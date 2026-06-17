@@ -5,7 +5,7 @@ import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { useAuth } from "@/context/AuthContext";
 
 export default function Index() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, biometricVerified } = useAuth();
 
   if (isLoading) {
     return (
@@ -15,11 +15,15 @@ export default function Index() {
     );
   }
 
-  if (isAuthenticated) {
-    return <Redirect href="/(tabs)" />;
+  if (!isAuthenticated) {
+    return <Redirect href="/(auth)/onboarding" />;
   }
 
-  return <Redirect href="/(auth)/onboarding" />;
+  if (!biometricVerified) {
+    return <Redirect href="/lock" />;
+  }
+
+  return <Redirect href="/(tabs)" />;
 }
 
 const styles = StyleSheet.create({

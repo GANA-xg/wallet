@@ -17,48 +17,14 @@ import { useWallet } from "@/context/WalletContext";
 import { useColors } from "@/hooks/useColors";
 
 const FEATURES = [
-  {
-    icon: "file-text" as const,
-    label: "Documents",
-    sub: "ID & papers",
-    route: "/documents",
-    color: "#3B82F6",
-  },
-  {
-    icon: "tag" as const,
-    label: "Tickets",
-    sub: "Travel & events",
-    route: "/tickets",
-    color: "#8B5CF6",
-  },
-  {
-    icon: "gift" as const,
-    label: "Rewards",
-    sub: "Points & offers",
-    route: "/rewards",
-    color: "#F59E0B",
-  },
-  {
-    icon: "cpu" as const,
-    label: "AI Insights",
-    sub: "Smart analysis",
-    route: "/ai-insights",
-    color: "#7C3AED",
-  },
-  {
-    icon: "bell" as const,
-    label: "Notifications",
-    sub: "Alerts",
-    route: "/notifications",
-    color: "#EF4444",
-  },
-  {
-    icon: "shield" as const,
-    label: "Security",
-    sub: "Protect account",
-    route: "/security",
-    color: "#22C55E",
-  },
+  { icon: "file-text" as const, label: "Documents", sub: "ID & papers", route: "/documents", color: "#3B82F6" },
+  { icon: "tag" as const, label: "Tickets", sub: "Travel & events", route: "/tickets", color: "#8B5CF6" },
+  { icon: "gift" as const, label: "Rewards", sub: "Points & offers", route: "/rewards", color: "#F59E0B" },
+  { icon: "cpu" as const, label: "AI Insights", sub: "Smart analysis", route: "/ai-insights", color: "#7C3AED" },
+  { icon: "map" as const, label: "Transport", sub: "Metro & Bus", route: "/transport", color: "#22C55E" },
+  { icon: "wifi" as const, label: "NFC Pay", sub: "Tap to pay", route: "/nfc-pay", color: "#FF6B00" },
+  { icon: "bell" as const, label: "Alerts", sub: "Notifications", route: "/notifications", color: "#EF4444" },
+  { icon: "shield" as const, label: "Security", sub: "Protect account", route: "/security", color: "#06B6D4" },
 ];
 
 const SETTINGS_ITEMS = [
@@ -67,15 +33,11 @@ const SETTINGS_ITEMS = [
   { icon: "help-circle" as const, label: "Help & Support", route: "/settings" },
 ];
 
-function firstName(name: string) {
-  return name.split(" ")[0];
-}
-
 export default function MoreScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
-  const { unreadCount, rewards } = useWallet();
+  const { unreadCount, rewards, transportPasses } = useWallet();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
@@ -86,11 +48,15 @@ export default function MoreScreen() {
   };
 
   const totalPoints = rewards.find((r) => r.type === "points")?.points ?? 0;
+  const totalTransportBalance = transportPasses.reduce((s, tp) => s + tp.balance, 0);
 
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={[styles.content, { paddingTop: topPad + 16, paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 100 }]}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: topPad + 16, paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 100 },
+      ]}
       showsVerticalScrollIndicator={false}
     >
       {/* User Banner */}
@@ -101,23 +67,28 @@ export default function MoreScreen() {
       >
         <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
           <Text style={styles.avatarText}>
-            {user?.name
-              .split(" ")
-              .map((n) => n[0])
-              .join("") ?? "AS"}
+            {user?.name.split(" ").map((n) => n[0]).join("") ?? "AS"}
           </Text>
         </View>
         <View style={styles.userInfo}>
-          <Text style={[styles.userName, { color: colors.text }]}>
-            {user?.name ?? "Aryan Sharma"}
-          </Text>
+          <Text style={[styles.userName, { color: colors.text }]}>{user?.name ?? "Aryan Sharma"}</Text>
           <Text style={[styles.userPhone, { color: colors.mutedForeground }]}>
             +91 {user?.phone ?? "98765 43210"}
           </Text>
         </View>
-        <View style={styles.pointsBadge}>
-          <Feather name="star" size={12} color="#F59E0B" />
-          <Text style={styles.pointsText}>{totalPoints.toLocaleString("en-IN")}</Text>
+        <View style={styles.badges}>
+          <View style={styles.pointsBadge}>
+            <Feather name="star" size={11} color="#F59E0B" />
+            <Text style={styles.pointsText}>{totalPoints.toLocaleString("en-IN")}</Text>
+          </View>
+          {totalTransportBalance > 0 && (
+            <View style={[styles.transportBadge, { backgroundColor: "#22C55E20" }]}>
+              <Feather name="map" size={11} color="#22C55E" />
+              <Text style={[styles.transportBadgeText, { color: "#22C55E" }]}>
+                ₹{totalTransportBalance}
+              </Text>
+            </View>
+          )}
         </View>
         <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
       </TouchableOpacity>
@@ -136,7 +107,7 @@ export default function MoreScreen() {
           >
             <View style={[styles.featureIcon, { backgroundColor: feat.color + "20" }]}>
               <Feather name={feat.icon} size={22} color={feat.color} />
-              {feat.label === "Notifications" && unreadCount > 0 && (
+              {feat.label === "Alerts" && unreadCount > 0 && (
                 <View style={styles.notifDot} />
               )}
             </View>
@@ -171,7 +142,6 @@ export default function MoreScreen() {
         ))}
       </View>
 
-      {/* Logout */}
       <TouchableOpacity
         style={[styles.logoutBtn, { borderColor: colors.border }]}
         onPress={handleLogout}
@@ -190,93 +160,45 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 20, gap: 0 },
   userBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    padding: 16,
-    borderRadius: 20,
-    borderWidth: 1,
-    marginBottom: 24,
+    flexDirection: "row", alignItems: "center", gap: 12,
+    padding: 16, borderRadius: 20, borderWidth: 1, marginBottom: 24,
   },
-  avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-  },
+  avatar: { width: 52, height: 52, borderRadius: 16, justifyContent: "center", alignItems: "center" },
   avatarText: { color: "#fff", fontSize: 18, fontWeight: "800" },
   userInfo: { flex: 1 },
   userName: { fontSize: 16, fontWeight: "700" },
   userPhone: { fontSize: 13, marginTop: 2 },
+  badges: { flexDirection: "row", gap: 6, alignItems: "center" },
   pointsBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#F59E0B20",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: "#F59E0B20", paddingHorizontal: 7, paddingVertical: 4, borderRadius: 8,
   },
-  pointsText: { color: "#F59E0B", fontSize: 13, fontWeight: "700" },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    marginBottom: 24,
+  pointsText: { color: "#F59E0B", fontSize: 12, fontWeight: "700" },
+  transportBadge: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 7, paddingVertical: 4, borderRadius: 8,
   },
-  featureCard: {
-    width: "47%",
-    padding: 16,
-    borderRadius: 20,
-    borderWidth: 1,
-    gap: 8,
-  },
+  transportBadgeText: { fontSize: 12, fontWeight: "700" },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 24 },
+  featureCard: { width: "47%", padding: 16, borderRadius: 20, borderWidth: 1, gap: 8 },
   featureIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    justifyContent: "center",
-    alignItems: "center",
-    position: "relative",
+    width: 48, height: 48, borderRadius: 14,
+    justifyContent: "center", alignItems: "center", position: "relative",
   },
-  notifDot: {
-    position: "absolute",
-    top: 6,
-    right: 6,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#EF4444",
-  },
+  notifDot: { position: "absolute", top: 6, right: 6, width: 8, height: 8, borderRadius: 4, backgroundColor: "#EF4444" },
   featureLabel: { fontSize: 15, fontWeight: "700" },
   featureSub: { fontSize: 12 },
   settingsCard: { borderRadius: 20, overflow: "hidden", marginBottom: 16 },
   settingsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    padding: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row", alignItems: "center", gap: 12,
+    padding: 16, borderBottomWidth: StyleSheet.hairlineWidth,
   },
   lastRow: { borderBottomWidth: 0 },
-  settingsIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-  },
+  settingsIcon: { width: 36, height: 36, borderRadius: 10, justifyContent: "center", alignItems: "center" },
   settingsLabel: { flex: 1, fontSize: 15, fontWeight: "600" },
   logoutBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderWidth: 1,
-    borderRadius: 16,
-    paddingVertical: 14,
-    marginBottom: 16,
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 8, borderWidth: 1, borderRadius: 16, paddingVertical: 14, marginBottom: 16,
   },
   logoutText: { fontSize: 16, fontWeight: "700" },
   version: { textAlign: "center", fontSize: 12 },

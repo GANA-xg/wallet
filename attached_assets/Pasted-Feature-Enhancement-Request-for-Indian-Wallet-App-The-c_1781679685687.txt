@@ -1,0 +1,208 @@
+Feature Enhancement Request for Indian Wallet App
+
+The current app is good, but I want the following improvements implemented with production-quality UI/UX similar to Apple Wallet.
+
+1. NFC Card Payments + QR Scanner
+
+* Keep existing QR scanner.
+* Add NFC Tap-to-Pay support.
+* User should be able to tap phones or NFC cards for payments.
+* Support:
+    * Debit Cards
+    * Credit Cards
+    * Metro Cards
+    * Bus Passes
+    * Loyalty Cards
+* Payment flow:
+    NFC Tap → Biometric Authentication → Confirm Amount → UPI PIN → Success Animation.
+
+⸻
+
+2. Biometric Authentication
+
+Implement:
+
+* Face ID / Fingerprint authentication on app launch.
+* Keep secure token session.
+* User should not login every time.
+* Login screen appears only:
+    * First install
+    * Logout
+    * Session expiry
+    * Device change
+
+⸻
+
+3. Apple Wallet Style Card UI
+
+Create Apple Wallet style cards with:
+
+* Glass Morphism
+* Blur background
+* Dynamic reflections
+* Rounded corners
+* Soft shadows
+
+Card animations:
+
+* Cards stacked vertically.
+* Tap card → Expand to full screen.
+* Swipe down → Collapse back.
+* Smooth 60 FPS animations.
+
+⸻
+
+4. Custom Card Scanner
+
+While adding cards:
+
+Provide two methods:
+
+Scan Card
+
+* Scan physical cards using camera.
+* OCR should detect:
+    * Card Number
+    * Name
+    * Expiry Date
+
+Custom Card Creator
+
+Allow users to:
+
+* Upload image/logo
+* Choose colors
+* Add title
+* Add description
+* Add barcode or QR
+* Save as wallet card
+
+Preview should update in real time.
+
+⸻
+
+5. Metro and Bus Passes
+
+Add dedicated section:
+
+Transport Wallet
+
+Support:
+
+* Metro Pass
+* Bus Pass
+* Monthly Pass
+* Student Pass
+
+Features:
+
+* NFC tap entry
+* QR fallback
+* Remaining balance
+* Expiry alerts
+* Recharge option
+
+Cards should have animated transport designs.
+
+⸻
+
+6. Smart Expense Protection
+
+Create an AI Expense Guard feature.
+
+Example:
+
+User enters:
+
+Hostel Fee = ₹6000 every month.
+
+System should:
+
+* Automatically reserve ₹6000.
+* Lock this money from daily spending.
+* Show:
+
+Available Balance
+
+₹18,000
+
+Reserved Money
+
+₹6,000 Hostel
+
+Spendable Balance
+
+₹12,000
+
+If user tries to spend reserved money:
+
+Show:
+
+“₹6000 is reserved for Hostel Fee.”
+
+Allow override only after biometric confirmation.
+
+⸻
+
+7. Payment Flow
+
+After every payment:
+
+1. Scan QR / NFC Tap
+2. Biometric Authentication
+3. Enter Amount
+4. Choose Bank Account
+5. Ask for UPI PIN
+6. Process Payment
+7. Show Success Animation
+8. Save Transaction
+
+⸻
+
+8. Transaction Tracker
+
+Create an advanced analytics dashboard:
+
+* Daily Spending
+* Monthly Spending
+* Category Breakdown
+* Hostel Expenses
+* Food Expenses
+* Savings
+* Reserved Money
+* Upcoming Bills
+* Spending Trends
+
+Add:
+
+* Pie Charts
+* Bar Charts
+* Monthly Insights
+* AI Suggestions
+
+Example:
+
+“You spent 25% more on food this month.”
+
+⸻
+
+9. Technical Requirements
+
+Implement:
+
+* CRUD Operations for all entities
+* Clean Architecture
+* Repository Pattern
+* MVVM Architecture
+* Secure Local Storage
+* AES-256 Encryption
+* JWT Refresh Tokens
+* CI/CD Pipeline
+* Unit Tests
+* Integration Tests
+* Dark Mode
+* Offline First Architecture
+* Production Ready Code
+* Apple-Level Smooth Animations
+
+The final application should feel as polished, fluid, and premium as Apple Wallet while being designed specifically for Indian users with UPI, NFC, Metro, Bus Passes, and Smart Expense Management.

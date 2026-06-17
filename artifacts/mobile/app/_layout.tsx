@@ -25,16 +25,12 @@ function RootLayoutNav() {
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#0F1115" } }}>
       <Stack.Screen name="index" />
+      <Stack.Screen name="lock" />
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(tabs)" />
-      <Stack.Screen
-        name="send"
-        options={{ presentation: "modal", animation: "slide_from_bottom" }}
-      />
-      <Stack.Screen
-        name="receive"
-        options={{ presentation: "modal", animation: "slide_from_bottom" }}
-      />
+      <Stack.Screen name="send" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
+      <Stack.Screen name="receive" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
+      <Stack.Screen name="nfc-pay" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
       <Stack.Screen name="ai-insights" />
       <Stack.Screen name="notifications" />
       <Stack.Screen name="settings" />
@@ -43,6 +39,7 @@ function RootLayoutNav() {
       <Stack.Screen name="documents" />
       <Stack.Screen name="tickets" />
       <Stack.Screen name="rewards" />
+      <Stack.Screen name="transport" />
     </Stack>
   );
 }
