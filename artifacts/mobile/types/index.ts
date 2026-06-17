@@ -88,3 +88,25 @@ export interface Budget {
   month: string;
   color: string;
 }
+
+export interface ReservedAmount {
+  id: string;
+  label: string;
+  amount: number;
+  category: string;
+  dueDate?: string;
+  recurring: boolean;
+  interval?: "monthly" | "weekly" | "yearly";
+  color: string;
+}
+
+export interface TransportPass {
+  id: string;
+  type: "metro" | "bus" | "monthly" | "student";
+  name: string;
+  balance: number;
+  expiry: string;
+  cardNumber: string;
+  gradientColors: [string, string];
+  city: string;
+}
