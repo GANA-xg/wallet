@@ -1,0 +1,747 @@
+PRD: VAULT — PREMIUM INDIAN DIGITAL WALLET
+
+You are a team of Staff Engineers from Apple, Stripe, Revolut, PhonePe and Google.
+
+DO NOT explain anything.
+
+DO NOT ask questions.
+
+DO NOT provide plans.
+
+DIRECTLY START BUILDING THE COMPLETE APPLICATION.
+
+Every file must be production ready.
+
+No placeholders.
+
+No TODOs.
+
+No mock architecture.
+
+Everything must work.
+
+⸻
+
+PROJECT NAME
+
+Vault
+
+A premium Indian Digital Wallet inspired by Apple Wallet with a unique identity.
+
+⸻
+
+DESIGN PRINCIPLES
+
+Minimal.
+
+Elegant.
+
+Premium.
+
+Dark Mode First.
+
+No unnecessary backgrounds.
+
+No clutter.
+
+Large whitespace.
+
+Smooth animations.
+
+Subtle scribble illustrations only where needed.
+
+Color Palette:
+
+Primary Orange: #FF6B00
+
+Soft Orange: #FFB347
+
+Background: #0F1115
+
+Surface: #171A21
+
+Text Primary: #FFFFFF
+
+Text Secondary: #B0B7C3
+
+Success: #22C55E
+
+Error: #EF4444
+
+Border: #262B36
+
+Radius:
+
+24px
+
+Apple level spacing.
+
+⸻
+
+TECH STACK
+
+Frontend
+
+Next.js 15
+
+React 19
+
+TypeScript
+
+TailwindCSS
+
+Shadcn UI
+
+Framer Motion
+
+React Query
+
+Zustand
+
+React Hook Form
+
+Zod
+
+Recharts
+
+⸻
+
+Backend
+
+Node.js
+
+Express
+
+TypeScript
+
+Prisma ORM
+
+PostgreSQL
+
+Redis
+
+JWT
+
+Socket.IO
+
+⸻
+
+Storage
+
+AWS S3
+
+⸻
+
+Authentication
+
+OTP Login
+
+JWT
+
+Refresh Tokens
+
+Biometric Authentication
+
+Device Binding
+
+Session Management
+
+⸻
+
+DevOps
+
+Docker
+
+Docker Compose
+
+Github Actions
+
+CI/CD Pipeline
+
+Automatic testing
+
+Automatic deployment
+
+Production and Development environments
+
+Nginx Reverse Proxy
+
+SSL
+
+⸻
+
+COMPLETE FEATURE SET
+
+AUTH
+
+OTP Login
+
+Registration
+
+Logout
+
+Session Management
+
+Refresh Tokens
+
+Biometric Login
+
+Device Management
+
+Trusted Devices
+
+⸻
+
+HOME
+
+Wallet Balance
+
+Quick Actions
+
+Recent Transactions
+
+AI Insights
+
+Cards Preview
+
+Rewards
+
+Offers
+
+⸻
+
+CARDS
+
+CRUD
+
+Create Card
+
+Update Card
+
+Delete Card
+
+View Card
+
+Card Freeze
+
+Card Unfreeze
+
+Card Details
+
+Card Transactions
+
+Card Settings
+
+Card Stack Animation
+
+⸻
+
+UPI
+
+CRUD
+
+Add UPI
+
+Delete UPI
+
+Update UPI
+
+Set Primary
+
+QR Payments
+
+Send Money
+
+Receive Money
+
+Request Money
+
+UPI Lite
+
+UPI History
+
+Saved Beneficiaries
+
+⸻
+
+TRANSACTIONS
+
+CRUD
+
+Filter
+
+Search
+
+Sort
+
+Export
+
+Transaction Detail
+
+Categories
+
+Recurring Transactions
+
+⸻
+
+DOCUMENTS
+
+CRUD
+
+Aadhaar
+
+PAN
+
+Driving License
+
+Passport
+
+Vehicle RC
+
+Upload
+
+Edit
+
+Delete
+
+Secure Storage
+
+⸻
+
+TICKETS
+
+CRUD
+
+Movie Tickets
+
+Flight Tickets
+
+Train Tickets
+
+Bus Tickets
+
+Event Tickets
+
+QR Tickets
+
+Animated Reveal
+
+⸻
+
+REWARDS
+
+CRUD
+
+Loyalty Cards
+
+Points
+
+Coupons
+
+Offers
+
+Cashback
+
+⸻
+
+NOTIFICATIONS
+
+CRUD
+
+Push Notifications
+
+Realtime Notifications
+
+Read
+
+Unread
+
+Delete
+
+Categories
+
+⸻
+
+AI FEATURES
+
+Expense Categorization
+
+Budget Prediction
+
+Subscription Detection
+
+Savings Recommendation
+
+Financial Health Score
+
+Spending Analytics
+
+Charts
+
+⸻
+
+SETTINGS
+
+CRUD
+
+Theme
+
+Profile
+
+Security
+
+Notifications
+
+Devices
+
+Privacy
+
+Language
+
+⸻
+
+DATABASE DESIGN
+
+Create complete schemas.
+
+Users
+
+Wallets
+
+Cards
+
+UPI Accounts
+
+Transactions
+
+Beneficiaries
+
+Documents
+
+Tickets
+
+Rewards
+
+Notifications
+
+Sessions
+
+Devices
+
+Budgets
+
+Subscriptions
+
+Analytics
+
+Audit Logs
+
+Every table:
+
+Primary Keys
+
+Foreign Keys
+
+Indexes
+
+Constraints
+
+Timestamps
+
+Soft Deletes
+
+⸻
+
+API DESIGN
+
+REST API
+
+GET
+
+POST
+
+PUT
+
+PATCH
+
+DELETE
+
+Pagination
+
+Sorting
+
+Filtering
+
+Search
+
+Validation
+
+Rate Limiting
+
+Swagger Documentation
+
+⸻
+
+CRUD REQUIREMENTS
+
+Every entity must support:
+
+Create
+
+Read
+
+Update
+
+Delete
+
+Soft Delete
+
+Bulk Delete
+
+Search
+
+Pagination
+
+Sorting
+
+Filters
+
+Validation
+
+Error Handling
+
+Audit Logging
+
+⸻
+
+SYSTEM DESIGN
+
+Monorepo Architecture
+
+apps/
+
+web/
+
+server/
+
+packages/
+
+ui/
+
+config/
+
+types/
+
+utils/
+
+Database Layer
+
+Service Layer
+
+Controller Layer
+
+Repository Pattern
+
+Event Driven Architecture
+
+Caching Layer
+
+Message Queue Ready
+
+Websocket Layer
+
+⸻
+
+SECURITY
+
+OTP Verification
+
+JWT Access Token
+
+Refresh Token Rotation
+
+AES Encryption
+
+Passwordless Authentication
+
+Biometric Login
+
+Rate Limiting
+
+XSS Protection
+
+CSRF Protection
+
+SQL Injection Protection
+
+Input Sanitization
+
+Secure Cookies
+
+Helmet
+
+CORS
+
+Audit Logs
+
+⸻
+
+CI/CD
+
+Github Actions
+
+Lint
+
+Type Check
+
+Unit Tests
+
+Integration Tests
+
+E2E Tests
+
+Docker Build
+
+Docker Push
+
+Automatic Deployment
+
+Rollback Support
+
+Health Checks
+
+⸻
+
+TESTING
+
+Jest
+
+Supertest
+
+Playwright
+
+RTL
+
+Coverage above 90%
+
+⸻
+
+UI REQUIREMENTS
+
+Create every screen.
+
+Splash
+
+Onboarding
+
+Login
+
+OTP
+
+Home
+
+Wallet
+
+Cards
+
+UPI
+
+QR Scanner
+
+Send Money
+
+Receive Money
+
+Transactions
+
+Documents
+
+Tickets
+
+Rewards
+
+AI Insights
+
+Notifications
+
+Profile
+
+Security
+
+Settings
+
+⸻
+
+MOTION
+
+Apple Level Motion
+
+Spring animations
+
+Card Stack
+
+Swipe Gestures
+
+Bottom Sheets
+
+Page Transitions
+
+Pull To Refresh
+
+Payment Success Animation
+
+Ticket Reveal Animation
+
+QR Scan Animation
+
+⸻
+
+FIGMA
+
+Auto Layout
+
+Design Tokens
+
+Variables
+
+Component Variants
+
+Dark Mode
+
+Light Mode
+
+Reusable Components
+
+Production Ready
+
+⸻
+
+FINAL INSTRUCTION
+
+DO NOT EXPLAIN.
+
+DO NOT ASK QUESTIONS.
+
+DO NOT OUTPUT PLANS.
+
+DIRECTLY GENERATE THE ENTIRE FULL STACK APPLICATION.
+
+GENERATE ALL FILES.
+
+GENERATE ALL CODE.
+
+GENERATE ALL CONFIGURATIONS.
+
+GENERATE DATABASE.
+
+GENERATE API.
+
+GENERATE TESTS.
+
+GENERATE CI/CD.
+
+GENERATE DOCKER.
+
+GENERATE EVERYTHING.
+
+START IMMEDIATELY.
