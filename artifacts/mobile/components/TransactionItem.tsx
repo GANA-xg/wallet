@@ -59,7 +59,11 @@ export function TransactionItem({ transaction, onPress }: Props) {
         </Text>
         <Text style={[styles.date, { color: colors.mutedForeground }]}>
           {formatDate(transaction.date)}
-          {transaction.status === "pending" ? " · Pending" : ""}
+          {transaction.status === "pending"
+            ? " · Pending"
+            : transaction.status === "launched"
+            ? " · Launched"
+            : ""}
         </Text>
       </View>
 

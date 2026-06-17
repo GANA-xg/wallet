@@ -14,10 +14,15 @@
       "backgroundColor": "#0F1115"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Vault uses the camera to scan UPI QR codes and launch payments in your UPI app.",
+        "LSApplicationQueriesSchemes": ["tez", "phonepe", "paytmmp", "upi"]
+      }
     },
     "android": {
-      "backgroundColor": "#0F1115"
+      "backgroundColor": "#0F1115",
+      "permissions": ["android.permission.CAMERA"]
     },
     "web": {
       "favicon": "./assets/images/icon.png"
@@ -30,7 +35,13 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Vault uses the camera to scan UPI QR codes and launch payments in your UPI app."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

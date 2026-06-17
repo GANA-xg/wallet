@@ -14,14 +14,20 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { buildLaunchRequest, PaymentAppButtons } from "@/components/PaymentAppButtons";
 import { useAuth } from "@/context/AuthContext";
 import { useWallet } from "@/context/WalletContext";
 import { useColors } from "@/hooks/useColors";
+import type { UpiAppId } from "@/services/payment";
 import type { Transaction } from "@/types";
 
-type Step = "ready" | "tapped" | "biometric" | "amount" | "pin" | "processing" | "success";
+type Step = "ready" | "tapped" | "biometric" | "amount" | "launch" | "launched";
 
-const PIN_LENGTH = 6;
+const NFC_MERCHANT = {
+  name: "Metro Station · Gate 4",
+  upi: "dmrc.pay@upi",
+  merchantCode: "4111",
+};
 
 function PulseRing({ anim, size }: { anim: Animated.Value; size: number }) {
   return (
@@ -44,11 +50,10 @@ export default function NFCPayScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { verifyBiometric } = useAuth();
-  const { addTransaction, balance, setBalance, upiAccounts } = useWallet();
+  const { addTransaction } = useWallet();
   const [step, setStep] = useState<Step>("ready");
   const [amount, setAmount] = useState("250");
-  const [pin, setPin] = useState("");
-  const [merchant] = useState("Metro Station · Gate 4");
+  const [launchedApp, setLaunchedApp] = useState<UpiAppId | null>(null);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -57,9 +62,6 @@ export default function NFCPayScreen() {
   const pulse2 = useRef(new Animated.Value(0)).current;
   const pulse3 = useRef(new Animated.Value(0)).current;
   const tapScale = useRef(new Animated.Value(1)).current;
-  const successScale = useRef(new Animated.Value(0)).current;
-  const successOpacity = useRef(new Animated.Value(0)).current;
-  const checkAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (step !== "ready" && step !== "tapped") return;
@@ -70,26 +72,21 @@ export default function NFCPayScreen() {
           Animated.delay(delay),
           Animated.timing(anim, { toValue: 1, duration: 1400, useNativeDriver: true }),
           Animated.timing(anim, { toValue: 0, duration: 0, useNativeDriver: true }),
-        ])
+        ]),
       );
 
     const p1 = makePulse(pulse1, 0);
     const p2 = makePulse(pulse2, 460);
     const p3 = makePulse(pulse3, 920);
-    p1.start(); p2.start(); p3.start();
-    return () => { p1.stop(); p2.stop(); p3.stop(); };
-  }, [step]);
-
-  useEffect(() => {
-    if (step === "success") {
-      Animated.parallel([
-        Animated.spring(successScale, { toValue: 1, useNativeDriver: true, friction: 5, tension: 60 }),
-        Animated.timing(successOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
-        Animated.timing(checkAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      ]).start();
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }
-  }, [step]);
+    p1.start();
+    p2.start();
+    p3.start();
+    return () => {
+      p1.stop();
+      p2.stop();
+      p3.stop();
+    };
+  }, [step, pulse1, pulse2, pulse3]);
 
   const handleTap = async () => {
     if (step !== "ready") return;
@@ -112,43 +109,44 @@ export default function NFCPayScreen() {
   };
 
   const handleConfirmAmount = () => {
-    const n = parseFloat(amount);
-    if (!n || n <= 0) return;
+    const n = Number.parseFloat(amount);
+    if (!Number.isFinite(n) || n <= 0) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setStep("pin");
-    setPin("");
+    setStep("launch");
   };
 
-  const handlePinChange = async (text: string) => {
-    if (text.length > PIN_LENGTH) return;
-    setPin(text);
-    if (text.length === PIN_LENGTH) {
-      setStep("processing");
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      await new Promise((r) => setTimeout(r, 1600));
-
-      const amountNum = parseFloat(amount);
-      const tx: Transaction = {
-        id: Date.now().toString() + Math.random().toString(36).slice(2),
-        amount: amountNum,
-        type: "debit",
-        category: "transport",
-        description: `NFC Pay · ${merchant}`,
-        date: new Date().toISOString(),
-        status: "success",
-        merchant,
-      };
-      addTransaction(tx);
-      setBalance(balance - amountNum);
-      setStep("success");
-    }
+  const handleLaunched = (appId: UpiAppId) => {
+    const amountNum = Number.parseFloat(amount);
+    const tx: Transaction = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      amount: amountNum,
+      type: "debit",
+      category: "transport",
+      description: `NFC Pay · ${NFC_MERCHANT.name}`,
+      date: new Date().toISOString(),
+      status: "launched",
+      merchant: NFC_MERCHANT.name,
+      payeeAddress: NFC_MERCHANT.upi,
+      launchedVia: appId,
+    };
+    addTransaction(tx);
+    setLaunchedApp(appId);
+    setStep("launched");
   };
 
-  const primaryUPI = upiAccounts.find((u) => u.primary);
+  const launchRequest =
+    step === "launch"
+      ? buildLaunchRequest({
+          payeeAddress: NFC_MERCHANT.upi,
+          payeeName: NFC_MERCHANT.name,
+          merchantCode: NFC_MERCHANT.merchantCode,
+          amount,
+          note: "NFC Tap Payment",
+        })
+      : null;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 16 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
           <Feather name="x" size={22} color={colors.text} />
@@ -157,11 +155,10 @@ export default function NFCPayScreen() {
         <View style={{ width: 38 }} />
       </View>
 
-      {/* Ready / Tapped */}
       {(step === "ready" || step === "tapped") && (
         <View style={styles.content}>
           <Text style={[styles.merchantLabel, { color: colors.mutedForeground }]}>PAYING TO</Text>
-          <Text style={[styles.merchantName, { color: colors.text }]}>{merchant}</Text>
+          <Text style={[styles.merchantName, { color: colors.text }]}>{NFC_MERCHANT.name}</Text>
 
           <View style={styles.nfcArea}>
             <Animated.View style={{ transform: [{ scale: tapScale }] }}>
@@ -173,11 +170,7 @@ export default function NFCPayScreen() {
                 onPress={handleTap}
                 activeOpacity={0.8}
               >
-                <Feather
-                  name="wifi"
-                  size={52}
-                  color={step === "tapped" ? "#fff" : "#FF6B00"}
-                />
+                <Feather name="wifi" size={52} color={step === "tapped" ? "#fff" : "#FF6B00"} />
               </TouchableOpacity>
             </Animated.View>
           </View>
@@ -186,19 +179,11 @@ export default function NFCPayScreen() {
             {step === "tapped" ? "Authenticating…" : "Tap to simulate NFC"}
           </Text>
           <Text style={[styles.tapSub, { color: colors.mutedForeground }]}>
-            Hold your phone near the NFC terminal
+            NFC reads merchant UPI details, then launches your UPI app
           </Text>
-
-          <View style={[styles.upiRow, { backgroundColor: colors.surface }]}>
-            <Feather name="credit-card" size={16} color={colors.mutedForeground} />
-            <Text style={[styles.upiText, { color: colors.mutedForeground }]}>
-              {primaryUPI?.upiId ?? "aryan.sharma@hdfc"}
-            </Text>
-          </View>
         </View>
       )}
 
-      {/* Biometric verifying */}
       {step === "biometric" && (
         <View style={styles.content}>
           <View style={[styles.bioCircle, { backgroundColor: "#FF6B0015", borderColor: "#FF6B00" }]}>
@@ -206,17 +191,16 @@ export default function NFCPayScreen() {
           </View>
           <Text style={[styles.bioTitle, { color: colors.text }]}>Biometric Verification</Text>
           <Text style={[styles.bioSub, { color: colors.mutedForeground }]}>
-            Use Face ID or Fingerprint to authorise
+            Confirm before launching payment in your UPI app
           </Text>
         </View>
       )}
 
-      {/* Amount */}
       {step === "amount" && (
         <View style={styles.content}>
           <View style={[styles.detectedBadge, { backgroundColor: "#22C55E15" }]}>
             <Feather name="check-circle" size={14} color="#22C55E" />
-            <Text style={[styles.detectedText, { color: "#22C55E" }]}>NFC Connected · {merchant}</Text>
+            <Text style={[styles.detectedText, { color: "#22C55E" }]}>NFC Connected · {NFC_MERCHANT.name}</Text>
           </View>
 
           <Text style={[styles.amountLabel, { color: colors.mutedForeground }]}>ENTER AMOUNT</Text>
@@ -237,10 +221,7 @@ export default function NFCPayScreen() {
             {["50", "100", "250", "500"].map((a) => (
               <TouchableOpacity
                 key={a}
-                style={[
-                  styles.quickAmtChip,
-                  { backgroundColor: amount === a ? "#FF6B00" : colors.surface },
-                ]}
+                style={[styles.quickAmtChip, { backgroundColor: amount === a ? "#FF6B00" : colors.surface }]}
                 onPress={() => setAmount(a)}
               >
                 <Text style={[styles.quickAmtText, { color: amount === a ? "#fff" : colors.mutedForeground }]}>
@@ -250,132 +231,43 @@ export default function NFCPayScreen() {
             ))}
           </View>
 
-          <View style={[styles.bankRow, { backgroundColor: colors.surface }]}>
-            <Feather name="database" size={15} color={colors.mutedForeground} />
-            <Text style={[styles.bankText, { color: colors.mutedForeground }]}>
-              HDFC Bank · ₹{(balance).toLocaleString("en-IN")} available
-            </Text>
-          </View>
-
           <TouchableOpacity
             style={styles.confirmBtn}
             onPress={handleConfirmAmount}
-            disabled={!amount || parseFloat(amount) <= 0}
+            disabled={!amount || Number.parseFloat(amount) <= 0}
           >
             <LinearGradient colors={["#FF6B00", "#FF9240"]} style={styles.confirmBtnGrad}>
-              <Text style={styles.confirmBtnText}>Continue</Text>
+              <Text style={styles.confirmBtnText}>Choose UPI App</Text>
               <Feather name="arrow-right" size={18} color="#fff" />
             </LinearGradient>
           </TouchableOpacity>
         </View>
       )}
 
-      {/* UPI PIN */}
-      {step === "pin" && (
-        <View style={styles.content}>
-          <View style={[styles.pinSummary, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.pinSummaryLabel, { color: colors.mutedForeground }]}>PAYING</Text>
-            <Text style={[styles.pinSummaryAmount, { color: colors.text }]}>₹{parseFloat(amount).toLocaleString("en-IN")}</Text>
-            <Text style={[styles.pinSummaryMerchant, { color: colors.mutedForeground }]}>{merchant}</Text>
-          </View>
-
-          <Text style={[styles.pinLabel, { color: colors.text }]}>Enter UPI PIN</Text>
-          <Text style={[styles.pinSub, { color: colors.mutedForeground }]}>
-            Enter any {PIN_LENGTH} digits to confirm (demo)
-          </Text>
-
-          <View style={styles.pinDots}>
-            {Array.from({ length: PIN_LENGTH }).map((_, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.pinDot,
-                  {
-                    backgroundColor: i < pin.length ? "#FF6B00" : "transparent",
-                    borderColor: i < pin.length ? "#FF6B00" : colors.border,
-                  },
-                ]}
-              />
-            ))}
-          </View>
-
-          <TextInput
-            style={styles.pinHiddenInput}
-            value={pin}
-            onChangeText={handlePinChange}
-            keyboardType="number-pad"
-            maxLength={PIN_LENGTH}
-            autoFocus
-            secureTextEntry
-            caretHidden
-          />
+      {step === "launch" && launchRequest && (
+        <View style={[styles.launchContent, { paddingBottom: bottomPad + 24 }]}>
+          <PaymentAppButtons request={launchRequest} onLaunched={handleLaunched} />
         </View>
       )}
 
-      {/* Processing */}
-      {step === "processing" && (
+      {step === "launched" && launchedApp && (
         <View style={styles.content}>
-          <View style={[styles.processingCircle, { backgroundColor: "#FF6B0015" }]}>
-            <Feather name="loader" size={48} color="#FF6B00" />
+          <View style={[styles.launchedIcon, { backgroundColor: "#22C55E20" }]}>
+            <Feather name="external-link" size={40} color="#22C55E" />
           </View>
-          <Text style={[styles.processingTitle, { color: colors.text }]}>Processing Payment</Text>
-          <Text style={[styles.processingSub, { color: colors.mutedForeground }]}>
-            Communicating with bank…
-          </Text>
-          <View style={styles.processingSteps}>
-            {["Biometric verified", "NFC secured", "Bank processing"].map((s, i) => (
-              <View key={i} style={styles.processingStep}>
-                <View style={[styles.processingDot, { backgroundColor: "#22C55E" }]} />
-                <Text style={[styles.processingStepText, { color: colors.mutedForeground }]}>{s}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      )}
-
-      {/* Success */}
-      {step === "success" && (
-        <Animated.View style={[styles.content, { opacity: successOpacity }]}>
-          <Animated.View
-            style={[
-              styles.successCircle,
-              { transform: [{ scale: successScale }] },
-            ]}
-          >
-            <LinearGradient colors={["#22C55E", "#16A34A"]} style={styles.successGrad}>
-              <Feather name="check" size={52} color="#fff" />
-            </LinearGradient>
-          </Animated.View>
-
-          <Text style={[styles.successTitle, { color: colors.text }]}>Payment Successful!</Text>
+          <Text style={[styles.successTitle, { color: colors.text }]}>Payment Launched</Text>
           <Text style={[styles.successAmount, { color: "#22C55E" }]}>
-            ₹{parseFloat(amount).toLocaleString("en-IN")}
+            ₹{Number.parseFloat(amount).toLocaleString("en-IN")}
           </Text>
-          <Text style={[styles.successMerchant, { color: colors.mutedForeground }]}>{merchant}</Text>
-
-          <View style={[styles.successDetails, { backgroundColor: colors.surface }]}>
-            {[
-              ["Transaction ID", `TXN${Date.now().toString().slice(-8)}`],
-              ["Payment Method", "NFC · UPI"],
-              ["Bank", "HDFC Bank"],
-              ["Status", "Approved"],
-            ].map(([label, value]) => (
-              <View key={label} style={styles.successDetailRow}>
-                <Text style={[styles.successDetailLabel, { color: colors.mutedForeground }]}>{label}</Text>
-                <Text style={[styles.successDetailValue, { color: colors.text }]}>{value}</Text>
-              </View>
-            ))}
-          </View>
-
-          <TouchableOpacity
-            style={styles.doneBtn}
-            onPress={() => router.back()}
-          >
+          <Text style={[styles.successMerchant, { color: colors.mutedForeground }]}>
+            Complete in {launchedApp === "google_pay" ? "Google Pay" : launchedApp === "phonepe" ? "PhonePe" : "Paytm"}
+          </Text>
+          <TouchableOpacity style={styles.doneBtn} onPress={() => router.back()}>
             <LinearGradient colors={["#FF6B00", "#FF9240"]} style={styles.doneBtnGrad}>
               <Text style={styles.doneBtnText}>Done</Text>
             </LinearGradient>
           </TouchableOpacity>
-        </Animated.View>
+        </View>
       )}
 
       <View style={{ paddingBottom: bottomPad + 16 }} />
@@ -395,31 +287,40 @@ const styles = StyleSheet.create({
   closeBtn: { width: 38, height: 38, justifyContent: "center", alignItems: "center" },
   headerTitle: { fontSize: 18, fontWeight: "700" },
   content: { flex: 1, paddingHorizontal: 28, alignItems: "center", justifyContent: "center", gap: 12 },
+  launchContent: { flex: 1, paddingHorizontal: 24, justifyContent: "center" },
   merchantLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 1.5 },
   merchantName: { fontSize: 22, fontWeight: "800", marginBottom: 12, textAlign: "center" },
   nfcArea: { width: 260, height: 260, alignItems: "center", justifyContent: "center", marginVertical: 12 },
   nfcCircle: {
-    width: 120, height: 120, borderRadius: 60,
-    justifyContent: "center", alignItems: "center",
-    borderWidth: 2, borderColor: "#FF6B00",
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#FF6B00",
   },
   tapInstr: { fontSize: 20, fontWeight: "700", textAlign: "center" },
   tapSub: { fontSize: 14, textAlign: "center", marginTop: -4 },
-  upiRow: {
-    flexDirection: "row", alignItems: "center", gap: 8,
-    paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, marginTop: 8,
-  },
-  upiText: { fontSize: 13 },
   bioCircle: {
-    width: 120, height: 120, borderRadius: 60,
-    justifyContent: "center", alignItems: "center",
-    borderWidth: 2, marginBottom: 16,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    marginBottom: 16,
   },
   bioTitle: { fontSize: 24, fontWeight: "800", textAlign: "center" },
   bioSub: { fontSize: 15, textAlign: "center" },
   detectedBadge: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginBottom: 12,
   },
   detectedText: { fontSize: 13, fontWeight: "600" },
   amountLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 1.5 },
@@ -429,45 +330,26 @@ const styles = StyleSheet.create({
   quickAmountsRow: { flexDirection: "row", gap: 8, marginTop: 4 },
   quickAmtChip: { paddingHorizontal: 18, paddingVertical: 10, borderRadius: 20 },
   quickAmtText: { fontSize: 14, fontWeight: "700" },
-  bankRow: {
-    flexDirection: "row", alignItems: "center", gap: 8,
-    paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, marginTop: 8,
-  },
-  bankText: { fontSize: 13 },
   confirmBtn: { width: "100%", borderRadius: 16, overflow: "hidden", marginTop: 16 },
-  confirmBtnGrad: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, paddingVertical: 16 },
+  confirmBtnGrad: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 16,
+  },
   confirmBtnText: { color: "#fff", fontSize: 17, fontWeight: "700" },
-  pinSummary: {
-    width: "100%", borderRadius: 20, padding: 20,
-    alignItems: "center", gap: 4, marginBottom: 16,
+  launchedIcon: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
   },
-  pinSummaryLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 1.5 },
-  pinSummaryAmount: { fontSize: 40, fontWeight: "900" },
-  pinSummaryMerchant: { fontSize: 13 },
-  pinLabel: { fontSize: 20, fontWeight: "800" },
-  pinSub: { fontSize: 13, textAlign: "center" },
-  pinDots: { flexDirection: "row", gap: 14, marginVertical: 16 },
-  pinDot: { width: 18, height: 18, borderRadius: 9, borderWidth: 2 },
-  pinHiddenInput: { position: "absolute", opacity: 0, width: 1, height: 1 },
-  processingCircle: {
-    width: 120, height: 120, borderRadius: 60,
-    justifyContent: "center", alignItems: "center", marginBottom: 16,
-  },
-  processingTitle: { fontSize: 22, fontWeight: "800" },
-  processingSub: { fontSize: 15 },
-  processingSteps: { gap: 8, marginTop: 16, alignSelf: "stretch" },
-  processingStep: { flexDirection: "row", alignItems: "center", gap: 10 },
-  processingDot: { width: 8, height: 8, borderRadius: 4 },
-  processingStepText: { fontSize: 14 },
-  successCircle: { width: 120, height: 120, borderRadius: 60, overflow: "hidden", marginBottom: 20 },
-  successGrad: { flex: 1, justifyContent: "center", alignItems: "center" },
   successTitle: { fontSize: 24, fontWeight: "800" },
   successAmount: { fontSize: 44, fontWeight: "900" },
   successMerchant: { fontSize: 15 },
-  successDetails: { width: "100%", borderRadius: 20, padding: 20, gap: 12, marginTop: 8 },
-  successDetailRow: { flexDirection: "row", justifyContent: "space-between" },
-  successDetailLabel: { fontSize: 14 },
-  successDetailValue: { fontSize: 14, fontWeight: "600" },
   doneBtn: { width: "100%", borderRadius: 16, overflow: "hidden", marginTop: 16 },
   doneBtnGrad: { paddingVertical: 16, alignItems: "center" },
   doneBtnText: { color: "#fff", fontSize: 17, fontWeight: "700" },
