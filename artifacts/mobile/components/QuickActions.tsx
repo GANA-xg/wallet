@@ -7,9 +7,9 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useColors } from "@/hooks/useColors";
 
 const ACTIONS = [
+  { id: "pay", label: "Pay", icon: "maximize" as const, route: "/pay" as const },
   { id: "send", label: "Send", icon: "send" as const, route: "/send" as const },
   { id: "receive", label: "Receive", icon: "download" as const, route: "/receive" as const },
-  { id: "scan", label: "Scan", icon: "maximize" as const, route: "/receive" as const },
   { id: "bills", label: "Bills", icon: "file-text" as const, route: "/rewards" as const },
   { id: "recharge", label: "Recharge", icon: "smartphone" as const, route: "/rewards" as const },
 ];

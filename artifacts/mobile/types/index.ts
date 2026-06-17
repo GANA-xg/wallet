@@ -34,8 +34,10 @@ export interface Transaction {
   category: string;
   description: string;
   date: string;
-  status: "success" | "pending" | "failed";
+  status: "success" | "pending" | "failed" | "launched";
   merchant: string;
+  payeeAddress?: string;
+  launchedVia?: "google_pay" | "phonepe" | "paytm" | "generic";
 }
 
 export interface VaultDocument {

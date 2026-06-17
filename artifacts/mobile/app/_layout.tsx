@@ -28,6 +28,7 @@ function RootLayoutNav() {
       <Stack.Screen name="lock" />
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="pay" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
       <Stack.Screen name="send" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
       <Stack.Screen name="receive" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
       <Stack.Screen name="nfc-pay" options={{ presentation: "modal", animation: "slide_from_bottom" }} />

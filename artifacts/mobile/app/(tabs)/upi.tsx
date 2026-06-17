@@ -41,7 +41,10 @@ export default function UPIScreen() {
       contentContainerStyle={[styles.content, { paddingTop: topPad + 16, paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 100 }]}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={[styles.title, { color: colors.text }]}>UPI Payments</Text>
+      <Text style={[styles.title, { color: colors.text }]}>UPI Launcher</Text>
+      <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+        Scan QR codes or enter a UPI ID — Vault opens Google Pay, PhonePe, or Paytm with details pre-filled.
+      </Text>
 
       {/* Primary UPI Card */}
       {primaryUPI && (
@@ -85,10 +88,10 @@ export default function UPIScreen() {
       {/* Actions */}
       <View style={styles.actions}>
         {[
-          { icon: "send", label: "Send\nMoney", color: "#FF6B00", route: "/send" },
+          { icon: "maximize", label: "Scan\n& Pay", color: "#FF6B00", route: "/pay" },
+          { icon: "send", label: "Pay\nUPI ID", color: "#7C3AED", route: "/send" },
           { icon: "download", label: "Receive\nMoney", color: "#22C55E", route: "/receive" },
-          { icon: "maximize", label: "Scan\nQR", color: "#7C3AED", route: "/receive" },
-          { icon: "clock", label: "History", color: "#3B82F6", route: null },
+          { icon: "clock", label: "History", color: "#3B82F6", route: "/(tabs)/transactions" },
         ].map((item, i) => (
           <TouchableOpacity
             key={i}
@@ -96,7 +99,7 @@ export default function UPIScreen() {
             activeOpacity={0.7}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              if (item.route) router.push(item.route as never);
+              router.push(item.route as never);
             }}
           >
             <View style={[styles.actionIcon, { backgroundColor: item.color + "20" }]}>
@@ -187,7 +190,8 @@ export default function UPIScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 20, gap: 0 },
-  title: { fontSize: 28, fontWeight: "800", marginBottom: 20 },
+  title: { fontSize: 28, fontWeight: "800", marginBottom: 8 },
+  subtitle: { fontSize: 14, lineHeight: 20, marginBottom: 20 },
   upiCard: {
     borderRadius: 20,
     padding: 16,
