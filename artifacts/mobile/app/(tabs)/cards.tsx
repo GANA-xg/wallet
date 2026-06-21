@@ -116,6 +116,7 @@ export default function CardsScreen() {
         { paddingTop: topPad + 16, paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 100 },
       ]}
       showsVerticalScrollIndicator={false}
+      keyboardDismissMode="on-drag"
     >
       {/* Header */}
       <View style={styles.header}>

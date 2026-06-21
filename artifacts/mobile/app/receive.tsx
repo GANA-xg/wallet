@@ -11,6 +11,10 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  KeyboardAvoidingView,
+  TouchableWithoutFeedback,
+  Keyboard,
+  ScrollView,
 } from "react-native";
 import Svg, { Rect } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -86,89 +90,105 @@ export default function ReceiveScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: topPad + 16 }]}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Feather name="arrow-left" size={22} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>Receive Money</Text>
-        <TouchableOpacity onPress={handleShare}>
-          <Feather name="share-2" size={20} color={colors.text} />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.content}>
-        {/* QR Card */}
-        <View style={[styles.qrCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.cardName, { color: colors.text }]}>
-            {user?.name ?? "Aryan Sharma"}
-          </Text>
-          <Text style={[styles.cardUpi, { color: colors.mutedForeground }]}>{upiId}</Text>
-
-          <View style={[styles.qrContainer, { backgroundColor: "#fff", borderRadius: 16 }]}>
-            <QRPattern />
-            <View style={styles.qrCenter}>
-              <LinearGradient colors={["#FF6B00", "#FF9240"]} style={styles.qrLogo}>
-                <Feather name="layers" size={16} color="#fff" />
-              </LinearGradient>
-            </View>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={{ flex: 1 }}>
+          <View style={[styles.header, { paddingTop: topPad + 16 }]}>
+            <TouchableOpacity onPress={() => router.back()}>
+              <Feather name="arrow-left" size={22} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={[styles.title, { color: colors.text }]}>Receive Money</Text>
+            <TouchableOpacity onPress={handleShare}>
+              <Feather name="share-2" size={20} color={colors.text} />
+            </TouchableOpacity>
           </View>
 
-          <View style={styles.scanHint}>
-            <Feather name="maximize" size={14} color={colors.mutedForeground} />
-            <Text style={[styles.scanHintText, { color: colors.mutedForeground }]}>
-              Scan to pay via any UPI app
-            </Text>
-          </View>
-        </View>
-
-        {/* Amount */}
-        <View style={[styles.amountCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.amountLabel, { color: colors.mutedForeground }]}>
-            Request specific amount (optional)
-          </Text>
-          <View style={styles.amountRow}>
-            <Text style={[styles.rupeeSign, { color: colors.text }]}>₹</Text>
-            <TextInput
-              style={[styles.amountInput, { color: colors.text }]}
-              placeholder="0"
-              placeholderTextColor={colors.textTertiary}
-              keyboardType="decimal-pad"
-              value={amount}
-              onChangeText={setAmount}
-              selectionColor={colors.primary}
-            />
-          </View>
-        </View>
-
-        {/* UPI Apps */}
-        <View style={styles.appsRow}>
-          {["GPay", "PhonePe", "Paytm", "BHIM"].map((app) => (
-            <View key={app} style={[styles.appChip, { backgroundColor: colors.surface }]}>
-              <Text style={[styles.appChipText, { color: colors.mutedForeground }]}>{app}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* Share Button */}
-        <TouchableOpacity style={styles.shareBtn} onPress={handleShare} activeOpacity={0.85}>
-          <LinearGradient
-            colors={["#FF6B00", "#FF9240"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.shareBtnGrad}
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
-            <Feather name="share-2" size={18} color="#fff" />
-            <Text style={styles.shareBtnText}>Share Payment Link</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
-    </View>
+            <View style={[styles.content, { paddingBottom: bottomPad + 24 }]}>
+              {/* QR Card */}
+              <View style={[styles.qrCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Text style={[styles.cardName, { color: colors.text }]}>
+                  {user?.name ?? "Aryan Sharma"}
+                </Text>
+                <Text style={[styles.cardUpi, { color: colors.mutedForeground }]}>{upiId}</Text>
+
+                <View style={[styles.qrContainer, { backgroundColor: "#fff", borderRadius: 16 }]}>
+                  <QRPattern />
+                  <View style={styles.qrCenter}>
+                    <LinearGradient colors={["#FF6B00", "#FF9240"]} style={styles.qrLogo}>
+                      <Feather name="layers" size={16} color="#fff" />
+                    </LinearGradient>
+                  </View>
+                </View>
+
+                <View style={styles.scanHint}>
+                  <Feather name="maximize" size={14} color={colors.mutedForeground} />
+                  <Text style={[styles.scanHintText, { color: colors.mutedForeground }]}>
+                    Scan to pay via any UPI app
+                  </Text>
+                </View>
+              </View>
+
+              {/* Amount */}
+              <View style={[styles.amountCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Text style={[styles.amountLabel, { color: colors.mutedForeground }]}>
+                  Request specific amount (optional)
+                </Text>
+                <View style={styles.amountRow}>
+                  <Text style={[styles.rupeeSign, { color: colors.text }]}>₹</Text>
+                  <TextInput
+                    style={[styles.amountInput, { color: colors.text }]}
+                    placeholder="0"
+                    placeholderTextColor={colors.textTertiary}
+                    keyboardType="decimal-pad"
+                    value={amount}
+                    onChangeText={setAmount}
+                    selectionColor={colors.primary}
+                  />
+                </View>
+              </View>
+
+              {/* UPI Apps */}
+              <View style={styles.appsRow}>
+                {["GPay", "PhonePe", "Paytm", "BHIM"].map((app) => (
+                  <View key={app} style={[styles.appChip, { backgroundColor: colors.surface }]}>
+                    <Text style={[styles.appChipText, { color: colors.mutedForeground }]}>{app}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* Share Button */}
+              <TouchableOpacity style={styles.shareBtn} onPress={handleShare} activeOpacity={0.85}>
+                <LinearGradient
+                  colors={["#FF6B00", "#FF9240"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.shareBtnGrad}
+                >
+                  <Feather name="share-2" size={18} color="#fff" />
+                  <Text style={styles.shareBtnText}>Share Payment Link</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </View>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  scrollContent: {
+    flexGrow: 1,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -178,10 +198,10 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 18, fontWeight: "700" },
   content: {
-    flex: 1,
     paddingHorizontal: 20,
     alignItems: "center",
     gap: 16,
+    width: "100%",
   },
   qrCard: {
     width: "100%",

@@ -25,6 +25,7 @@ interface WalletContextType {
   toggleFreeze: (id: string) => void;
   upiAccounts: UPIAccount[];
   setPrimaryUPI: (id: string) => void;
+  addUPIAccount: (u: UPIAccount) => void;
   transactions: Transaction[];
   addTransaction: (t: Transaction) => void;
   documents: VaultDocument[];
@@ -55,6 +56,7 @@ const WalletContext = createContext<WalletContextType>({
   toggleFreeze: () => {},
   upiAccounts: [],
   setPrimaryUPI: () => {},
+  addUPIAccount: () => {},
   transactions: [],
   addTransaction: () => {},
   documents: [],
@@ -226,6 +228,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const removeCard = (id: string) => { const next = cards.filter((c) => c.id !== id); setCards(next); save(KEYS.cards, next); };
   const toggleFreeze = (id: string) => { const next = cards.map((c) => c.id === id ? { ...c, frozen: !c.frozen } : c); setCards(next); save(KEYS.cards, next); };
   const setPrimaryUPI = (id: string) => { const next = upiAccounts.map((u) => ({ ...u, primary: u.id === id })); setUpiAccounts(next); save(KEYS.upi, next); };
+  const addUPIAccount = (u: UPIAccount) => { const next = [...upiAccounts, u]; setUpiAccounts(next); save(KEYS.upi, next); };
   const addTransaction = (t: Transaction) => { const next = [t, ...transactions]; setTransactions(next); save(KEYS.transactions, next); };
   const addDocument = (d: VaultDocument) => { const next = [d, ...documents]; setDocuments(next); save(KEYS.documents, next); };
   const removeDocument = (id: string) => { const next = documents.filter((d) => d.id !== id); setDocuments(next); save(KEYS.documents, next); };
@@ -242,7 +245,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     <WalletContext.Provider value={{
       balance, setBalance, spendableBalance, totalReserved,
       cards, addCard, removeCard, toggleFreeze,
-      upiAccounts, setPrimaryUPI,
+      upiAccounts, setPrimaryUPI, addUPIAccount,
       transactions, addTransaction,
       documents, addDocument, removeDocument,
       tickets, rewards, notifications, markRead, unreadCount,

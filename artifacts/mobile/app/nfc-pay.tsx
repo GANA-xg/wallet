@@ -11,6 +11,9 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  KeyboardAvoidingView,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -146,132 +149,139 @@ export default function NFCPayScreen() {
       : null;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: topPad + 16 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
-          <Feather name="x" size={22} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>NFC Pay</Text>
-        <View style={{ width: 38 }} />
-      </View>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={{ flex: 1 }}>
+          <View style={[styles.header, { paddingTop: topPad + 16 }]}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
+              <Feather name="x" size={22} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>NFC Pay</Text>
+            <View style={{ width: 38 }} />
+          </View>
 
-      {(step === "ready" || step === "tapped") && (
-        <View style={styles.content}>
-          <Text style={[styles.merchantLabel, { color: colors.mutedForeground }]}>PAYING TO</Text>
-          <Text style={[styles.merchantName, { color: colors.text }]}>{NFC_MERCHANT.name}</Text>
+          {(step === "ready" || step === "tapped") && (
+            <View style={styles.content}>
+              <Text style={[styles.merchantLabel, { color: colors.mutedForeground }]}>PAYING TO</Text>
+              <Text style={[styles.merchantName, { color: colors.text }]}>{NFC_MERCHANT.name}</Text>
 
-          <View style={styles.nfcArea}>
-            <Animated.View style={{ transform: [{ scale: tapScale }] }}>
-              <PulseRing anim={pulse1} size={260} />
-              <PulseRing anim={pulse2} size={210} />
-              <PulseRing anim={pulse3} size={160} />
+              <View style={styles.nfcArea}>
+                <Animated.View style={{ transform: [{ scale: tapScale }] }}>
+                  <PulseRing anim={pulse1} size={260} />
+                  <PulseRing anim={pulse2} size={210} />
+                  <PulseRing anim={pulse3} size={160} />
+                  <TouchableOpacity
+                    style={[styles.nfcCircle, { backgroundColor: step === "tapped" ? "#FF6B00" : "#171A21" }]}
+                    onPress={handleTap}
+                    activeOpacity={0.8}
+                  >
+                    <Feather name="wifi" size={52} color={step === "tapped" ? "#fff" : "#FF6B00"} />
+                  </TouchableOpacity>
+                </Animated.View>
+              </View>
+
+              <Text style={[styles.tapInstr, { color: colors.text }]}>
+                {step === "tapped" ? "Authenticating…" : "Tap to simulate NFC"}
+              </Text>
+              <Text style={[styles.tapSub, { color: colors.mutedForeground }]}>
+                NFC reads merchant UPI details, then launches your UPI app
+              </Text>
+            </View>
+          )}
+
+          {step === "biometric" && (
+            <View style={styles.content}>
+              <View style={[styles.bioCircle, { backgroundColor: "#FF6B0015", borderColor: "#FF6B00" }]}>
+                <Feather name="cpu" size={52} color="#FF6B00" />
+              </View>
+              <Text style={[styles.bioTitle, { color: colors.text }]}>Biometric Verification</Text>
+              <Text style={[styles.bioSub, { color: colors.mutedForeground }]}>
+                Confirm before launching payment in your UPI app
+              </Text>
+            </View>
+          )}
+
+          {step === "amount" && (
+            <View style={styles.content}>
+              <View style={[styles.detectedBadge, { backgroundColor: "#22C55E15" }]}>
+                <Feather name="check-circle" size={14} color="#22C55E" />
+                <Text style={[styles.detectedText, { color: "#22C55E" }]}>NFC Connected · {NFC_MERCHANT.name}</Text>
+              </View>
+
+              <Text style={[styles.amountLabel, { color: colors.mutedForeground }]}>ENTER AMOUNT</Text>
+
+              <View style={styles.amountRow}>
+                <Text style={[styles.rupeeSign, { color: colors.text }]}>₹</Text>
+                <TextInput
+                  style={[styles.amountInput, { color: colors.text }]}
+                  value={amount}
+                  onChangeText={setAmount}
+                  keyboardType="decimal-pad"
+                  autoFocus
+                  selectionColor="#FF6B00"
+                />
+              </View>
+
+              <View style={styles.quickAmountsRow}>
+                {["50", "100", "250", "500"].map((a) => (
+                  <TouchableOpacity
+                    key={a}
+                    style={[styles.quickAmtChip, { backgroundColor: amount === a ? "#FF6B00" : colors.surface }]}
+                    onPress={() => setAmount(a)}
+                  >
+                    <Text style={[styles.quickAmtText, { color: amount === a ? "#fff" : colors.mutedForeground }]}>
+                      ₹{a}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
               <TouchableOpacity
-                style={[styles.nfcCircle, { backgroundColor: step === "tapped" ? "#FF6B00" : "#171A21" }]}
-                onPress={handleTap}
-                activeOpacity={0.8}
+                style={styles.confirmBtn}
+                onPress={handleConfirmAmount}
+                disabled={!amount || Number.parseFloat(amount) <= 0}
               >
-                <Feather name="wifi" size={52} color={step === "tapped" ? "#fff" : "#FF6B00"} />
+                <LinearGradient colors={["#FF6B00", "#FF9240"]} style={styles.confirmBtnGrad}>
+                  <Text style={styles.confirmBtnText}>Choose UPI App</Text>
+                  <Feather name="arrow-right" size={18} color="#fff" />
+                </LinearGradient>
               </TouchableOpacity>
-            </Animated.View>
-          </View>
+            </View>
+          )}
 
-          <Text style={[styles.tapInstr, { color: colors.text }]}>
-            {step === "tapped" ? "Authenticating…" : "Tap to simulate NFC"}
-          </Text>
-          <Text style={[styles.tapSub, { color: colors.mutedForeground }]}>
-            NFC reads merchant UPI details, then launches your UPI app
-          </Text>
-        </View>
-      )}
+          {step === "launch" && launchRequest && (
+            <View style={[styles.launchContent, { paddingBottom: bottomPad + 24 }]}>
+              <PaymentAppButtons request={launchRequest} onLaunched={handleLaunched} />
+            </View>
+          )}
 
-      {step === "biometric" && (
-        <View style={styles.content}>
-          <View style={[styles.bioCircle, { backgroundColor: "#FF6B0015", borderColor: "#FF6B00" }]}>
-            <Feather name="cpu" size={52} color="#FF6B00" />
-          </View>
-          <Text style={[styles.bioTitle, { color: colors.text }]}>Biometric Verification</Text>
-          <Text style={[styles.bioSub, { color: colors.mutedForeground }]}>
-            Confirm before launching payment in your UPI app
-          </Text>
-        </View>
-      )}
-
-      {step === "amount" && (
-        <View style={styles.content}>
-          <View style={[styles.detectedBadge, { backgroundColor: "#22C55E15" }]}>
-            <Feather name="check-circle" size={14} color="#22C55E" />
-            <Text style={[styles.detectedText, { color: "#22C55E" }]}>NFC Connected · {NFC_MERCHANT.name}</Text>
-          </View>
-
-          <Text style={[styles.amountLabel, { color: colors.mutedForeground }]}>ENTER AMOUNT</Text>
-
-          <View style={styles.amountRow}>
-            <Text style={[styles.rupeeSign, { color: colors.text }]}>₹</Text>
-            <TextInput
-              style={[styles.amountInput, { color: colors.text }]}
-              value={amount}
-              onChangeText={setAmount}
-              keyboardType="decimal-pad"
-              autoFocus
-              selectionColor="#FF6B00"
-            />
-          </View>
-
-          <View style={styles.quickAmountsRow}>
-            {["50", "100", "250", "500"].map((a) => (
-              <TouchableOpacity
-                key={a}
-                style={[styles.quickAmtChip, { backgroundColor: amount === a ? "#FF6B00" : colors.surface }]}
-                onPress={() => setAmount(a)}
-              >
-                <Text style={[styles.quickAmtText, { color: amount === a ? "#fff" : colors.mutedForeground }]}>
-                  ₹{a}
-                </Text>
+          {step === "launched" && launchedApp && (
+            <View style={styles.content}>
+              <View style={[styles.launchedIcon, { backgroundColor: "#22C55E20" }]}>
+                <Feather name="external-link" size={40} color="#22C55E" />
+              </View>
+              <Text style={[styles.successTitle, { color: colors.text }]}>Payment Launched</Text>
+              <Text style={[styles.successAmount, { color: "#22C55E" }]}>
+                ₹{Number.parseFloat(amount).toLocaleString("en-IN")}
+              </Text>
+              <Text style={[styles.successMerchant, { color: colors.mutedForeground }]}>
+                Complete in {launchedApp === "google_pay" ? "Google Pay" : launchedApp === "phonepe" ? "PhonePe" : "Paytm"}
+              </Text>
+              <TouchableOpacity style={styles.doneBtn} onPress={() => router.back()}>
+                <LinearGradient colors={["#FF6B00", "#FF9240"]} style={styles.doneBtnGrad}>
+                  <Text style={styles.doneBtnText}>Done</Text>
+                </LinearGradient>
               </TouchableOpacity>
-            ))}
-          </View>
+            </View>
+          )}
 
-          <TouchableOpacity
-            style={styles.confirmBtn}
-            onPress={handleConfirmAmount}
-            disabled={!amount || Number.parseFloat(amount) <= 0}
-          >
-            <LinearGradient colors={["#FF6B00", "#FF9240"]} style={styles.confirmBtnGrad}>
-              <Text style={styles.confirmBtnText}>Choose UPI App</Text>
-              <Feather name="arrow-right" size={18} color="#fff" />
-            </LinearGradient>
-          </TouchableOpacity>
+          <View style={{ paddingBottom: bottomPad + 16 }} />
         </View>
-      )}
-
-      {step === "launch" && launchRequest && (
-        <View style={[styles.launchContent, { paddingBottom: bottomPad + 24 }]}>
-          <PaymentAppButtons request={launchRequest} onLaunched={handleLaunched} />
-        </View>
-      )}
-
-      {step === "launched" && launchedApp && (
-        <View style={styles.content}>
-          <View style={[styles.launchedIcon, { backgroundColor: "#22C55E20" }]}>
-            <Feather name="external-link" size={40} color="#22C55E" />
-          </View>
-          <Text style={[styles.successTitle, { color: colors.text }]}>Payment Launched</Text>
-          <Text style={[styles.successAmount, { color: "#22C55E" }]}>
-            ₹{Number.parseFloat(amount).toLocaleString("en-IN")}
-          </Text>
-          <Text style={[styles.successMerchant, { color: colors.mutedForeground }]}>
-            Complete in {launchedApp === "google_pay" ? "Google Pay" : launchedApp === "phonepe" ? "PhonePe" : "Paytm"}
-          </Text>
-          <TouchableOpacity style={styles.doneBtn} onPress={() => router.back()}>
-            <LinearGradient colors={["#FF6B00", "#FF9240"]} style={styles.doneBtnGrad}>
-              <Text style={styles.doneBtnText}>Done</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      <View style={{ paddingBottom: bottomPad + 16 }} />
-    </View>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 

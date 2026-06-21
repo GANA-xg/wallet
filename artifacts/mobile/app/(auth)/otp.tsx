@@ -9,8 +9,13 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  KeyboardAvoidingView,
+  TouchableWithoutFeedback,
+  Keyboard,
+  ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { useAuth } from "@/context/AuthContext";
 import type { VaultUser } from "@/types";
@@ -25,6 +30,7 @@ export default function OTP() {
   const [resendTimer, setResendTimer] = useState(30);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<TextInput>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -36,6 +42,20 @@ export default function OTP() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      () => {
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 80);
+      }
+    );
+    return () => {
+      showSubscription.remove();
+    };
+  }, []);
+
   const handleVerify = async () => {
     if (otp.length !== OTP_LENGTH) {
       setError("Enter the 6-digit OTP");
@@ -44,16 +64,26 @@ export default function OTP() {
     setLoading(true);
     await new Promise((r) => setTimeout(r, 800));
 
-    const user: VaultUser = {
-      id: Date.now().toString(),
-      name: "Aryan Sharma",
-      phone: pendingPhone || "9876543210",
-      balance: 128420,
-      upiLite: 1500,
-    };
+    const normalizedPhone = pendingPhone || "9876543210";
+    
+    // Check if the user is registered in AsyncStorage
+    const registeredUserRaw = await AsyncStorage.getItem(`@vault_user_profile_${normalizedPhone}`);
+    if (registeredUserRaw || normalizedPhone === "9876543210") {
+      const user: VaultUser = registeredUserRaw
+        ? JSON.parse(registeredUserRaw)
+        : {
+            id: "default_aryan",
+            name: "Aryan Sharma",
+            phone: "9876543210",
+            balance: 128420,
+            upiLite: 1500,
+          };
 
-    await login(user);
-    router.replace("/(tabs)");
+      await login(user);
+      router.replace("/(tabs)");
+    } else {
+      router.push("/(auth)/register" as any);
+    }
     setLoading(false);
   };
 
@@ -62,86 +92,104 @@ export default function OTP() {
     : "+91 98765 43210";
 
   return (
-    <View style={[styles.container, { paddingTop: topPad, paddingBottom: bottomPad }]}>
-      <TouchableOpacity style={styles.back} onPress={() => router.back()}>
-        <Feather name="arrow-left" size={22} color="#fff" />
-      </TouchableOpacity>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.container}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={{ flex: 1 }}>
+          <ScrollView
+            ref={scrollViewRef}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={[styles.innerContent, { paddingTop: topPad, paddingBottom: bottomPad }]}>
+              <View>
+                <TouchableOpacity style={styles.back} onPress={() => router.back()}>
+                  <Feather name="arrow-left" size={22} color="#fff" />
+                </TouchableOpacity>
 
-      <View style={styles.content}>
-        <View style={styles.iconWrap}>
-          <LinearGradient colors={["#171A21", "#1E2128"]} style={styles.iconBg}>
-            <Feather name="message-circle" size={32} color="#FF6B00" />
-          </LinearGradient>
-        </View>
+                <View style={styles.content}>
+                  <View style={styles.iconWrap}>
+                    <LinearGradient colors={["#171A21", "#1E2128"]} style={styles.iconBg}>
+                      <Feather name="message-circle" size={32} color="#FF6B00" />
+                    </LinearGradient>
+                  </View>
 
-        <Text style={styles.heading}>Verify your{"\n"}number</Text>
-        <Text style={styles.subheading}>
-          OTP sent to <Text style={styles.phone}>{displayPhone}</Text>
-        </Text>
+                  <Text style={styles.heading}>Verify your{"\n"}number</Text>
+                  <Text style={styles.subheading}>
+                    OTP sent to <Text style={styles.phone}>{displayPhone}</Text>
+                  </Text>
 
-        <TouchableOpacity style={styles.otpContainer} onPress={() => inputRef.current?.focus()}>
-          {Array.from({ length: OTP_LENGTH }).map((_, i) => (
-            <View
-              key={i}
-              style={[
-                styles.otpBox,
-                otp.length === i && styles.otpBoxActive,
-                otp.length > i && styles.otpBoxFilled,
-              ]}
-            >
-              <Text style={styles.otpChar}>{otp[i] || ""}</Text>
+                  <TouchableOpacity style={styles.otpContainer} onPress={() => inputRef.current?.focus()}>
+                    {Array.from({ length: OTP_LENGTH }).map((_, i) => (
+                      <View
+                        key={i}
+                        style={[
+                          styles.otpBox,
+                          otp.length === i && styles.otpBoxActive,
+                          otp.length > i && styles.otpBoxFilled,
+                        ]}
+                      >
+                        <Text style={styles.otpChar}>{otp[i] || ""}</Text>
+                      </View>
+                    ))}
+                  </TouchableOpacity>
+
+                  <TextInput
+                    ref={inputRef}
+                    style={styles.hiddenInput}
+                    keyboardType="number-pad"
+                    maxLength={OTP_LENGTH}
+                    value={otp}
+                    onChangeText={(t) => {
+                      setOtp(t);
+                      if (error) setError("");
+                    }}
+                    autoFocus
+                    caretHidden
+                  />
+
+                  {!!error && <Text style={styles.errorText}>{error}</Text>}
+
+                  <View style={styles.resendRow}>
+                    {resendTimer > 0 ? (
+                      <Text style={styles.resendInfo}>
+                        Resend OTP in <Text style={styles.timer}>{resendTimer}s</Text>
+                      </Text>
+                    ) : (
+                      <TouchableOpacity onPress={() => setResendTimer(30)}>
+                        <Text style={styles.resendBtn}>Resend OTP</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  <Text style={styles.hint}>Use any 6 digits to verify (demo mode)</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.btnWrap, (otp.length !== OTP_LENGTH || loading) && styles.btnDisabled]}
+                onPress={handleVerify}
+                activeOpacity={0.85}
+                disabled={otp.length !== OTP_LENGTH || loading}
+              >
+                <LinearGradient
+                  colors={otp.length === OTP_LENGTH ? ["#FF6B00", "#FF9240"] : ["#262B36", "#262B36"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.btn}
+                >
+                  <Text style={styles.btnText}>{loading ? "Verifying..." : "Verify & Continue"}</Text>
+                  {!loading && <Feather name="arrow-right" size={18} color="#fff" />}
+                </LinearGradient>
+              </TouchableOpacity>
             </View>
-          ))}
-        </TouchableOpacity>
-
-        <TextInput
-          ref={inputRef}
-          style={styles.hiddenInput}
-          keyboardType="number-pad"
-          maxLength={OTP_LENGTH}
-          value={otp}
-          onChangeText={(t) => {
-            setOtp(t);
-            if (error) setError("");
-          }}
-          autoFocus
-          caretHidden
-        />
-
-        {!!error && <Text style={styles.errorText}>{error}</Text>}
-
-        <View style={styles.resendRow}>
-          {resendTimer > 0 ? (
-            <Text style={styles.resendInfo}>
-              Resend OTP in <Text style={styles.timer}>{resendTimer}s</Text>
-            </Text>
-          ) : (
-            <TouchableOpacity onPress={() => setResendTimer(30)}>
-              <Text style={styles.resendBtn}>Resend OTP</Text>
-            </TouchableOpacity>
-          )}
+          </ScrollView>
         </View>
-
-        <Text style={styles.hint}>Use any 6 digits to verify (demo mode)</Text>
-      </View>
-
-      <TouchableOpacity
-        style={[styles.btnWrap, (otp.length !== OTP_LENGTH || loading) && styles.btnDisabled]}
-        onPress={handleVerify}
-        activeOpacity={0.85}
-        disabled={otp.length !== OTP_LENGTH || loading}
-      >
-        <LinearGradient
-          colors={otp.length === OTP_LENGTH ? ["#FF6B00", "#FF9240"] : ["#262B36", "#262B36"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.btn}
-        >
-          <Text style={styles.btnText}>{loading ? "Verifying..." : "Verify & Continue"}</Text>
-          {!loading && <Feather name="arrow-right" size={18} color="#fff" />}
-        </LinearGradient>
-      </TouchableOpacity>
-    </View>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -150,6 +198,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#0F1115",
     paddingHorizontal: 24,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  innerContent: {
+    flex: 1,
+    justifyContent: "space-between",
   },
   back: {
     marginBottom: 24,

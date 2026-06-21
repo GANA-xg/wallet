@@ -16,6 +16,7 @@ import {
   UPI_APPS,
   createPaymentRequest,
   getStoreUrl,
+  isUpiDeepLinkSupported,
   launchUpiPayment,
   openAppStore,
   type UpiAppId,
@@ -51,6 +52,14 @@ export function PaymentAppButtons({ request, onLaunched, disabled }: Props) {
     setLaunching(null);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
 
+    if (result.reason === "unsupported_platform") {
+      Alert.alert(
+        "UPI launch unavailable",
+        "UPI app deep links are not supported on iPhone while running in Expo Go. Please test this payment redirection flow on Android.",
+      );
+      return;
+    }
+
     if (result.reason === "app_not_installed") {
       const app = UPI_APPS.find((item) => item.id === appId);
       Alert.alert(
@@ -78,6 +87,13 @@ export function PaymentAppButtons({ request, onLaunched, disabled }: Props) {
       <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
         Payment opens in your UPI app — Vault never processes or stores your PIN.
       </Text>
+
+      {!isUpiDeepLinkSupported() && (
+        <Text style={[styles.platformHint, { color: colors.mutedForeground }]}>
+          UPI app launch is available on Android. iPhone Expo Go can scan and verify payment
+          details, but cannot open Android UPI deep links.
+        </Text>
+      )}
 
       {UPI_APPS.map((app) => {
         const isLoading = launching === app.id;
@@ -151,5 +167,6 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
   },
   buttonText: { color: "#fff", fontSize: 17, fontWeight: "800" },
+  platformHint: { fontSize: 12, lineHeight: 17, marginBottom: 4 },
   webHint: { fontSize: 12, textAlign: "center", marginTop: 4 },
 });
