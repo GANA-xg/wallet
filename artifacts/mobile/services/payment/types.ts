@@ -38,7 +38,11 @@ export interface UpiAppConfig {
 
 export type LaunchResult =
   | { ok: true; appId: UpiAppId }
-  | { ok: false; reason: "app_not_installed" | "invalid_request" | "launch_failed"; appId: UpiAppId };
+  | {
+      ok: false;
+      reason: "app_not_installed" | "invalid_request" | "launch_failed" | "unsupported_platform";
+      appId: UpiAppId;
+    };
 
 export interface LaunchedPaymentRecord {
   id: string;

@@ -139,6 +139,7 @@ export default function TransactionsScreen() {
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
+        keyboardDismissMode="on-drag"
         renderItem={({ item }) => (
           <TransactionItem transaction={item} />
         )}

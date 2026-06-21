@@ -16,8 +16,13 @@ export {
   validatePaymentRequest,
 } from "./PaymentLinkBuilder";
 
+export function isUpiDeepLinkSupported(): boolean {
+  return Platform.OS === "android" || Platform.OS === "web";
+}
+
 export async function canOpenUpiApp(appId: UpiAppId): Promise<boolean> {
   if (Platform.OS === "web") return true;
+  if (Platform.OS !== "android") return false;
 
   const app = getUpiApp(appId);
   if (!app) return false;
@@ -43,9 +48,13 @@ export async function launchUpiPayment(
     return { ok: false, reason: "launch_failed", appId };
   }
 
+  if (!isUpiDeepLinkSupported()) {
+    return { ok: false, reason: "unsupported_platform", appId };
+  }
+
   const deepLink = app.buildDeepLink(request);
 
-  if (Platform.OS !== "web") {
+  if (Platform.OS === "android") {
     const installed = await canOpenUpiApp(appId);
     if (!installed) {
       return { ok: false, reason: "app_not_installed", appId };
