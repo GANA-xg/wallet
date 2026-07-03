@@ -51,7 +51,7 @@ export default function RewardsScreen() {
 
       {/* Points Banner */}
       {pointsReward && (
-        <LinearGradient colors={["#FF6B00", "#FF9240"]} style={styles.pointsBanner}>
+        <LinearGradient colors={["#F4F4F5", "#D4D4D8"]} style={styles.pointsBanner}>
           <View>
             <Text style={styles.pointsLabel}>Vault Points</Text>
             <Text style={styles.pointsValue}>

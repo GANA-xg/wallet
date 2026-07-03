@@ -24,22 +24,22 @@ import type { VaultCard } from "@/types";
 const { width } = Dimensions.get("window");
 
 const CARD_GRADIENTS: [string, string][] = [
-  ["#1a1a2e", "#16213e"],
-  ["#0a1628", "#1a2f4e"],
-  ["#1a0a28", "#2e0d4e"],
-  ["#0a1a10", "#0d3318"],
-  ["#2e1a00", "#4e2d00"],
+  ["#2a2a2a", "#222222"],
+  ["#252525", "#303030"],
+  ["#202020", "#2a2a2a"],
+  ["#2b2b2b", "#1f1f1f"],
+  ["#303030", "#252525"],
 ];
 
 const CARD_TYPES: VaultCard["type"][] = ["visa", "mastercard", "rupay"];
 
 const PRESET_GRADIENTS: { colors: [string, string]; label: string }[] = [
-  { colors: ["#1a1a2e", "#16213e"], label: "Navy" },
-  { colors: ["#1a0a28", "#2e0d4e"], label: "Violet" },
-  { colors: ["#0a1a10", "#0d3318"], label: "Forest" },
-  { colors: ["#2e1a00", "#4e2d00"], label: "Ember" },
-  { colors: ["#1a0808", "#3d0f0f"], label: "Rouge" },
-  { colors: ["#0a1628", "#1a2f4e"], label: "Ocean" },
+  { colors: ["#2a2a2a", "#222222"], label: "Graphite" },
+  { colors: ["#252525", "#303030"], label: "Slate" },
+  { colors: ["#202020", "#2a2a2a"], label: "Smoke" },
+  { colors: ["#2b2b2b", "#1f1f1f"], label: "Ink" },
+  { colors: ["#303030", "#252525"], label: "Stone" },
+  { colors: ["#1f1f1f", "#2f2f2f"], label: "Charcoal" },
 ];
 
 export default function CardsScreen() {
@@ -128,11 +128,11 @@ export default function CardsScreen() {
         </View>
         <View style={styles.headerRight}>
           <TouchableOpacity
-            style={[styles.nfcBtn, { backgroundColor: "#FF6B0020" }]}
+            style={[styles.nfcBtn, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
             onPress={() => router.push("/nfc-pay")}
           >
-            <Feather name="wifi" size={16} color="#FF6B00" />
-            <Text style={[styles.nfcText, { color: "#FF6B00" }]}>NFC Pay</Text>
+            <Feather name="wifi" size={16} color={colors.primary} />
+            <Text style={[styles.nfcText, { color: colors.primary }]}>NFC Pay</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.addBtn, { backgroundColor: colors.primary }]}
@@ -171,8 +171,8 @@ export default function CardsScreen() {
               style={[styles.addMethod, { backgroundColor: colors.surface, borderColor: colors.border }]}
               onPress={() => setAddMode("custom")}
             >
-              <View style={[styles.addMethodIcon, { backgroundColor: "#FF6B0020" }]}>
-                <Feather name="edit-3" size={24} color="#FF6B00" />
+              <View style={[styles.addMethodIcon, { backgroundColor: colors.surfaceElevated }]}>
+                <Feather name="edit-3" size={24} color={colors.primary} />
               </View>
               <Text style={[styles.addMethodTitle, { color: colors.text }]}>Custom Card</Text>
               <Text style={[styles.addMethodSub, { color: colors.mutedForeground }]}>
@@ -195,7 +195,7 @@ export default function CardsScreen() {
             <Text style={styles.scanPrompt}>Position your card within the frame</Text>
           </View>
           <TouchableOpacity style={styles.scanSimBtn} onPress={simulateScan}>
-            <LinearGradient colors={["#FF6B00", "#FF9240"]} style={styles.scanSimGrad}>
+            <LinearGradient colors={[colors.primary, "#d9d9d9"]} style={styles.scanSimGrad}>
               <Feather name="zap" size={16} color="#fff" />
               <Text style={styles.scanSimText}>Simulate Scan (Demo)</Text>
             </LinearGradient>
@@ -223,7 +223,7 @@ export default function CardsScreen() {
           </LinearGradient>
 
           <Text style={[styles.creatorLabel, { color: colors.mutedForeground }]}>Bank Name</Text>
-          <View style={[styles.creatorInput, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+          <View style={[styles.creatorInput, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}> 
             <TextInput
               style={[styles.creatorInputText, { color: colors.text }]}
               value={customBank}
@@ -241,7 +241,7 @@ export default function CardsScreen() {
                 key={t}
                 style={[
                   styles.typeChip,
-                  { backgroundColor: customType === t ? colors.primary : colors.muted, borderColor: colors.border },
+                  { backgroundColor: customType === t ? colors.primary : colors.surfaceElevated, borderColor: colors.border },
                 ]}
                 onPress={() => setCustomType(t)}
               >
@@ -266,7 +266,7 @@ export default function CardsScreen() {
           </View>
 
           <TouchableOpacity style={styles.createBtn} onPress={handleAddCustom}>
-            <LinearGradient colors={["#FF6B00", "#FF9240"]} style={styles.createBtnGrad}>
+            <LinearGradient colors={[colors.primary, "#d9d9d9"]} style={styles.createBtnGrad}>
               <Text style={styles.createBtnText}>Add to Wallet</Text>
             </LinearGradient>
           </TouchableOpacity>
@@ -282,8 +282,8 @@ export default function CardsScreen() {
         style={[styles.transportTeaser, { backgroundColor: colors.surface, borderColor: colors.border }]}
         onPress={() => router.push("/transport")}
       >
-        <View style={[styles.transportIcon, { backgroundColor: "#22C55E20" }]}>
-          <Feather name="map" size={20} color="#22C55E" />
+        <View style={[styles.transportIcon, { backgroundColor: colors.surfaceElevated }]}> 
+          <Feather name="map" size={20} color={colors.success} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[styles.transportTitle, { color: colors.text }]}>Transport Wallet</Text>
@@ -325,10 +325,10 @@ const styles = StyleSheet.create({
     gap: 12,
     position: "relative",
   },
-  scanCornerTL: { position: "absolute", top: 12, left: 12, width: 24, height: 24, borderTopWidth: 3, borderLeftWidth: 3, borderColor: "#FF6B00", borderRadius: 4 },
-  scanCornerTR: { position: "absolute", top: 12, right: 12, width: 24, height: 24, borderTopWidth: 3, borderRightWidth: 3, borderColor: "#FF6B00", borderRadius: 4 },
-  scanCornerBL: { position: "absolute", bottom: 12, left: 12, width: 24, height: 24, borderBottomWidth: 3, borderLeftWidth: 3, borderColor: "#FF6B00", borderRadius: 4 },
-  scanCornerBR: { position: "absolute", bottom: 12, right: 12, width: 24, height: 24, borderBottomWidth: 3, borderRightWidth: 3, borderColor: "#FF6B00", borderRadius: 4 },
+  scanCornerTL: { position: "absolute", top: 12, left: 12, width: 24, height: 24, borderTopWidth: 3, borderLeftWidth: 3, borderColor: "#F4F4F5", borderRadius: 4 },
+  scanCornerTR: { position: "absolute", top: 12, right: 12, width: 24, height: 24, borderTopWidth: 3, borderRightWidth: 3, borderColor: "#F4F4F5", borderRadius: 4 },
+  scanCornerBL: { position: "absolute", bottom: 12, left: 12, width: 24, height: 24, borderBottomWidth: 3, borderLeftWidth: 3, borderColor: "#F4F4F5", borderRadius: 4 },
+  scanCornerBR: { position: "absolute", bottom: 12, right: 12, width: 24, height: 24, borderBottomWidth: 3, borderRightWidth: 3, borderColor: "#F4F4F5", borderRadius: 4 },
   scanPrompt: { color: "rgba(255,255,255,0.5)", fontSize: 12, textAlign: "center" },
   scanSimBtn: { width: "100%", borderRadius: 14, overflow: "hidden" },
   scanSimGrad: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, paddingVertical: 14 },

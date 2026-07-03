@@ -22,7 +22,7 @@ const SLIDES = [
     icon: "layers" as const,
     title: "Your Wallet,\nReinvented",
     subtitle: "One premium wallet for all your cards, UPI, and money — designed with intention.",
-    gradient: ["#FF6B00", "#FF4500"] as [string, string],
+    gradient: ["#F4F4F5", "#D4D4D8"] as [string, string],
   },
   {
     id: 2,
@@ -104,7 +104,7 @@ export default function Onboarding() {
 
         <TouchableOpacity style={styles.btn} onPress={handleNext} activeOpacity={0.85}>
           <LinearGradient
-            colors={["#FF6B00", "#FF9240"]}
+            colors={["#F4F4F5", "#D4D4D8"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.btnGradient}
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   },
   dotActive: {
     width: 24,
-    backgroundColor: "#FF6B00",
+    backgroundColor: "#F4F4F5",
   },
   btn: {
     borderRadius: 16,

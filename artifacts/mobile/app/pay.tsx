@@ -3,7 +3,7 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Platform,
   ScrollView,
@@ -31,7 +31,15 @@ export default function PayScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { verifyBiometric } = useAuth();
-  const { addTransaction } = useWallet();
+  const {
+    addTransaction,
+    spendableBalance,
+    getPaymentPreview,
+    canAffordPayment,
+    createPaymentHold,
+    releasePaymentHold,
+    commitPaymentHold,
+  } = useWallet();
   const [permission, requestPermission] = useCameraPermissions();
 
   const [step, setStep] = useState<Step>("scan");
@@ -40,7 +48,18 @@ export default function PayScreen() {
   const [note, setNote] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [launchedApp, setLaunchedApp] = useState<UpiAppId | null>(null);
+  const [holdId, setHoldId] = useState<string | null>(null);
   const scannedRef = useRef(false);
+
+  const amountValue = Number.parseFloat(amount);
+  const hasAmount = Number.isFinite(amountValue) && amountValue > 0;
+  const paymentPreview = hasAmount ? getPaymentPreview(amountValue) : null;
+
+  useEffect(() => {
+    return () => {
+      if (holdId) releasePaymentHold(holdId);
+    };
+  }, [holdId, releasePaymentHold]);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -76,6 +95,10 @@ export default function PayScreen() {
       setErrorMsg("Enter a valid amount");
       return;
     }
+    if (!canAffordPayment(amt)) {
+      setErrorMsg(`You only have ₹${spendableBalance.toLocaleString("en-IN")} available right now.`);
+      return;
+    }
 
     setErrorMsg("");
     const ok = await verifyBiometric();
@@ -84,8 +107,29 @@ export default function PayScreen() {
       return;
     }
 
+    const hold = createPaymentHold({
+      amount: amt,
+      merchant: parsedQr.payeeName ?? parsedQr.payeeAddress,
+      payeeAddress: parsedQr.payeeAddress,
+      note,
+    });
+    if (!hold) {
+      setErrorMsg(`You only have ₹${spendableBalance.toLocaleString("en-IN")} available right now.`);
+      return;
+    }
+    setHoldId(hold.id);
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setStep("launch");
+  };
+
+  const handleLaunchFailed = () => {
+    if (holdId) {
+      releasePaymentHold(holdId);
+      setHoldId(null);
+    }
+    setStep("details");
+    setErrorMsg("Payment launch failed. Your funds were released.");
   };
 
   const handleLaunched = (appId: UpiAppId) => {
@@ -107,7 +151,12 @@ export default function PayScreen() {
       launchedVia: appId,
     };
 
-    addTransaction(tx);
+    if (holdId) {
+      commitPaymentHold(holdId, tx);
+      setHoldId(null);
+    } else {
+      addTransaction(tx);
+    }
     setLaunchedApp(appId);
     setStep("launched");
   };
@@ -183,7 +232,7 @@ export default function PayScreen() {
           )}
 
           <TouchableOpacity style={styles.demoBtn} onPress={handleSimulateScan}>
-            <LinearGradient colors={["#FF6B00", "#FF9240"]} style={styles.demoBtnGrad}>
+            <LinearGradient colors={["#F4F4F5", "#D4D4D8"]} style={styles.demoBtnGrad}>
               <Feather name="maximize" size={18} color="#fff" />
               <Text style={styles.demoBtnText}>Simulate UPI QR Scan (Demo)</Text>
             </LinearGradient>
@@ -207,8 +256,8 @@ export default function PayScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={[styles.merchantCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <View style={[styles.merchantIcon, { backgroundColor: "#FF6B0015" }]}>
-              <Feather name="shopping-bag" size={22} color="#FF6B00" />
+            <View style={[styles.merchantIcon, { backgroundColor: "#F4F4F515" }]}> 
+              <Feather name="shopping-bag" size={22} color="#F4F4F5" />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.merchantLabel, { color: colors.mutedForeground }]}>MERCHANT</Text>
@@ -237,8 +286,31 @@ export default function PayScreen() {
                   onChangeText={setAmount}
                   keyboardType="decimal-pad"
                   editable={step === "details"}
-                  selectionColor="#FF6B00"
+                  selectionColor={colors.primary}
                 />
+              </View>
+              <Text style={[styles.remainingText, { color: colors.mutedForeground }]}> 
+                {paymentPreview
+                  ? `Remaining after payment: ₹${paymentPreview.remainingSpendable.toLocaleString("en-IN")}`
+                  : `Available to spend: ₹${spendableBalance.toLocaleString("en-IN")}`}
+              </Text>
+
+              <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+                <View style={styles.summaryRow}>
+                  <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>Merchant</Text>
+                  <Text style={[styles.summaryValue, { color: colors.text }]}>{parsedQr.payeeName ?? parsedQr.payeeAddress}</Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>Amount</Text>
+                  <Text style={[styles.summaryValue, { color: colors.text }]}>₹{amountValue.toLocaleString("en-IN") || "0"}</Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>After hold</Text>
+                  <Text style={[styles.summaryValue, { color: colors.text }]}>
+                    ₹{paymentPreview?.remainingSpendable.toLocaleString("en-IN") ?? spendableBalance.toLocaleString("en-IN")}
+                  </Text>
+                </View>
+                <Text style={[styles.summaryNote, { color: colors.mutedForeground }]}>Funds are reserved before launch. If launch fails, the hold is released.</Text>
               </View>
 
               <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>NOTES</Text>
@@ -251,7 +323,7 @@ export default function PayScreen() {
                   value={note}
                   onChangeText={setNote}
                   editable={step === "details"}
-                  selectionColor="#FF6B00"
+                  selectionColor={colors.primary}
                 />
               </View>
 
@@ -266,11 +338,11 @@ export default function PayScreen() {
 
           {step === "details" && (
             <TouchableOpacity
-              style={[styles.continueBtn, { opacity: amount ? 1 : 0.5 }]}
+              style={[styles.continueBtn, { opacity: hasAmount && canAffordPayment(amountValue) ? 1 : 0.5 }]}
               onPress={handleContinueToLaunch}
-              disabled={!amount}
+              disabled={!hasAmount || !canAffordPayment(amountValue)}
             >
-              <LinearGradient colors={["#FF6B00", "#FF9240"]} style={styles.continueBtnGrad}>
+              <LinearGradient colors={[colors.primary, colors.primaryLight]} style={styles.continueBtnGrad}>
                 <Feather name="shield" size={18} color="#fff" />
                 <Text style={styles.continueBtnText}>Verify & Choose UPI App</Text>
               </LinearGradient>
@@ -278,7 +350,7 @@ export default function PayScreen() {
           )}
 
           {step === "launch" && launchRequest && (
-            <PaymentAppButtons request={launchRequest} onLaunched={handleLaunched} />
+              <PaymentAppButtons request={launchRequest} onLaunched={handleLaunched} onLaunchFailed={handleLaunchFailed} />
           )}
 
           {step === "launched" && launchedApp && (
@@ -293,7 +365,7 @@ export default function PayScreen() {
                 Vault recorded this launch in your history.
               </Text>
               <TouchableOpacity style={styles.doneBtn} onPress={() => router.back()}>
-                <LinearGradient colors={["#FF6B00", "#FF9240"]} style={styles.doneBtnGrad}>
+                <LinearGradient colors={["#F4F4F5", "#D4D4D8"]} style={styles.doneBtnGrad}>
                   <Text style={styles.doneBtnText}>Done</Text>
                 </LinearGradient>
               </TouchableOpacity>
@@ -340,7 +412,7 @@ const styles = StyleSheet.create({
     height: 36,
     borderTopWidth: 4,
     borderLeftWidth: 4,
-    borderColor: "#FF6B00",
+    borderColor: "#F4F4F5",
     borderRadius: 6,
   },
   scanCornerTR: {
@@ -351,7 +423,7 @@ const styles = StyleSheet.create({
     height: 36,
     borderTopWidth: 4,
     borderRightWidth: 4,
-    borderColor: "#FF6B00",
+    borderColor: "#F4F4F5",
     borderRadius: 6,
   },
   scanCornerBL: {
@@ -362,7 +434,7 @@ const styles = StyleSheet.create({
     height: 36,
     borderBottomWidth: 4,
     borderLeftWidth: 4,
-    borderColor: "#FF6B00",
+    borderColor: "#F4F4F5",
     borderRadius: 6,
   },
   scanCornerBR: {
@@ -373,7 +445,7 @@ const styles = StyleSheet.create({
     height: 36,
     borderBottomWidth: 4,
     borderRightWidth: 4,
-    borderColor: "#FF6B00",
+    borderColor: "#F4F4F5",
     borderRadius: 6,
   },
   cameraPlaceholder: {
@@ -389,7 +461,7 @@ const styles = StyleSheet.create({
   placeholderText: { fontSize: 14, textAlign: "center", lineHeight: 20 },
   permissionBtn: {
     marginTop: 8,
-    backgroundColor: "#FF6B00",
+    backgroundColor: "#F4F4F5",
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
@@ -458,6 +530,19 @@ const styles = StyleSheet.create({
   input: { flex: 1, fontSize: 15 },
   errorRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8 },
   errorText: { color: "#EF4444", fontSize: 13 },
+  remainingText: { fontSize: 13, textAlign: "center", marginBottom: 4 },
+  summaryCard: {
+    width: "100%",
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
+    gap: 8,
+    marginBottom: 4,
+  },
+  summaryRow: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
+  summaryLabel: { fontSize: 12, fontWeight: "600" },
+  summaryValue: { fontSize: 12, fontWeight: "700", flexShrink: 1, textAlign: "right" },
+  summaryNote: { fontSize: 12, lineHeight: 18, marginTop: 2 },
   continueBtn: { borderRadius: 16, overflow: "hidden", marginTop: 24 },
   continueBtnGrad: {
     flexDirection: "row",

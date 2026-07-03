@@ -113,7 +113,7 @@ export default function OTP() {
                 <View style={styles.content}>
                   <View style={styles.iconWrap}>
                     <LinearGradient colors={["#171A21", "#1E2128"]} style={styles.iconBg}>
-                      <Feather name="message-circle" size={32} color="#FF6B00" />
+                      <Feather name="message-circle" size={32} color="#F4F4F5" />
                     </LinearGradient>
                   </View>
 
@@ -176,7 +176,7 @@ export default function OTP() {
                 disabled={otp.length !== OTP_LENGTH || loading}
               >
                 <LinearGradient
-                  colors={otp.length === OTP_LENGTH ? ["#FF6B00", "#FF9240"] : ["#262B36", "#262B36"]}
+                  colors={otp.length === OTP_LENGTH ? ["#F4F4F5", "#D4D4D8"] : ["#262B36", "#262B36"]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.btn}
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   phone: {
-    color: "#FF6B00",
+    color: "#F4F4F5",
     fontWeight: "600",
   },
   otpContainer: {
@@ -256,11 +256,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   otpBoxActive: {
-    borderColor: "#FF6B00",
+    borderColor: "#F4F4F5",
     backgroundColor: "#1a1208",
   },
   otpBoxFilled: {
-    borderColor: "#FF6B00",
+    borderColor: "#F4F4F5",
   },
   otpChar: {
     color: "#fff",
@@ -285,11 +285,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   timer: {
-    color: "#FF6B00",
+    color: "#F4F4F5",
     fontWeight: "700",
   },
   resendBtn: {
-    color: "#FF6B00",
+    color: "#F4F4F5",
     fontSize: 14,
     fontWeight: "700",
   },

@@ -1,6 +1,5 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { LinearGradient } from "expo-linear-gradient";
 import React, { useRef, useState } from "react";
 import {
   Animated,
@@ -49,6 +48,7 @@ interface CardItemProps {
 }
 
 function CardItem({ card, index, totalCards, expandedAnim, isSelected, onSelect, onDeselect }: CardItemProps) {
+  const colors = useColors();
   const [showCVV, setShowCVV] = useState(false);
 
   const topAnim = expandedAnim.interpolate({
@@ -80,49 +80,50 @@ function CardItem({ card, index, totalCards, expandedAnim, isSelected, onSelect,
         }}
         activeOpacity={0.95}
       >
-        <LinearGradient
-          colors={card.gradientColors as [string, string]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.card, isSelected && styles.cardSelected]}
+        <View
+          style={[
+            styles.card,
+            { backgroundColor: colors.surface, borderColor: isSelected ? colors.primary : colors.border },
+            isSelected && styles.cardSelected,
+          ]}
         >
           {card.frozen && (
             <View style={styles.frozenBanner}>
-              <Feather name="lock" size={11} color="#fff" />
-              <Text style={styles.frozenText}>FROZEN</Text>
+              <Feather name="lock" size={11} color={colors.text} />
+              <Text style={[styles.frozenText, { color: colors.text }]}>FROZEN</Text>
             </View>
           )}
 
           <View style={styles.cardTop}>
-            <Text style={styles.bankName}>{card.bank}</Text>
+            <Text style={[styles.bankName, { color: colors.text }]}>{card.bank}</Text>
             <CardTypeLogo type={card.type} />
           </View>
 
-          <View style={styles.chip} />
-          <Text style={styles.cardNum}>{maskNumber(card.number)}</Text>
+          <View style={[styles.chip, { backgroundColor: colors.primary + "12", borderColor: colors.border }]} />
+          <Text style={[styles.cardNum, { color: colors.text }]}>{maskNumber(card.number)}</Text>
 
           <View style={styles.cardBottom}>
             <View>
-              <Text style={styles.cardLabel}>CARD HOLDER</Text>
-              <Text style={styles.cardValue}>{card.name}</Text>
+              <Text style={[styles.cardLabel, { color: colors.mutedForeground }]}>CARD HOLDER</Text>
+              <Text style={[styles.cardValue, { color: colors.text }]}>{card.name}</Text>
             </View>
             <View>
-              <Text style={styles.cardLabel}>EXPIRES</Text>
-              <Text style={styles.cardValue}>{card.expiry}</Text>
+              <Text style={[styles.cardLabel, { color: colors.mutedForeground }]}>EXPIRES</Text>
+              <Text style={[styles.cardValue, { color: colors.text }]}>{card.expiry}</Text>
             </View>
             <View>
-              <Text style={styles.cardLabel}>CVV</Text>
+              <Text style={[styles.cardLabel, { color: colors.mutedForeground }]}>CVV</Text>
               <TouchableOpacity onPress={() => setShowCVV(!showCVV)}>
-                <Text style={styles.cardValue}>{showCVV ? card.cvv : "•••"}</Text>
+                <Text style={[styles.cardValue, { color: colors.text }]}>{showCVV ? card.cvv : "•••"}</Text>
               </TouchableOpacity>
             </View>
           </View>
 
           {/* Balance overlay */}
-          <View style={styles.balanceTag}>
-            <Text style={styles.balanceText}>₹{card.balance.toLocaleString("en-IN")}</Text>
+          <View style={[styles.balanceTag, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+            <Text style={[styles.balanceText, { color: colors.text }]}>₹{card.balance.toLocaleString("en-IN")}</Text>
           </View>
-        </LinearGradient>
+        </View>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -290,16 +291,17 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     padding: 20,
     overflow: "hidden",
+    borderWidth: 1,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.15,
     shadowRadius: 16,
-    elevation: 12,
+    elevation: 4,
   },
   cardSelected: {
-    shadowOpacity: 0.7,
-    shadowRadius: 24,
-    elevation: 20,
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
+    elevation: 6,
   },
   frozenBanner: {
     position: "absolute",
@@ -313,27 +315,27 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     gap: 4,
   },
-  frozenText: { color: "#fff", fontSize: 10, fontWeight: "700", letterSpacing: 1 },
+  frozenText: { fontSize: 10, fontWeight: "700", letterSpacing: 1 },
   cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
-  bankName: { color: "rgba(255,255,255,0.8)", fontSize: 12, fontWeight: "600" },
-  visaText: { color: "#fff", fontSize: 18, fontWeight: "900", fontStyle: "italic" },
-  rupayText: { color: "#fff", fontSize: 12, fontWeight: "800" },
+  bankName: { fontSize: 12, fontWeight: "700" },
+  visaText: { color: "#F5F5F5", fontSize: 18, fontWeight: "900", fontStyle: "italic" },
+  rupayText: { color: "#F5F5F5", fontSize: 12, fontWeight: "800" },
   mcCircle: { width: 22, height: 22, borderRadius: 11 },
-  chip: { width: 34, height: 24, borderRadius: 4, backgroundColor: "rgba(255,215,100,0.5)", borderWidth: 1, borderColor: "rgba(255,215,100,0.6)", marginBottom: 10 },
-  cardNum: { color: "#fff", fontSize: 14, fontWeight: "500", letterSpacing: 3, marginBottom: 14 },
+  chip: { width: 34, height: 24, borderRadius: 6, borderWidth: 1, marginBottom: 10 },
+  cardNum: { fontSize: 14, fontWeight: "700", letterSpacing: 3, marginBottom: 14 },
   cardBottom: { flexDirection: "row", justifyContent: "space-between" },
-  cardLabel: { color: "rgba(255,255,255,0.5)", fontSize: 8, fontWeight: "700", letterSpacing: 1, marginBottom: 2 },
-  cardValue: { color: "#fff", fontSize: 11, fontWeight: "600" },
+  cardLabel: { fontSize: 8, fontWeight: "800", letterSpacing: 1, marginBottom: 2 },
+  cardValue: { fontSize: 11, fontWeight: "700" },
   balanceTag: {
     position: "absolute",
     bottom: 16,
     right: 16,
-    backgroundColor: "rgba(255,255,255,0.15)",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
+    borderWidth: 1,
   },
-  balanceText: { color: "#fff", fontSize: 12, fontWeight: "700" },
+  balanceText: { fontSize: 12, fontWeight: "800" },
   actions: {
     borderRadius: 20,
     padding: 16,

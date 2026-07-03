@@ -27,10 +27,11 @@ import { useColors } from "@/hooks/useColors";
 interface Props {
   request: UpiPaymentRequest;
   onLaunched: (appId: UpiAppId) => void;
+  onLaunchFailed?: (appId: UpiAppId, reason: string) => void;
   disabled?: boolean;
 }
 
-export function PaymentAppButtons({ request, onLaunched, disabled }: Props) {
+export function PaymentAppButtons({ request, onLaunched, onLaunchFailed, disabled }: Props) {
   const colors = useColors();
   const [launching, setLaunching] = useState<UpiAppId | null>(null);
 
@@ -53,6 +54,7 @@ export function PaymentAppButtons({ request, onLaunched, disabled }: Props) {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
 
     if (result.reason === "unsupported_platform") {
+      onLaunchFailed?.(appId, result.reason);
       Alert.alert(
         "UPI launch unavailable",
         "UPI app deep links are not supported on iPhone while running in Expo Go. Please test this payment redirection flow on Android.",
@@ -61,6 +63,7 @@ export function PaymentAppButtons({ request, onLaunched, disabled }: Props) {
     }
 
     if (result.reason === "app_not_installed") {
+      onLaunchFailed?.(appId, result.reason);
       const app = UPI_APPS.find((item) => item.id === appId);
       Alert.alert(
         `${app?.label ?? "App"} not installed`,
@@ -78,6 +81,7 @@ export function PaymentAppButtons({ request, onLaunched, disabled }: Props) {
       return;
     }
 
+    onLaunchFailed?.(appId, result.reason);
     Alert.alert("Unable to launch", "Please try another UPI app or check your payment details.");
   };
 

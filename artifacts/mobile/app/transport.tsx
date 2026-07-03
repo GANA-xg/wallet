@@ -133,8 +133,8 @@ function PassCard({ pass, onTopUp }: { pass: TransportPass; onTopUp: () => void 
         </TouchableOpacity>
         <View style={[styles.passActionDivider, { backgroundColor: "#262B36" }]} />
         <TouchableOpacity style={styles.passActionBtn} onPress={onTopUp}>
-          <Feather name="zap" size={16} color="#FF6B00" />
-          <Text style={[styles.passActionText, { color: "#FF6B00" }]}>Top Up</Text>
+          <Feather name="zap" size={16} color="#F4F4F5" />
+          <Text style={[styles.passActionText, { color: "#F4F4F5" }]}>Top Up</Text>
         </TouchableOpacity>
         <View style={[styles.passActionDivider, { backgroundColor: "#262B36" }]} />
         <TouchableOpacity style={styles.passActionBtn}>
@@ -205,7 +205,7 @@ function TopUpSheet({
         }}
         disabled={!amount}
       >
-        <LinearGradient colors={["#FF6B00", "#FF9240"]} style={styles.topUpBtnGrad}>
+        <LinearGradient colors={["#F4F4F5", "#D4D4D8"]} style={styles.topUpBtnGrad}>
           <Text style={styles.topUpBtnText}>Add ₹{amount || "0"}</Text>
         </LinearGradient>
       </TouchableOpacity>
@@ -282,7 +282,7 @@ export default function TransportScreen() {
         style={[styles.nfcTeaser, { backgroundColor: colors.surface, borderColor: colors.border }]}
         onPress={() => router.push("/nfc-pay")}
       >
-        <Feather name="wifi" size={18} color="#FF6B00" />
+        <Feather name="wifi" size={18} color="#F4F4F5" />
         <Text style={[styles.nfcTeaserText, { color: colors.text }]}>
           Tap phone to Metro gate — NFC enabled
         </Text>

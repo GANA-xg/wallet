@@ -22,7 +22,7 @@ const FEATURES = [
   { icon: "gift" as const, label: "Rewards", sub: "Points & offers", route: "/rewards", color: "#F59E0B" },
   { icon: "cpu" as const, label: "AI Insights", sub: "Smart analysis", route: "/ai-insights", color: "#7C3AED" },
   { icon: "map" as const, label: "Transport", sub: "Metro & Bus", route: "/transport", color: "#22C55E" },
-  { icon: "wifi" as const, label: "NFC Pay", sub: "Tap to pay", route: "/nfc-pay", color: "#FF6B00" },
+  { icon: "wifi" as const, label: "NFC Pay", sub: "Tap to pay", route: "/nfc-pay", color: "#0A84FF" },
   { icon: "bell" as const, label: "Alerts", sub: "Notifications", route: "/notifications", color: "#EF4444" },
   { icon: "shield" as const, label: "Security", sub: "Protect account", route: "/security", color: "#06B6D4" },
 ];
@@ -105,7 +105,7 @@ export default function MoreScreen() {
             }}
             activeOpacity={0.75}
           >
-            <View style={[styles.featureIcon, { backgroundColor: feat.color + "20" }]}>
+            <View style={[styles.featureIcon, { backgroundColor: feat.color + "18" }]}> 
               <Feather name={feat.icon} size={22} color={feat.color} />
               {feat.label === "Alerts" && unreadCount > 0 && (
                 <View style={styles.notifDot} />

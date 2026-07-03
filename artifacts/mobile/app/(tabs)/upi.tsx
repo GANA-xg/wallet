@@ -49,11 +49,11 @@ export default function UPIScreen() {
       {/* Primary UPI Card */}
       {primaryUPI && (
         <LinearGradient
-          colors={["#171A21", "#1E2128"]}
+          colors={[colors.surface, colors.surfaceElevated]}
           style={[styles.upiCard, { borderColor: colors.border }]}
         >
           <View style={styles.upiCardTop}>
-            <View style={[styles.upiIcon, { backgroundColor: "#FF6B0015" }]}>
+            <View style={[styles.upiIcon, { backgroundColor: colors.primary + "14" }]}> 
               <Feather name="send" size={22} color={colors.primary} />
             </View>
             <View style={styles.upiInfo}>
@@ -62,7 +62,7 @@ export default function UPIScreen() {
                 {primaryUPI.bank} · Primary
               </Text>
             </View>
-            <View style={[styles.primaryBadge, { backgroundColor: "#FF6B0020" }]}>
+            <View style={[styles.primaryBadge, { backgroundColor: colors.primary + "14" }]}> 
               <Text style={[styles.primaryBadgeText, { color: colors.primary }]}>PRIMARY</Text>
             </View>
           </View>
@@ -72,7 +72,7 @@ export default function UPIScreen() {
       {/* UPI Lite */}
       <View style={[styles.upiLiteCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <View style={styles.upiLiteLeft}>
-          <Feather name="zap" size={18} color="#F59E0B" />
+          <Feather name="zap" size={18} color={colors.warning} />
           <View>
             <Text style={[styles.upiLiteTitle, { color: colors.text }]}>UPI Lite</Text>
             <Text style={[styles.upiLiteSub, { color: colors.mutedForeground }]}>
@@ -88,9 +88,9 @@ export default function UPIScreen() {
       {/* Actions */}
       <View style={styles.actions}>
         {[
-          { icon: "maximize", label: "Scan\n& Pay", color: "#FF6B00", route: "/pay" },
+          { icon: "maximize", label: "Scan\n& Pay", color: colors.primary, route: "/pay" },
           { icon: "send", label: "Pay\nUPI ID", color: "#7C3AED", route: "/send" },
-          { icon: "download", label: "Receive\nMoney", color: "#22C55E", route: "/receive" },
+          { icon: "download", label: "Receive\nMoney", color: colors.success, route: "/receive" },
           { icon: "clock", label: "History", color: "#3B82F6", route: "/(tabs)/transactions" },
         ].map((item, i) => (
           <TouchableOpacity
@@ -157,7 +157,7 @@ export default function UPIScreen() {
               }}
               activeOpacity={0.7}
             >
-              <View style={[styles.upiIcon, { backgroundColor: colors.muted }]}>
+              <View style={[styles.upiIcon, { backgroundColor: colors.surfaceElevated }]}> 
                 <Feather name="at-sign" size={16} color={colors.primary} />
               </View>
               <View style={styles.upiRowInfo}>
