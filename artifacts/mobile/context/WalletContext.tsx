@@ -8,6 +8,8 @@ import type {
   Ticket,
   Transaction,
   TransportPass,
+  PaymentHold,
+  ScheduledPayment,
   UPIAccount,
   VaultCard,
   VaultDocument,
@@ -19,6 +21,15 @@ interface WalletContextType {
   setBalance: (b: number) => void;
   spendableBalance: number;
   totalReserved: number;
+  getPaymentPreview: (amount: number) => { remainingBalance: number; remainingSpendable: number };
+  canAffordPayment: (amount: number) => boolean;
+  paymentHolds: PaymentHold[];
+  scheduledPayments: ScheduledPayment[];
+  createPaymentHold: (input: { amount: number; merchant: string; payeeAddress: string; note?: string }) => PaymentHold | null;
+  releasePaymentHold: (holdId: string) => void;
+  commitPaymentHold: (holdId: string, transaction: Transaction) => void;
+  schedulePayment: (input: { amount: number; merchant: string; payeeAddress: string; note?: string; scheduledFor: string }) => ScheduledPayment | null;
+  cancelScheduledPayment: (paymentId: string) => void;
   cards: VaultCard[];
   addCard: (c: VaultCard) => void;
   removeCard: (id: string) => void;
@@ -32,6 +43,10 @@ interface WalletContextType {
   addDocument: (d: VaultDocument) => void;
   removeDocument: (id: string) => void;
   tickets: Ticket[];
+  addTicket: (t: Ticket) => void;
+  removeTicket: (id: string) => void;
+  updateTicket: (id: string, updates: Partial<Ticket>) => void;
+  findTicketByPNR: (pnr: string) => Ticket | undefined;
   rewards: Reward[];
   notifications: VaultNotification[];
   markRead: (id: string) => void;
@@ -50,6 +65,15 @@ const WalletContext = createContext<WalletContextType>({
   setBalance: () => {},
   spendableBalance: 0,
   totalReserved: 0,
+  getPaymentPreview: () => ({ remainingBalance: 0, remainingSpendable: 0 }),
+  canAffordPayment: () => false,
+  paymentHolds: [],
+  scheduledPayments: [],
+  createPaymentHold: () => null,
+  releasePaymentHold: () => {},
+  commitPaymentHold: () => {},
+  schedulePayment: () => null,
+  cancelScheduledPayment: () => {},
   cards: [],
   addCard: () => {},
   removeCard: () => {},
@@ -63,6 +87,10 @@ const WalletContext = createContext<WalletContextType>({
   addDocument: () => {},
   removeDocument: () => {},
   tickets: [],
+  addTicket: () => {},
+  removeTicket: () => {},
+  updateTicket: () => {},
+  findTicketByPNR: () => undefined,
   rewards: [],
   notifications: [],
   markRead: () => {},
@@ -191,6 +219,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [reservedAmounts, setReservedAmounts] = useState<ReservedAmount[]>([]);
   const [transportPasses, setTransportPasses] = useState<TransportPass[]>([]);
+  const [paymentHolds, setPaymentHolds] = useState<PaymentHold[]>([]);
+  const [scheduledPayments, setScheduledPayments] = useState<ScheduledPayment[]>([]);
 
   useEffect(() => {
     Promise.all([
@@ -222,16 +252,113 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const setBalance = (b: number) => { setBalanceState(b); save(KEYS.balance, b); };
   const totalReserved = reservedAmounts.reduce((s, r) => s + r.amount, 0);
-  const spendableBalance = Math.max(0, balance - totalReserved);
+  const totalHeld = paymentHolds.reduce((s, hold) => s + hold.amount, 0);
+  const spendableBalance = Math.max(0, balance - totalReserved - totalHeld);
+  const getPaymentPreview = (amount: number) => ({
+    remainingBalance: Math.max(0, balance - amount),
+    remainingSpendable: Math.max(0, spendableBalance - amount),
+  });
+  const canAffordPayment = (amount: number) => Number.isFinite(amount) && amount > 0 && amount <= spendableBalance;
 
   const addCard = (c: VaultCard) => { const next = [c, ...cards]; setCards(next); save(KEYS.cards, next); };
   const removeCard = (id: string) => { const next = cards.filter((c) => c.id !== id); setCards(next); save(KEYS.cards, next); };
   const toggleFreeze = (id: string) => { const next = cards.map((c) => c.id === id ? { ...c, frozen: !c.frozen } : c); setCards(next); save(KEYS.cards, next); };
   const setPrimaryUPI = (id: string) => { const next = upiAccounts.map((u) => ({ ...u, primary: u.id === id })); setUpiAccounts(next); save(KEYS.upi, next); };
   const addUPIAccount = (u: UPIAccount) => { const next = [...upiAccounts, u]; setUpiAccounts(next); save(KEYS.upi, next); };
-  const addTransaction = (t: Transaction) => { const next = [t, ...transactions]; setTransactions(next); save(KEYS.transactions, next); };
+  const addTransaction = (t: Transaction) => {
+    setTransactions((prev) => {
+      const next = [t, ...prev];
+      void save(KEYS.transactions, next);
+      return next;
+    });
+
+    if (t.status === "failed") return;
+
+    setBalanceState((prev) => {
+      const nextBalance = t.type === "credit" ? prev + t.amount : Math.max(0, prev - t.amount);
+      void save(KEYS.balance, nextBalance);
+      return nextBalance;
+    });
+  };
+
+  const createPaymentHold = (input: { amount: number; merchant: string; payeeAddress: string; note?: string }) => {
+    if (!Number.isFinite(input.amount) || input.amount <= 0 || input.amount > spendableBalance) return null;
+    const hold: PaymentHold = {
+      id: `hold-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      amount: input.amount,
+      merchant: input.merchant,
+      payeeAddress: input.payeeAddress,
+      note: input.note,
+      createdAt: new Date().toISOString(),
+    };
+    const next = [hold, ...paymentHolds];
+    setPaymentHolds(next);
+    return hold;
+  };
+
+  const releasePaymentHold = (holdId: string) => {
+    setPaymentHolds((prev) => prev.filter((hold) => hold.id !== holdId));
+  };
+
+  const commitPaymentHold = (holdId: string, transaction: Transaction) => {
+    const hold = paymentHolds.find((item) => item.id === holdId);
+    if (hold) {
+      releasePaymentHold(holdId);
+      addTransaction(transaction);
+      return;
+    }
+    addTransaction(transaction);
+  };
+
+  const schedulePayment = (input: { amount: number; merchant: string; payeeAddress: string; note?: string; scheduledFor: string }) => {
+    if (!Number.isFinite(input.amount) || input.amount <= 0) return null;
+    const payment: ScheduledPayment = {
+      id: `sched-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      amount: input.amount,
+      merchant: input.merchant,
+      payeeAddress: input.payeeAddress,
+      note: input.note,
+      scheduledFor: input.scheduledFor,
+      status: "scheduled",
+    };
+    const next = [payment, ...scheduledPayments];
+    setScheduledPayments(next);
+    return payment;
+  };
+
+  const cancelScheduledPayment = (paymentId: string) => {
+    setScheduledPayments((prev) => prev.filter((payment) => payment.id !== paymentId));
+  };
   const addDocument = (d: VaultDocument) => { const next = [d, ...documents]; setDocuments(next); save(KEYS.documents, next); };
   const removeDocument = (id: string) => { const next = documents.filter((d) => d.id !== id); setDocuments(next); save(KEYS.documents, next); };
+  const addTicket = (t: Ticket) => {
+    if (t.pnr) {
+      const existing = tickets.find((x) => x.pnr === t.pnr && x.isSmartTicket);
+      if (existing) return;
+    }
+    const next = [t, ...tickets];
+    setTickets(next);
+    save(KEYS.tickets, next);
+    try {
+      const { scheduleJourneyNotifications } = require("@/services/ticket/notificationService");
+      scheduleJourneyNotifications(t);
+    } catch {}
+  };
+  const findTicketByPNR = (pnr: string) => tickets.find((t) => t.pnr === pnr);
+  const removeTicket = (id: string) => {
+    const next = tickets.filter((t) => t.id !== id);
+    setTickets(next);
+    save(KEYS.tickets, next);
+    try {
+      const { cancelTicketNotifications } = require("@/services/ticket/notificationService");
+      cancelTicketNotifications(id);
+    } catch {}
+  };
+  const updateTicket = (id: string, updates: Partial<Ticket>) => {
+    const next = tickets.map((t) => t.id === id ? { ...t, ...updates } : t);
+    setTickets(next);
+    save(KEYS.tickets, next);
+  };
   const markRead = (id: string) => { const next = notifications.map((n) => n.id === id ? { ...n, read: true } : n); setNotifications(next); save(KEYS.notifications, next); };
   const unreadCount = notifications.filter((n) => !n.read).length;
   const addReservation = (r: ReservedAmount) => { const next = [r, ...reservedAmounts]; setReservedAmounts(next); save(KEYS.reserved, next); };
@@ -248,9 +375,11 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       upiAccounts, setPrimaryUPI, addUPIAccount,
       transactions, addTransaction,
       documents, addDocument, removeDocument,
-      tickets, rewards, notifications, markRead, unreadCount,
+      tickets, addTicket, removeTicket, updateTicket, findTicketByPNR, rewards, notifications, markRead, unreadCount,
       budgets, reservedAmounts, addReservation, removeReservation,
+      paymentHolds, scheduledPayments, createPaymentHold, releasePaymentHold, commitPaymentHold, schedulePayment, cancelScheduledPayment,
       transportPasses, topUpTransport,
+      getPaymentPreview, canAffordPayment,
       upiLite: 1500,
     }}>
       {children}

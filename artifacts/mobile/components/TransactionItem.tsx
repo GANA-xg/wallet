@@ -49,7 +49,7 @@ export function TransactionItem({ transaction, onPress }: Props) {
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.iconWrap, { backgroundColor: colors.surfaceElevated }]}>
+      <View style={[styles.iconWrap, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
         <Feather name={icon} size={18} color={isCredit ? colors.success : colors.primary} />
       </View>
 
@@ -93,6 +93,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 1,
   },
   info: {
     flex: 1,

@@ -34,10 +34,29 @@ export interface Transaction {
   category: string;
   description: string;
   date: string;
-  status: "success" | "pending" | "failed" | "launched";
+  status: "success" | "pending" | "failed" | "launched" | "held" | "scheduled" | "rolled_back";
   merchant: string;
   payeeAddress?: string;
   launchedVia?: "google_pay" | "phonepe" | "paytm" | "generic";
+}
+
+export interface PaymentHold {
+  id: string;
+  amount: number;
+  merchant: string;
+  payeeAddress: string;
+  note?: string;
+  createdAt: string;
+}
+
+export interface ScheduledPayment {
+  id: string;
+  amount: number;
+  merchant: string;
+  payeeAddress: string;
+  note?: string;
+  scheduledFor: string;
+  status: "scheduled" | "cancelled" | "completed";
 }
 
 export interface VaultDocument {
@@ -59,6 +78,38 @@ export interface Ticket {
   pnr?: string;
   seat?: string;
   time?: string;
+  transportType?: "train" | "flight" | "bus" | "metro" | "ferry";
+  passengerName?: string;
+  trainNumber?: string;
+  trainName?: string;
+  coach?: string;
+  ticketStatus?: "confirmed" | "rac" | "wl" | "cancelled";
+  qrCode?: string;
+  stations?: string[];
+  boardingPoint?: string;
+  dropPoint?: string;
+  isSmartTicket?: boolean;
+  source?: string;
+}
+
+export interface SmartTicketInput {
+  type: "train" | "flight" | "bus" | "metro" | "ferry";
+  transportType: "train" | "flight" | "bus" | "metro" | "ferry";
+  title?: string;
+  passengerName?: string;
+  pnr?: string;
+  trainNumber?: string;
+  trainName?: string;
+  from?: string;
+  to?: string;
+  date: string;
+  time?: string;
+  coach?: string;
+  seat?: string;
+  ticketStatus?: "confirmed" | "rac" | "wl" | "cancelled";
+  qrCode?: string;
+  stations?: string[];
+  source?: string;
 }
 
 export interface Reward {

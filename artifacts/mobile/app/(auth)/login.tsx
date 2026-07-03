@@ -80,7 +80,7 @@ export default function Login() {
                 </TouchableOpacity>
 
                 <View style={styles.logo}>
-                  <LinearGradient colors={["#FF6B00", "#FF9240"]} style={styles.logoGradient}>
+                  <LinearGradient colors={["#F4F4F5", "#D4D4D8"]} style={styles.logoGradient}>
                     <Feather name="layers" size={24} color="#fff" />
                   </LinearGradient>
                   <Text style={styles.logoText}>Vault</Text>
@@ -108,7 +108,7 @@ export default function Login() {
                       if (error) setError("");
                     }}
                     onFocus={handleFocus}
-                    selectionColor="#FF6B00"
+                    selectionColor="#F4F4F5"
                   />
                 </View>
 
@@ -128,7 +128,7 @@ export default function Login() {
                 disabled={phone.length !== 10}
               >
                 <LinearGradient
-                  colors={phone.length === 10 ? ["#FF6B00", "#FF9240"] : ["#262B36", "#262B36"]}
+                  colors={phone.length === 10 ? ["#F4F4F5", "#D4D4D8"] : ["#262B36", "#262B36"]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.btn}
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   link: {
-    color: "#FF6B00",
+    color: "#F4F4F5",
   },
   btnWrap: {
     borderRadius: 16,

@@ -46,7 +46,7 @@ export default function ProfileScreen() {
 
       {/* Avatar */}
       <View style={styles.avatarSection}>
-        <LinearGradient colors={["#FF6B00", "#FF9240"]} style={styles.avatar}>
+        <LinearGradient colors={["#F4F4F5", "#D4D4D8"]} style={styles.avatar}>
           <Text style={styles.avatarText}>{initials}</Text>
         </LinearGradient>
         {editing && (

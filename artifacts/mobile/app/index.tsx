@@ -3,14 +3,16 @@ import React from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 import { useAuth } from "@/context/AuthContext";
+import { useColors } from "@/hooks/useColors";
 
 export default function Index() {
+  const colors = useColors();
   const { isAuthenticated, isLoading, biometricVerified } = useAuth();
 
   if (isLoading) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator color="#FF6B00" size="large" />
+      <View style={[styles.loading, { backgroundColor: colors.background }]}>
+        <ActivityIndicator color={colors.primary} size="large" />
       </View>
     );
   }
@@ -29,7 +31,6 @@ export default function Index() {
 const styles = StyleSheet.create({
   loading: {
     flex: 1,
-    backgroundColor: "#0F1115",
     justifyContent: "center",
     alignItems: "center",
   },

@@ -86,7 +86,7 @@ export default function LockScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <LinearGradient colors={["#FF6B00", "#FF9240"]} style={styles.logoGrad}>
+        <LinearGradient colors={["#F4F4F5", "#D4D4D8"]} style={styles.logoGrad}>
           <Feather name="layers" size={24} color="#fff" />
         </LinearGradient>
         <Text style={styles.logoText}>Vault</Text>
@@ -105,7 +105,7 @@ export default function LockScreen() {
               {
                 transform: [{ scale: pulseAnim }],
                 opacity: status === "failed" ? 0.4 : 0.3,
-                borderColor: status === "failed" ? "#EF4444" : "#FF6B00",
+                borderColor: status === "failed" ? "#EF4444" : "#F4F4F5",
               },
             ]}
           />
@@ -118,7 +118,7 @@ export default function LockScreen() {
                 {
                   backgroundColor:
                     status === "verifying"
-                      ? "#FF6B00"
+                      ? "#F4F4F5"
                       : status === "failed"
                       ? "#EF4444"
                       : "#171A21",
@@ -131,7 +131,7 @@ export default function LockScreen() {
               <Feather
                 name={status === "failed" ? "x" : biometricAvailable ? "cpu" : "lock"}
                 size={36}
-                color={status === "verifying" || status === "failed" ? "#fff" : "#FF6B00"}
+                color={status === "verifying" || status === "failed" ? "#fff" : "#F4F4F5"}
               />
             </TouchableOpacity>
           </Animated.View>
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   retryBtn: { marginTop: 20, paddingVertical: 12, paddingHorizontal: 28 },
-  retryText: { color: "#FF6B00", fontSize: 16, fontWeight: "700" },
+  retryText: { color: "#F4F4F5", fontSize: 16, fontWeight: "700" },
   footer: { paddingHorizontal: 28, alignItems: "center", paddingBottom: 16 },
   skipBtn: { flexDirection: "row", alignItems: "center", gap: 4, padding: 8 },
   skipText: { color: "#6B7280", fontSize: 14 },

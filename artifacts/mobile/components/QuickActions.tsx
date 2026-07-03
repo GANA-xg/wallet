@@ -31,7 +31,7 @@ export function QuickActions() {
           activeOpacity={0.7}
           onPress={() => handlePress(action.route)}
         >
-          <View style={[styles.iconWrap, { backgroundColor: colors.surfaceElevated }]}>
+          <View style={[styles.iconWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Feather name={action.icon} size={20} color={colors.primary} />
           </View>
           <Text style={[styles.label, { color: colors.mutedForeground }]}>{action.label}</Text>
@@ -57,6 +57,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 1,
   },
   label: {
     fontSize: 11,

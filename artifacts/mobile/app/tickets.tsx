@@ -1,4 +1,5 @@
 import { Feather } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useState } from "react";
@@ -17,6 +18,8 @@ import { useWallet } from "@/context/WalletContext";
 import { useColors } from "@/hooks/useColors";
 import type { Ticket } from "@/types";
 
+import TicketCard from "../components/TicketCard";
+
 const TICKET_STYLES: Record<Ticket["type"], { gradient: [string, string]; icon: keyof typeof Feather.glyphMap; color: string }> = {
   flight: { gradient: ["#0f2040", "#1e3a5f"], icon: "navigation", color: "#3B82F6" },
   movie: { gradient: ["#200f40", "#3b1f5f"], icon: "film", color: "#8B5CF6" },
@@ -25,7 +28,7 @@ const TICKET_STYLES: Record<Ticket["type"], { gradient: [string, string]; icon: 
   event: { gradient: ["#3d0f1f", "#5c1a2e"], icon: "star", color: "#EC4899" },
 };
 
-function TicketCard({ ticket }: { ticket: Ticket }) {
+function LegacyTicketCard({ ticket }: { ticket: Ticket }) {
   const style = TICKET_STYLES[ticket.type];
   const [revealed, setRevealed] = useState(false);
   const shakeAnim = React.useRef(new Animated.Value(0)).current;
@@ -44,7 +47,6 @@ function TicketCard({ ticket }: { ticket: Ticket }) {
     <Animated.View style={{ transform: [{ translateX: shakeAnim }] }}>
       <TouchableOpacity onPress={handleReveal} activeOpacity={0.95}>
         <LinearGradient colors={style.gradient} style={styles.ticketCard}>
-          {/* Header */}
           <View style={styles.ticketHeader}>
             <View style={[styles.ticketIconWrap, { backgroundColor: style.color + "30" }]}>
               <Feather name={style.icon} size={20} color={style.color} />
@@ -56,7 +58,6 @@ function TicketCard({ ticket }: { ticket: Ticket }) {
             {ticket.time && <Text style={styles.ticketTime}>{ticket.time}</Text>}
           </View>
 
-          {/* Route or Title */}
           {ticket.from && ticket.to ? (
             <View style={styles.routeRow}>
               <Text style={styles.station}>{ticket.from}</Text>
@@ -78,14 +79,12 @@ function TicketCard({ ticket }: { ticket: Ticket }) {
             </View>
           )}
 
-          {/* Dashed Separator */}
           <View style={styles.dashed}>
             <View style={[styles.circle, { left: -20 }]} />
             <View style={styles.dashedLine} />
             <View style={[styles.circle, { right: -20 }]} />
           </View>
 
-          {/* Bottom Details */}
           <View style={styles.ticketBottom}>
             {ticket.seat && (
               <View>
@@ -139,6 +138,19 @@ export default function TicketsScreen() {
         <View style={{ width: 22 }} />
       </View>
 
+      {/* Add Ticket Button */}
+      <TouchableOpacity
+        style={[styles.addButton, { backgroundColor: colors.primary }]}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          router.push("/add-ticket" as never);
+        }}
+        activeOpacity={0.85}
+      >
+        <Feather name="plus" size={18} color="#fff" />
+        <Text style={styles.addButtonText}>Add Ticket</Text>
+      </TouchableOpacity>
+
       {tickets.length === 0 ? (
         <View style={[styles.empty, { backgroundColor: colors.surface }]}>
           <Feather name="tag" size={40} color={colors.mutedForeground} />
@@ -149,9 +161,12 @@ export default function TicketsScreen() {
         </View>
       ) : (
         <View style={styles.ticketList}>
-          {tickets.map((ticket) => (
-            <TicketCard key={ticket.id} ticket={ticket} />
-          ))}
+          {tickets.map((ticket) => {
+            if (ticket.isSmartTicket) {
+              return <TicketCard key={ticket.id} ticket={ticket} />;
+            }
+            return <LegacyTicketCard key={ticket.id} ticket={ticket} />;
+          })}
         </View>
       )}
     </ScrollView>
@@ -241,6 +256,20 @@ const styles = StyleSheet.create({
   tapText: { color: "rgba(255,255,255,0.4)", fontSize: 12 },
   verifiedRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   verifiedText: { color: "#22C55E", fontSize: 12, fontWeight: "600" },
+  addButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 16,
+    marginBottom: 16,
+  },
+  addButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
   empty: { alignItems: "center", padding: 40, borderRadius: 20, gap: 12 },
   emptyTitle: { fontSize: 18, fontWeight: "700" },
   emptySub: { fontSize: 14, textAlign: "center" },

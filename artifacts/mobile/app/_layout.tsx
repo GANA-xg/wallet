@@ -6,9 +6,10 @@ import {
   useFonts,
 } from "@expo-google-fonts/inter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack } from "expo-router";
+import { router, Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
+import { Linking } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -16,14 +17,94 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/context/AuthContext";
 import { WalletProvider } from "@/context/WalletContext";
+import { useColors } from "@/hooks/useColors";
 
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
+function useDeepLinkHandler() {
+  useEffect(() => {
+    function handleDeepLink(url: string | null) {
+      if (!url) return;
+      if (url.includes("bharatwallet://add-ticket") || url.includes("add-ticket")) {
+        const queryIndex = url.indexOf("?");
+        if (queryIndex === -1) {
+          router.push("/add-ticket" as never);
+          return;
+        }
+        const params = new URLSearchParams(url.slice(queryIndex));
+        const type = params.get("type") ?? "train";
+        const pnr = params.get("pnr") ?? "";
+        const source = params.get("source") ?? "";
+        router.push(`/add-ticket?type=${type}&pnr=${pnr}&source=${source}` as never);
+      } else if (url.includes("bharatwallet://tickets") || url.includes("tickets")) {
+        router.push("/tickets" as never);
+      }
+    }
+
+    Linking.getInitialURL().then(handleDeepLink);
+    const subscription = Linking.addEventListener("url", (event) => {
+      handleDeepLink(event.url);
+    });
+    return () => subscription.remove();
+  }, []);
+}
+
+function useNotificationHandler() {
+  useEffect(() => {
+    let Notifications: any = null;
+    try {
+      Notifications = require("expo-notifications");
+    } catch {
+      return;
+    }
+
+    const setupNotifications = async () => {
+      try {
+        const { default: NotificationsModule } = Notifications;
+
+        NotificationsModule.setNotificationHandler({
+          handleNotification: async () => ({
+            shouldShowAlert: true,
+            shouldPlaySound: true,
+            shouldSetBadge: false,
+          }),
+        });
+
+        const { status } = await NotificationsModule.requestPermissionsAsync();
+        if (status !== "granted") return;
+
+        const lastResponse = await NotificationsModule.getLastNotificationResponseAsync();
+        if (lastResponse) {
+          const ticketId = lastResponse.notification.request.content.data?.ticketId;
+          if (ticketId) {
+            router.push(`/ticket-detail?id=${ticketId}` as never);
+          }
+        }
+
+        const subscription = NotificationsModule.addNotificationResponseReceivedListener((response: any) => {
+          const ticketId = response.notification.request.content.data?.ticketId;
+          if (ticketId) {
+            router.push(`/ticket-detail?id=${ticketId}` as never);
+          }
+        });
+
+        return () => subscription.remove();
+      } catch {}
+    };
+
+    setupNotifications();
+  }, []);
+}
+
 function RootLayoutNav() {
+  const colors = useColors();
+  useDeepLinkHandler();
+  useNotificationHandler();
+
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#0F1115" } }}>
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="lock" />
       <Stack.Screen name="(auth)" />
@@ -39,6 +120,8 @@ function RootLayoutNav() {
       <Stack.Screen name="security" />
       <Stack.Screen name="documents" />
       <Stack.Screen name="tickets" />
+      <Stack.Screen name="add-ticket" />
+      <Stack.Screen name="ticket-detail" />
       <Stack.Screen name="rewards" />
       <Stack.Screen name="transport" />
     </Stack>

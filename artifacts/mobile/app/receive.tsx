@@ -23,7 +23,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useWallet } from "@/context/WalletContext";
 import { useColors } from "@/hooks/useColors";
 
-function QRPattern() {
+function QRPattern({ fill }: { fill: string }) {
   const size = 220;
   const cellSize = 8;
   const cols = Math.floor(size / cellSize);
@@ -58,7 +58,7 @@ function QRPattern() {
               y={r * cellSize}
               width={cellSize - 1}
               height={cellSize - 1}
-              fill="#FF6B00"
+              fill={fill}
               rx={1}
             />
           ) : null
@@ -113,16 +113,16 @@ export default function ReceiveScreen() {
           >
             <View style={[styles.content, { paddingBottom: bottomPad + 24 }]}>
               {/* QR Card */}
-              <View style={[styles.qrCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={[styles.qrCard, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
                 <Text style={[styles.cardName, { color: colors.text }]}>
                   {user?.name ?? "Aryan Sharma"}
                 </Text>
                 <Text style={[styles.cardUpi, { color: colors.mutedForeground }]}>{upiId}</Text>
 
-                <View style={[styles.qrContainer, { backgroundColor: "#fff", borderRadius: 16 }]}>
-                  <QRPattern />
+                <View style={[styles.qrContainer, { backgroundColor: colors.surfaceElevated, borderRadius: 16 }]}> 
+                  <QRPattern fill={colors.primary} />
                   <View style={styles.qrCenter}>
-                    <LinearGradient colors={["#FF6B00", "#FF9240"]} style={styles.qrLogo}>
+                    <LinearGradient colors={[colors.primary, "#d9d9d9"]} style={styles.qrLogo}>
                       <Feather name="layers" size={16} color="#fff" />
                     </LinearGradient>
                   </View>
@@ -167,7 +167,7 @@ export default function ReceiveScreen() {
               {/* Share Button */}
               <TouchableOpacity style={styles.shareBtn} onPress={handleShare} activeOpacity={0.85}>
                 <LinearGradient
-                  colors={["#FF6B00", "#FF9240"]}
+                  colors={[colors.primary, "#d9d9d9"]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.shareBtnGrad}
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 10,
     overflow: "hidden",
-    backgroundColor: "#fff",
+    backgroundColor: "#151515",
     padding: 2,
   },
   qrLogo: {

@@ -266,7 +266,7 @@ export default function Register() {
       <View style={styles.inputLabelWrap}>
         <Text style={styles.inputLabel}>Full Name</Text>
         <View style={styles.fieldWrap}>
-          <Feather name="user" size={18} color="#FF6B00" style={styles.fieldIcon} />
+          <Feather name="user" size={18} color="#F4F4F5" style={styles.fieldIcon} />
           <TextInput
             style={styles.textInput}
             placeholder="Aryan Sharma"
@@ -276,7 +276,7 @@ export default function Register() {
               setFullName(t);
               if (infoError) setInfoError("");
             }}
-            selectionColor="#FF6B00"
+            selectionColor="#F4F4F5"
           />
         </View>
       </View>
@@ -299,7 +299,7 @@ export default function Register() {
       <View style={styles.inputLabelWrap}>
         <Text style={styles.inputLabel}>Date of Birth (DD/MM/YYYY)</Text>
         <View style={styles.fieldWrap}>
-          <Feather name="calendar" size={18} color="#FF6B00" style={styles.fieldIcon} />
+          <Feather name="calendar" size={18} color="#F4F4F5" style={styles.fieldIcon} />
           <TextInput
             style={styles.textInput}
             placeholder="15/08/2000"
@@ -308,7 +308,7 @@ export default function Register() {
             onChangeText={handleDobChange}
             keyboardType="numeric"
             maxLength={10}
-            selectionColor="#FF6B00"
+            selectionColor="#F4F4F5"
           />
         </View>
       </View>
@@ -316,7 +316,7 @@ export default function Register() {
       <View style={styles.inputLabelWrap}>
         <Text style={styles.inputLabel}>Email Address (Optional)</Text>
         <View style={styles.fieldWrap}>
-          <Feather name="mail" size={18} color="#FF6B00" style={styles.fieldIcon} />
+          <Feather name="mail" size={18} color="#F4F4F5" style={styles.fieldIcon} />
           <TextInput
             style={styles.textInput}
             placeholder="name@email.com"
@@ -325,7 +325,7 @@ export default function Register() {
             onChangeText={(t) => setEmail(t)}
             keyboardType="email-address"
             autoCapitalize="none"
-            selectionColor="#FF6B00"
+            selectionColor="#F4F4F5"
           />
         </View>
       </View>
@@ -339,7 +339,7 @@ export default function Register() {
 
       <TouchableOpacity style={styles.nextBtn} onPress={handleInfoNext} activeOpacity={0.85}>
         <LinearGradient
-          colors={["#FF6B00", "#FF9240"]}
+          colors={["#F4F4F5", "#D4D4D8"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.btnGradient}
@@ -365,7 +365,7 @@ export default function Register() {
             setKycStatus("idle");
           }}
         >
-          <Feather name="user" size={18} color={kycType === "aadhaar" ? "#FF6B00" : "#B0B7C3"} />
+          <Feather name="user" size={18} color={kycType === "aadhaar" ? "#F4F4F5" : "#B0B7C3"} />
           <Text style={[styles.kycTypeText, kycType === "aadhaar" && styles.kycTypeActiveText]}>Aadhaar Card</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -375,14 +375,14 @@ export default function Register() {
             setKycStatus("idle");
           }}
         >
-          <Feather name="credit-card" size={18} color={kycType === "pan" ? "#FF6B00" : "#B0B7C3"} />
+          <Feather name="credit-card" size={18} color={kycType === "pan" ? "#F4F4F5" : "#B0B7C3"} />
           <Text style={[styles.kycTypeText, kycType === "pan" && styles.kycTypeActiveText]}>PAN Card</Text>
         </TouchableOpacity>
       </View>
 
       {kycStatus === "idle" && (
         <View style={styles.uploadPlaceholder}>
-          <Feather name="upload-cloud" size={44} color="#FF6B00" />
+          <Feather name="upload-cloud" size={44} color="#F4F4F5" />
           <Text style={styles.uploadTitle}>Scan or Upload Document</Text>
           <Text style={styles.uploadSub}>Select a demo scenario below to simulate verification</Text>
         </View>
@@ -390,7 +390,7 @@ export default function Register() {
 
       {kycStatus === "scanning" && (
         <View style={styles.scannerBox}>
-          <ActivityIndicator size="large" color="#FF6B00" />
+          <ActivityIndicator size="large" color="#F4F4F5" />
           <Text style={styles.scanLogText}>{kycLog}</Text>
           <LinearGradient
             colors={["rgba(255, 107, 0, 0.4)", "rgba(255, 146, 64, 0.0)"]}
@@ -457,7 +457,7 @@ export default function Register() {
           activeOpacity={0.85}
         >
           <LinearGradient
-            colors={["#FF6B00", "#FF9240"]}
+            colors={["#F4F4F5", "#D4D4D8"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.btnGradient}
@@ -498,7 +498,7 @@ export default function Register() {
       <View style={styles.inputLabelWrap}>
         <Text style={styles.inputLabel}>IFSC Code</Text>
         <View style={styles.fieldWrap}>
-          <Feather name="hash" size={18} color="#FF6B00" style={styles.fieldIcon} />
+          <Feather name="hash" size={18} color="#F4F4F5" style={styles.fieldIcon} />
           <TextInput
             style={styles.textInput}
             placeholder="HDFC0000240"
@@ -507,14 +507,14 @@ export default function Register() {
             onChangeText={handleIfscChange}
             maxLength={11}
             autoCapitalize="characters"
-            selectionColor="#FF6B00"
+            selectionColor="#F4F4F5"
           />
         </View>
       </View>
 
       {!!bankName && (
         <View style={styles.bankNameBox}>
-          <Feather name="briefcase" size={16} color="#FF6B00" />
+          <Feather name="briefcase" size={16} color="#F4F4F5" />
           <Text style={styles.bankNameText}>Resolved Bank: <Text style={styles.bold}>{bankName}</Text></Text>
         </View>
       )}
@@ -522,7 +522,7 @@ export default function Register() {
       <View style={styles.inputLabelWrap}>
         <Text style={styles.inputLabel}>Account Number</Text>
         <View style={styles.fieldWrap}>
-          <Feather name="credit-card" size={18} color="#FF6B00" style={styles.fieldIcon} />
+          <Feather name="credit-card" size={18} color="#F4F4F5" style={styles.fieldIcon} />
           <TextInput
             style={styles.textInput}
             placeholder="123456789012"
@@ -533,7 +533,7 @@ export default function Register() {
               if (bankError) setBankError("");
             }}
             keyboardType="numeric"
-            selectionColor="#FF6B00"
+            selectionColor="#F4F4F5"
           />
         </View>
       </View>
@@ -541,7 +541,7 @@ export default function Register() {
       <View style={styles.inputLabelWrap}>
         <Text style={styles.inputLabel}>Confirm Account Number</Text>
         <View style={styles.fieldWrap}>
-          <Feather name="credit-card" size={18} color="#FF6B00" style={styles.fieldIcon} />
+          <Feather name="credit-card" size={18} color="#F4F4F5" style={styles.fieldIcon} />
           <TextInput
             style={styles.textInput}
             placeholder="Re-enter Account Number"
@@ -552,7 +552,7 @@ export default function Register() {
               if (bankError) setBankError("");
             }}
             keyboardType="numeric"
-            selectionColor="#FF6B00"
+            selectionColor="#F4F4F5"
           />
         </View>
       </View>
@@ -566,7 +566,7 @@ export default function Register() {
 
       {bankStatus === "verifying" && (
         <View style={styles.verifyingBankLoader}>
-          <ActivityIndicator size="small" color="#FF6B00" />
+          <ActivityIndicator size="small" color="#F4F4F5" />
           <Text style={styles.verifyingBankText}>Verifying bank ownership...</Text>
         </View>
       )}
@@ -581,7 +581,7 @@ export default function Register() {
       {bankStatus === "idle" && (
         <TouchableOpacity style={styles.nextBtn} onPress={runBankVerification} activeOpacity={0.85}>
           <LinearGradient
-            colors={["#FF6B00", "#FF9240"]}
+            colors={["#F4F4F5", "#D4D4D8"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.btnGradient}
@@ -826,7 +826,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   kycTypeActive: {
-    borderColor: "#FF6B00",
+    borderColor: "#F4F4F5",
     backgroundColor: "#1a1208",
   },
   kycTypeText: {
@@ -835,7 +835,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   kycTypeActiveText: {
-    color: "#FF6B00",
+    color: "#F4F4F5",
   },
   uploadPlaceholder: {
     alignItems: "center",
@@ -862,7 +862,7 @@ const styles = StyleSheet.create({
   scannerBox: {
     backgroundColor: "#171A21",
     borderWidth: 1.5,
-    borderColor: "#FF6B00",
+    borderColor: "#F4F4F5",
     paddingVertical: 40,
     borderRadius: 20,
     alignItems: "center",
@@ -978,7 +978,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   backLinkText: {
-    color: "#FF6B00",
+    color: "#F4F4F5",
     fontSize: 14,
     fontWeight: "600",
   },
@@ -1005,7 +1005,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   verifyingBankText: {
-    color: "#FF6B00",
+    color: "#F4F4F5",
     fontSize: 14,
     fontWeight: "600",
   },
