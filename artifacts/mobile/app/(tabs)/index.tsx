@@ -2,6 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
 import {
+  Dimensions,
   Platform,
   RefreshControl,
   ScrollView,
@@ -13,6 +14,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BalanceWidget } from "@/components/BalanceWidget";
+import { GradientCard } from "@/components/GradientCard";
 import { QuickActions } from "@/components/QuickActions";
 import { SectionHeader } from "@/components/SectionHeader";
 import { TransactionItem } from "@/components/TransactionItem";
@@ -37,6 +39,7 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const {
     balance,
+    cards,
     upiLite,
     transactions,
     unreadCount,
@@ -185,6 +188,34 @@ export default function HomeScreen() {
         <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
       </TouchableOpacity>
 
+      {/* Cards Strip */}
+      {cards.length > 0 && (
+        <View style={styles.section}>
+          <SectionHeader
+            title="My Cards"
+            actionLabel={cards.length > 1 ? `All ${cards.length}` : "Details"}
+            onAction={() => router.push("/(tabs)/cards")}
+          />
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.cardStrip}
+            decelerationRate="fast"
+            snapToInterval={Dimensions.get("window").width - 48 + 12}
+          >
+            {cards.map((card) => (
+              <TouchableOpacity
+                key={card.id}
+                onPress={() => router.push(`/card-detail?id=${card.id}`)}
+                activeOpacity={0.9}
+              >
+                <GradientCard card={card} />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
       {/* Recent Transactions */}
       <View style={styles.section}>
         <SectionHeader
@@ -249,4 +280,5 @@ const styles = StyleSheet.create({
   aiTitle: { fontSize: 15, fontWeight: "700" },
   aiSub: { fontSize: 13, marginTop: 2 },
   txCard: { paddingHorizontal: 16, overflow: "hidden" },
+  cardStrip: { gap: 12, paddingRight: 20 },
 });

@@ -3,7 +3,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React from "react";
 import {
+  ActivityIndicator,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,79 +14,269 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useWallet } from "@/context/WalletContext";
 import { useColors } from "@/hooks/useColors";
+import { useInsights } from "@/hooks/useInsights";
 
-const SUBSCRIPTIONS = [
-  { name: "Netflix", amount: 499, cycle: "Monthly", color: "#E50914" },
-  { name: "Hotstar", amount: 749, cycle: "Monthly", color: "#00AAFF" },
-  { name: "Spotify", amount: 119, cycle: "Monthly", color: "#1DB954" },
-];
-
-const SUGGESTIONS = [
-  {
-    icon: "trending-down" as const,
-    title: "Cut Food Delivery",
-    body: "You spent ₹2,100 on food delivery this month. Cook at home 2x/week to save ₹800/month.",
-    saving: "₹800/mo",
-    color: "#EF4444",
-  },
-  {
-    icon: "refresh-cw" as const,
-    title: "Auto-invest ₹5,000",
-    body: "You have consistent surplus at month-end. Auto-invest in index funds for long-term growth.",
-    saving: "12% returns",
-    color: "#22C55E",
-  },
-  {
-    icon: "credit-card" as const,
-    title: "Switch Card for Shopping",
-    body: "Use your HDFC Regalia for Amazon purchases to earn 3.3% cashback instead of 1%.",
-    saving: "₹300/mo",
-    color: "#3B82F6",
-  },
-];
-
-function HealthScore({ score }: { score: number }) {
+function HealthScore({ score, label }: { score: number; label: string }) {
   const colors = useColors();
-  const color = score >= 80 ? "#22C55E" : score >= 60 ? "#F59E0B" : "#EF4444";
-  const label = score >= 80 ? "Excellent" : score >= 60 ? "Good" : "Needs Work";
+  const size = 160;
+  const strokeWidth = 10;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const fill = (score / 100) * circumference;
+
+  const scoreColor = score >= 80 ? "#22C55E" : score >= 60 ? "#F59E0B" : "#EF4444";
 
   return (
-    <LinearGradient colors={["#171A21", "#1E2128"]} style={styles.scoreCard}>
-      <View style={styles.scoreLeft}>
-        <Text style={[styles.scoreTitle, { color: colors.text }]}>Financial Health</Text>
-        <Text style={[styles.scoreLabel, { color: colors.mutedForeground }]}>Based on your spending</Text>
+    <View style={styles.healthContainer}>
+      <View style={styles.healthRing}>
+        <View
+          style={[
+            styles.healthCircleBg,
+            { width: size, height: size, borderRadius: size / 2 },
+          ]}
+        />
+        <View style={styles.healthInner}>
+          <Text style={[styles.healthScoreNum, { color: scoreColor }]}>{score}</Text>
+          <Text style={[styles.healthScoreLabel, { color: scoreColor }]}>{label}</Text>
+        </View>
       </View>
-      <View style={styles.scoreRight}>
-        <Text style={[styles.scoreNumber, { color }]}>{score}</Text>
-        <Text style={[styles.scoreStatus, { color }]}>{label}</Text>
-      </View>
-    </LinearGradient>
+    </View>
   );
 }
 
-function SpendingBar({ category, spent, limit, color }: { category: string; spent: number; limit: number; color: string }) {
+function MetricCard({
+  label,
+  value,
+  icon,
+  color,
+}: {
+  label: string;
+  value: string;
+  icon: keyof typeof Feather.glyphMap;
+  color: string;
+}) {
   const colors = useColors();
-  const pct = Math.min((spent / limit) * 100, 100);
-  const overBudget = spent > limit;
+  return (
+    <View style={[styles.metricCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={[styles.metricIconBg, { backgroundColor: color + "20" }]}>
+        <Feather name={icon} size={16} color={color} />
+      </View>
+      <Text style={[styles.metricValue, { color: colors.text }]}>{value}</Text>
+      <Text style={[styles.metricLabel, { color: colors.mutedForeground }]}>{label}</Text>
+    </View>
+  );
+}
+
+function LoadingSkeleton() {
+  const colors = useColors();
+  return (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color={colors.primary} />
+      <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>
+        Analyzing your finances…
+      </Text>
+    </View>
+  );
+}
+
+function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  const colors = useColors();
+  return (
+    <View style={styles.errorContainer}>
+      <View style={[styles.errorIconBg, { backgroundColor: "#EF444415" }]}>
+        <Feather name="alert-circle" size={40} color="#EF4444" />
+      </View>
+      <Text style={[styles.errorTitle, { color: colors.text }]}>Could not load insights</Text>
+      <Text style={[styles.errorMessage, { color: colors.mutedForeground }]}>{message}</Text>
+      <TouchableOpacity style={styles.retryBtn} onPress={onRetry}>
+        <LinearGradient colors={[colors.primary, colors.primaryLight]} style={styles.retryBtnGrad}>
+          <Feather name="refresh-cw" size={16} color="#fff" />
+          <Text style={styles.retryBtnText}>Try Again</Text>
+        </LinearGradient>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function EmptyState() {
+  const colors = useColors();
+  return (
+    <View style={styles.emptyContainer}>
+      <View style={[styles.emptyIconBg, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Feather name="bar-chart-2" size={40} color={colors.mutedForeground} />
+      </View>
+      <Text style={[styles.emptyTitle, { color: colors.text }]}>No Data Yet</Text>
+      <Text style={[styles.emptyMessage, { color: colors.mutedForeground }]}>
+        Add some transactions and budgets to get personalized AI insights about your spending
+        patterns, savings opportunities, and financial health.
+      </Text>
+    </View>
+  );
+}
+
+function SectionHeader({ title, count }: { title: string; count?: number }) {
+  const colors = useColors();
+  return (
+    <View style={styles.sectionHeader}>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
+      {count !== undefined && (
+        <View style={[styles.sectionCount, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.sectionCountText, { color: colors.mutedForeground }]}>{count}</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+function BudgetBar({ label, spent, limit, percentage, status }: {
+  label: string;
+  spent: number;
+  limit: number;
+  percentage: number;
+  status: string;
+}) {
+  const colors = useColors();
+  const barColor = status === "exceeded" ? "#EF4444" : status === "warning" ? "#F59E0B" : status === "under_utilized" ? "#3B82F6" : "#22C55E";
 
   return (
-    <View style={styles.barRow}>
-      <View style={styles.barLeft}>
-        <Text style={[styles.barCategory, { color: colors.text }]}>{category}</Text>
-        <Text style={[styles.barAmount, { color: overBudget ? colors.error : colors.mutedForeground }]}>
+    <View style={styles.budgetRow}>
+      <View style={styles.budgetHeader}>
+        <Text style={[styles.budgetCategory, { color: colors.text }]}>{label}</Text>
+        <Text style={[styles.budgetAmount, { color: colors.mutedForeground }]}>
           ₹{spent.toLocaleString("en-IN")} / ₹{limit.toLocaleString("en-IN")}
         </Text>
       </View>
-      <View style={[styles.barTrack, { backgroundColor: colors.muted }]}>
+      <View style={[styles.budgetBarBg, { backgroundColor: colors.border }]}>
         <View
           style={[
-            styles.barFill,
-            { width: `${pct}%` as unknown as number, backgroundColor: overBudget ? "#EF4444" : color },
+            styles.budgetBarFill,
+            {
+              width: `${Math.min(percentage, 100)}%`,
+              backgroundColor: barColor,
+            },
           ]}
         />
       </View>
+      <Text style={[styles.budgetPercent, { color: colors.mutedForeground }]}>
+        {Math.round(percentage)}% used
+      </Text>
+    </View>
+  );
+}
+
+function RecommendationCard({
+  icon,
+  title,
+  body,
+  saving,
+  color,
+}: {
+  icon: string;
+  title: string;
+  body: string;
+  saving: string;
+  color: string;
+}) {
+  const colors = useColors();
+  return (
+    <View style={[styles.recCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={styles.recHeader}>
+        <View style={[styles.recIcon, { backgroundColor: color + "20" }]}>
+          <Feather name={icon as any} size={18} color={color} />
+        </View>
+        <View style={styles.recInfo}>
+          <Text style={[styles.recTitle, { color: colors.text }]}>{title}</Text>
+          <Text style={[styles.recSaving, { color }]}>{saving}</Text>
+        </View>
+      </View>
+      <Text style={[styles.recBody, { color: colors.mutedForeground }]}>{body}</Text>
+    </View>
+  );
+}
+
+function SubscriptionRow({
+  name,
+  amount,
+  cycle,
+  color,
+}: {
+  name: string;
+  amount: number;
+  cycle: string;
+  color: string;
+}) {
+  const colors = useColors();
+  return (
+    <View style={[styles.subRow, { borderBottomColor: colors.border }]}>
+      <View style={[styles.subDot, { backgroundColor: color }]} />
+      <View style={styles.subInfo}>
+        <Text style={[styles.subName, { color: colors.text }]}>{name}</Text>
+        <Text style={[styles.subCycle, { color: colors.mutedForeground }]}>{cycle}</Text>
+      </View>
+      <Text style={[styles.subAmount, { color: colors.text }]}>₹{amount.toLocaleString("en-IN")}</Text>
+    </View>
+  );
+}
+
+function AnomalyRow({
+  merchant,
+  amount,
+  category,
+  reason,
+  severity,
+}: {
+  merchant: string;
+  amount: number;
+  category: string;
+  reason: string;
+  severity: string;
+}) {
+  const colors = useColors();
+  const sevColor = severity === "high" ? "#EF4444" : severity === "medium" ? "#F59E0B" : "#3B82F6";
+  return (
+    <View style={[styles.anomalyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={styles.anomalyHeader}>
+        <View style={[styles.anomalyBadge, { backgroundColor: sevColor + "20" }]}>
+          <Text style={[styles.anomalyBadgeText, { color: sevColor }]}>
+            {severity === "high" ? "High" : severity === "medium" ? "Medium" : "Low"}
+          </Text>
+        </View>
+        <Text style={[styles.anomalyAmount, { color: colors.text }]}>
+          ₹{amount.toLocaleString("en-IN")}
+        </Text>
+      </View>
+      <Text style={[styles.anomalyMerchant, { color: colors.text }]}>{merchant}</Text>
+      <Text style={[styles.anomalyCategory, { color: colors.mutedForeground }]}>
+        {category}
+      </Text>
+      <Text style={[styles.anomalyReason, { color: colors.mutedForeground }]}>{reason}</Text>
+    </View>
+  );
+}
+
+function TrendRow({ month, income, spending, savings, topCategory }: {
+  month: string;
+  income: number;
+  spending: number;
+  savings: number;
+  topCategory: string;
+}) {
+  const colors = useColors();
+  return (
+    <View style={[styles.trendRow, { borderBottomColor: colors.border }]}>
+      <Text style={[styles.trendMonth, { color: colors.text }]}>{month}</Text>
+      <View style={styles.trendNumbers}>
+        <Text style={[styles.trendPositive, { color: "#22C55E" }]}>
+          +₹{income.toLocaleString("en-IN")}
+        </Text>
+        <Text style={[styles.trendNegative, { color: "#EF4444" }]}>
+          -₹{spending.toLocaleString("en-IN")}
+        </Text>
+      </View>
+      <Text style={[styles.trendCategory, { color: colors.mutedForeground }]}>
+        Top: {topCategory}
+      </Text>
     </View>
   );
 }
@@ -92,205 +284,423 @@ function SpendingBar({ category, spent, limit, color }: { category: string; spen
 export default function AIInsightsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { budgets, transactions } = useWallet();
+  const { data, isLoading, isRefreshing, isError, error, refetch } = useInsights();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
-  const totalSpent = transactions
-    .filter((t) => t.type === "debit")
-    .reduce((s, t) => s + t.amount, 0);
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background, paddingTop: topPad }]}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Feather name="chevron-left" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>AI Insights</Text>
+          <View style={{ width: 38 }} />
+        </View>
+        <LoadingSkeleton />
+      </View>
+    );
+  }
 
-  const totalSubs = SUBSCRIPTIONS.reduce((s, sub) => s + sub.amount, 0);
+  if (isError) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background, paddingTop: topPad }]}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Feather name="chevron-left" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>AI Insights</Text>
+          <View style={{ width: 38 }} />
+        </View>
+        <ErrorState message={error?.message ?? "Something went wrong"} onRetry={() => refetch()} />
+      </View>
+    );
+  }
+
+  if (!data || data.healthLabel === "No Data") {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background, paddingTop: topPad }]}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Feather name="chevron-left" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>AI Insights</Text>
+          <View style={{ width: 38 }} />
+        </View>
+        <EmptyState />
+      </View>
+    );
+  }
+
+  const {
+    healthScore,
+    healthLabel,
+    spendingSummary,
+    budgetRecommendations,
+    subscriptions,
+    unusualTransactions,
+    recommendations,
+    monthlyTrends,
+    cashFlowForecast,
+  } = data;
+
+  const totalSubscriptions = subscriptions.reduce((s, sub) => s + sub.amount, 0);
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={[styles.content, { paddingTop: topPad + 16, paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 40 }]}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Feather name="arrow-left" size={22} color={colors.text} />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.headerRow, { paddingTop: topPad + 8 }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Feather name="chevron-left" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>AI Insights</Text>
-        <View style={{ width: 22 }} />
+        <Text style={[styles.headerTitle, { color: colors.text }]}>AI Insights</Text>
+        <TouchableOpacity onPress={() => refetch()} style={styles.refreshBtn}>
+          <Feather
+            name={isRefreshing ? "loader" : "refresh-cw"}
+            size={18}
+            color={colors.mutedForeground}
+          />
+        </TouchableOpacity>
       </View>
 
-      <HealthScore score={78} />
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad + 32 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={() => refetch()} tintColor={colors.primary} />
+        }
+      >
+        <HealthScore score={healthScore} label={healthLabel} />
 
-      {/* Monthly Summary */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>June Summary</Text>
-        <View style={styles.summaryGrid}>
-          {[
-            { label: "Total Spent", value: `₹${totalSpent.toLocaleString("en-IN")}`, icon: "arrow-up-right" as const, color: "#EF4444" },
-            { label: "Subscriptions", value: `₹${totalSubs}`, icon: "refresh-cw" as const, color: "#F59E0B" },
-            { label: "Avg/Day", value: `₹${Math.round(totalSpent / 17).toLocaleString("en-IN")}`, icon: "calendar" as const, color: "#3B82F6" },
-            { label: "Savings Rate", value: "23%", icon: "trending-up" as const, color: "#22C55E" },
-          ].map((item, i) => (
-            <View key={i} style={[styles.summaryCard, { backgroundColor: colors.surface }]}>
-              <View style={[styles.summaryIcon, { backgroundColor: item.color + "20" }]}>
-                <Feather name={item.icon} size={16} color={item.color} />
-              </View>
-              <Text style={[styles.summaryValue, { color: colors.text }]}>{item.value}</Text>
-              <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>{item.label}</Text>
+        <View style={styles.metricsGrid}>
+          <MetricCard
+            label="Total Spent"
+            value={`₹${spendingSummary.totalSpent.toLocaleString("en-IN")}`}
+            icon="arrow-down-left"
+            color="#EF4444"
+          />
+          <MetricCard
+            label="Total Income"
+            value={`₹${spendingSummary.totalIncome.toLocaleString("en-IN")}`}
+            icon="arrow-up-right"
+            color="#22C55E"
+          />
+          <MetricCard
+            label="Avg/Day"
+            value={`₹${Math.round(spendingSummary.averageDailySpend).toLocaleString("en-IN")}`}
+            icon="clock"
+            color="#3B82F6"
+          />
+          <MetricCard
+            label="Savings Rate"
+            value={
+              spendingSummary.totalIncome > 0
+                ? `${Math.round(
+                    ((spendingSummary.totalIncome - spendingSummary.totalSpent) /
+                      spendingSummary.totalIncome) *
+                      100,
+                  )}%`
+                : "0%"
+            }
+            icon="trending-up"
+            color="#8B5CF6"
+          />
+        </View>
+
+        {(budgetRecommendations.length > 0) && (
+          <>
+            <SectionHeader title="Budget Tracker" count={budgetRecommendations.length} />
+            <View style={styles.budgetSection}>
+              {budgetRecommendations.map((b) => (
+                <BudgetBar
+                  key={b.category}
+                  label={b.category}
+                  spent={b.spent}
+                  limit={b.limit}
+                  percentage={b.percentage}
+                  status={b.status}
+                />
+              ))}
             </View>
-          ))}
-        </View>
-      </View>
+          </>
+        )}
 
-      {/* Budget Tracker */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Budget Tracker</Text>
-        <View style={[styles.budgetCard, { backgroundColor: colors.surface }]}>
-          {budgets.map((b) => (
-            <SpendingBar
-              key={b.id}
-              category={b.category}
-              spent={b.spent}
-              limit={b.limit}
-              color={b.color}
-            />
-          ))}
-        </View>
-      </View>
-
-      {/* Subscriptions */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Detected Subscriptions</Text>
-        <View style={[styles.subsList, { backgroundColor: colors.surface }]}>
-          {SUBSCRIPTIONS.map((sub, i) => (
-            <View
-              key={sub.name}
-              style={[
-                styles.subRow,
-                { borderBottomColor: colors.border },
-                i === SUBSCRIPTIONS.length - 1 && { borderBottomWidth: 0 },
-              ]}
-            >
-              <View style={[styles.subIcon, { backgroundColor: sub.color + "20" }]}>
-                <Feather name="refresh-cw" size={14} color={sub.color} />
+        {(subscriptions.length > 0) && (
+          <>
+            <SectionHeader title="Detected Subscriptions" />
+            <View style={[styles.subSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              {subscriptions.map((sub) => (
+                <SubscriptionRow
+                  key={sub.name}
+                  name={sub.name}
+                  amount={sub.amount}
+                  cycle={sub.cycle}
+                  color={sub.name === "Netflix" ? "#E50914" : sub.name === "Hotstar" ? "#00AAFF" : sub.name === "Spotify" ? "#1DB954" : "#3B82F6"}
+                />
+              ))}
+              <View style={styles.subTotal}>
+                <Text style={[styles.subTotalLabel, { color: colors.mutedForeground }]}>
+                  Monthly Total
+                </Text>
+                <Text style={[styles.subTotalAmount, { color: colors.text }]}>
+                  ₹{totalSubscriptions.toLocaleString("en-IN")}
+                </Text>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.subName, { color: colors.text }]}>{sub.name}</Text>
-                <Text style={[styles.subCycle, { color: colors.mutedForeground }]}>{sub.cycle}</Text>
-              </View>
-              <Text style={[styles.subAmount, { color: colors.text }]}>₹{sub.amount}</Text>
             </View>
-          ))}
-        </View>
-      </View>
+          </>
+        )}
 
-      {/* Suggestions */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>AI Recommendations</Text>
-        <View style={styles.suggestions}>
-          {SUGGESTIONS.map((s, i) => (
-            <View key={i} style={[styles.suggCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={styles.suggHeader}>
-                <View style={[styles.suggIcon, { backgroundColor: s.color + "20" }]}>
-                  <Feather name={s.icon} size={18} color={s.color} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.suggTitle, { color: colors.text }]}>{s.title}</Text>
-                  <View style={[styles.savingBadge, { backgroundColor: s.color + "20" }]}>
-                    <Text style={[styles.savingText, { color: s.color }]}>{s.saving}</Text>
-                  </View>
-                </View>
-              </View>
-              <Text style={[styles.suggBody, { color: colors.mutedForeground }]}>{s.body}</Text>
+        {(monthlyTrends.length > 0) && (
+          <>
+            <SectionHeader title="Monthly Trends" />
+            <View style={[styles.trendSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              {(Array.isArray(monthlyTrends) ? monthlyTrends : []).map((t) => (
+                <TrendRow key={t.month} {...t} />
+              ))}
             </View>
-          ))}
+          </>
+        )}
+
+        {(recommendations.length > 0) && (
+          <>
+            <SectionHeader title="AI Recommendations" count={recommendations.length} />
+            <View style={styles.recSection}>
+              {recommendations.map((r, idx) => (
+                <RecommendationCard key={`${r.title}-${idx}`} {...r} />
+              ))}
+            </View>
+          </>
+        )}
+
+        {(unusualTransactions.length > 0) && (
+          <>
+            <SectionHeader title="Unusual Activity" count={unusualTransactions.length} />
+            <View style={styles.anomalySection}>
+              {unusualTransactions.slice(0, 3).map((u) => (
+                <AnomalyRow key={u.transactionId} {...u} />
+              ))}
+            </View>
+          </>
+        )}
+
+        <View style={styles.footerNote}>
+          <Feather name={data.provider === "llm" ? "cpu" : "database"} size={14} color={colors.mutedForeground} />
+          <Text style={[styles.footerText, { color: colors.mutedForeground }]}>
+            Insights generated {data.provider === "llm" ? "by AI" : "from your data locally"}
+          </Text>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { paddingHorizontal: 20, gap: 0 },
-  header: {
+  headerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
   },
-  title: { fontSize: 20, fontWeight: "800" },
-  scoreCard: {
+  backBtn: { width: 38, height: 38, justifyContent: "center", alignItems: "center" },
+  headerTitle: { fontSize: 18, fontWeight: "700" },
+  refreshBtn: { width: 38, height: 38, justifyContent: "center", alignItems: "center" },
+  scroll: { flex: 1 },
+  scrollContent: { paddingHorizontal: 20, gap: 16 },
+
+  healthContainer: { alignItems: "center", paddingVertical: 8 },
+  healthRing: { position: "relative", width: 160, height: 160, justifyContent: "center", alignItems: "center" },
+  healthCircleBg: { position: "absolute", borderWidth: 10, borderColor: "#22C55E20" },
+  healthInner: { alignItems: "center" },
+  healthScoreNum: { fontSize: 44, fontWeight: "900" },
+  healthScoreLabel: { fontSize: 13, fontWeight: "700", marginTop: -2 },
+
+  metricsGrid: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 24,
+    flexWrap: "wrap",
+    gap: 10,
   },
-  scoreLeft: { gap: 4 },
-  scoreTitle: { fontSize: 18, fontWeight: "700" },
-  scoreLabel: { fontSize: 13 },
-  scoreRight: { alignItems: "center" },
-  scoreNumber: { fontSize: 44, fontWeight: "900" },
-  scoreStatus: { fontSize: 14, fontWeight: "700" },
-  section: { marginBottom: 24 },
-  sectionTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
-  summaryGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  summaryCard: {
-    width: "47%",
-    padding: 16,
+  metricCard: {
+    flex: 1,
+    minWidth: "45%",
     borderRadius: 16,
-    gap: 6,
+    borderWidth: 1,
+    padding: 14,
+    gap: 4,
   },
-  summaryIcon: {
-    width: 36,
-    height: 36,
+  metricIconBg: {
+    width: 32,
+    height: 32,
     borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
+    marginBottom: 4,
   },
-  summaryValue: { fontSize: 18, fontWeight: "800", marginTop: 4 },
-  summaryLabel: { fontSize: 12 },
-  budgetCard: { borderRadius: 16, padding: 16, gap: 16 },
-  barRow: { gap: 6 },
-  barLeft: { flexDirection: "row", justifyContent: "space-between" },
-  barCategory: { fontSize: 14, fontWeight: "600" },
-  barAmount: { fontSize: 13 },
-  barTrack: { height: 6, borderRadius: 3, overflow: "hidden" },
-  barFill: { height: "100%", borderRadius: 3 },
-  subsList: { borderRadius: 16, overflow: "hidden" },
+  metricValue: { fontSize: 20, fontWeight: "800" },
+  metricLabel: { fontSize: 12, fontWeight: "600" },
+
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 8,
+  },
+  sectionTitle: { fontSize: 18, fontWeight: "800" },
+  sectionCount: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  sectionCountText: { fontSize: 12, fontWeight: "700" },
+
+  budgetSection: { gap: 12 },
+  budgetRow: { gap: 6 },
+  budgetHeader: { flexDirection: "row", justifyContent: "space-between" },
+  budgetCategory: { fontSize: 14, fontWeight: "700" },
+  budgetAmount: { fontSize: 13, fontWeight: "600" },
+  budgetBarBg: { height: 8, borderRadius: 4, overflow: "hidden" },
+  budgetBarFill: { height: "100%", borderRadius: 4 },
+  budgetPercent: { fontSize: 11, fontWeight: "600" },
+
+  subSection: {
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
   subRow: {
     flexDirection: "row",
     alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 0.5,
     gap: 12,
-    padding: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  subIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: "center",
+  subDot: { width: 8, height: 8, borderRadius: 4 },
+  subInfo: { flex: 1 },
+  subName: { fontSize: 14, fontWeight: "700" },
+  subCycle: { fontSize: 11, fontWeight: "600", marginTop: 1 },
+  subAmount: { fontSize: 15, fontWeight: "800" },
+  subTotal: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  subTotalLabel: { fontSize: 13, fontWeight: "700" },
+  subTotalAmount: { fontSize: 15, fontWeight: "900" },
+
+  trendSection: {
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  trendRow: {
+    flexDirection: "row",
     alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 0.5,
+    gap: 12,
   },
-  subName: { fontSize: 14, fontWeight: "600" },
-  subCycle: { fontSize: 12, marginTop: 2 },
-  subAmount: { fontSize: 15, fontWeight: "700" },
-  suggestions: { gap: 12 },
-  suggCard: { borderRadius: 16, padding: 16, gap: 12, borderWidth: 1 },
-  suggHeader: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
-  suggIcon: {
+  trendMonth: { fontSize: 14, fontWeight: "700", width: 65 },
+  trendNumbers: { flex: 1, flexDirection: "row", gap: 8 },
+  trendPositive: { fontSize: 13, fontWeight: "700" },
+  trendNegative: { fontSize: 13, fontWeight: "700" },
+  trendCategory: { fontSize: 11, fontWeight: "600", width: 80, textAlign: "right" },
+
+  recSection: { gap: 10 },
+  recCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    gap: 10,
+  },
+  recHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
+  recIcon: {
     width: 40,
     height: 40,
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
   },
-  suggTitle: { fontSize: 15, fontWeight: "700", marginBottom: 4 },
-  savingBadge: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
+  recInfo: { flex: 1 },
+  recTitle: { fontSize: 15, fontWeight: "700" },
+  recSaving: { fontSize: 13, fontWeight: "700", marginTop: 1 },
+  recBody: { fontSize: 13, lineHeight: 19 },
+
+  anomalySection: { gap: 10 },
+  anomalyCard: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 4 },
+  anomalyHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  anomalyBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8 },
+  anomalyBadgeText: { fontSize: 11, fontWeight: "700" },
+  anomalyAmount: { fontSize: 18, fontWeight: "800" },
+  anomalyMerchant: { fontSize: 14, fontWeight: "700", marginTop: 4 },
+  anomalyCategory: { fontSize: 12, fontWeight: "600" },
+  anomalyReason: { fontSize: 12, lineHeight: 17, marginTop: 4 },
+
+  footerNote: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 16,
   },
-  savingText: { fontSize: 12, fontWeight: "700" },
-  suggBody: { fontSize: 14, lineHeight: 20 },
+  footerText: { fontSize: 12, fontWeight: "600" },
+
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+  },
+  loadingText: { fontSize: 15, fontWeight: "600" },
+
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 32,
+    gap: 12,
+  },
+  errorIconBg: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  errorTitle: { fontSize: 20, fontWeight: "800" },
+  errorMessage: { fontSize: 14, textAlign: "center", lineHeight: 20 },
+  retryBtn: { borderRadius: 16, overflow: "hidden", marginTop: 8 },
+  retryBtnGrad: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+  },
+  retryBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 32,
+    gap: 12,
+  },
+  emptyIconBg: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    marginBottom: 8,
+  },
+  emptyTitle: { fontSize: 22, fontWeight: "800" },
+  emptyMessage: { fontSize: 14, textAlign: "center", lineHeight: 20 },
 });

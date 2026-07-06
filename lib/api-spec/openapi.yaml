@@ -1,6 +1,5 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
   description: API specification
@@ -10,6 +9,10 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: insights
+    description: AI-powered financial insights
+  - name: cards
+    description: Card onboarding and management
 paths:
   /healthz:
     get:
@@ -24,6 +27,175 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /insights/health:
+    get:
+      operationId: insightsHealth
+      tags: [insights]
+      summary: Insights service health
+      description: Returns the AI insights service status and provider info
+      responses:
+        "200":
+          description: Insights service info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InsightsHealthResponse"
+
+  /insights/generate:
+    post:
+      operationId: generateInsights
+      tags: [insights]
+      summary: Generate financial insights
+      description: Analyzes user financial data and returns AI-powered insights
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InsightsGenerateRequest"
+      responses:
+        "200":
+          description: Generated insights
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InsightsResponse"
+        "400":
+          description: Invalid request data
+        "500":
+          description: Insights generation failed
+
+  /cards:
+    get:
+      operationId: listCards
+      tags: [cards]
+      summary: List all cards
+      responses:
+        "200":
+          description: Card list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cards:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CardRecord"
+    post:
+      operationId: createCard
+      tags: [cards]
+      summary: Add a new card
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CardCreateInput"
+      responses:
+        "201":
+          description: Card created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  card:
+                    $ref: "#/components/schemas/CardRecord"
+        "400":
+          description: Invalid input
+
+  /cards/{id}:
+    get:
+      operationId: getCard
+      tags: [cards]
+      summary: Get a card by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Card details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  card:
+                    $ref: "#/components/schemas/CardRecord"
+        "404":
+          description: Card not found
+    patch:
+      operationId: updateCard
+      tags: [cards]
+      summary: Update card details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CardUpdateInput"
+      responses:
+        "200":
+          description: Card updated
+        "404":
+          description: Card not found
+    delete:
+      operationId: deleteCard
+      tags: [cards]
+      summary: Remove a card
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Card removed
+        "404":
+          description: Card not found
+
+  /cards/{id}/freeze:
+    post:
+      operationId: freezeCard
+      tags: [cards]
+      summary: Freeze a card
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Card frozen
+
+  /cards/{id}/unfreeze:
+    post:
+      operationId: unfreezeCard
+      tags: [cards]
+      summary: Unfreeze a card
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Card unfrozen
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +206,430 @@ components:
       required:
         - status
 
+    InsightsHealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        version:
+          type: string
+        provider:
+          type: string
+      required:
+        - status
+        - version
+        - provider
+
+    TransactionInput:
+      type: object
+      properties:
+        id:
+          type: string
+        amount:
+          type: number
+        type:
+          type: string
+          enum: [credit, debit]
+        category:
+          type: string
+        description:
+          type: string
+        date:
+          type: string
+        status:
+          type: string
+        merchant:
+          type: string
+      required:
+        - id
+        - amount
+        - type
+        - category
+        - description
+        - date
+        - status
+        - merchant
+
+    BudgetInput:
+      type: object
+      properties:
+        id:
+          type: string
+        category:
+          type: string
+        limit:
+          type: number
+        spent:
+          type: number
+      required:
+        - id
+        - category
+        - limit
+        - spent
+
+    ReservedAmountInput:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        amount:
+          type: number
+        category:
+          type: string
+        dueDate:
+          type: string
+        recurring:
+          type: boolean
+      required:
+        - id
+        - label
+        - amount
+        - category
+        - recurring
+
+    InsightsGenerateRequest:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransactionInput"
+        budgets:
+          type: array
+          items:
+            $ref: "#/components/schemas/BudgetInput"
+        reservedAmounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReservedAmountInput"
+        balance:
+          type: number
+        upiLite:
+          type: number
+        month:
+          type: string
+        year:
+          type: number
+      required:
+        - transactions
+        - balance
+
+    CategoryBreakdown:
+      type: object
+      properties:
+        category:
+          type: string
+        total:
+          type: number
+        count:
+          type: integer
+        percentage:
+          type: number
+        trend:
+          type: string
+          enum: [up, down, stable]
+        previousPeriodAmount:
+          type: number
+
+    SpendingSummary:
+      type: object
+      properties:
+        totalIncome:
+          type: number
+        totalSpent:
+          type: number
+        incomeCount:
+          type: integer
+        expenseCount:
+          type: integer
+        averageDailySpend:
+          type: number
+        largestExpense:
+          type: object
+          nullable: true
+          properties:
+            amount:
+              type: number
+            merchant:
+              type: string
+            category:
+              type: string
+        largestIncome:
+          type: object
+          nullable: true
+          properties:
+            amount:
+              type: number
+            merchant:
+              type: string
+        byCategory:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/CategoryBreakdown"
+        topCategory:
+          type: string
+          nullable: true
+        topCategoryAmount:
+          type: number
+
+    BudgetRecommendation:
+      type: object
+      properties:
+        category:
+          type: string
+        limit:
+          type: number
+        spent:
+          type: number
+        percentage:
+          type: number
+        status:
+          type: string
+          enum: [on_track, warning, exceeded, under_utilized]
+        suggestedLimit:
+          type: number
+        reason:
+          type: string
+
+    CashFlowForecast:
+      type: object
+      properties:
+        currentBalance:
+          type: number
+        projectedBalance:
+          type: number
+        upcomingExpenses:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              amount:
+                type: number
+              dueDate:
+                type: string
+        daysUntilDepletion:
+          type: number
+          nullable: true
+        surplus:
+          type: number
+        confidence:
+          type: string
+          enum: [high, medium, low]
+
+    SavingsOpportunity:
+      type: object
+      properties:
+        category:
+          type: string
+        currentSpend:
+          type: number
+        potentialSavings:
+          type: number
+        suggestion:
+          type: string
+        impact:
+          type: string
+          enum: [low, medium, high]
+
+    UnusualTransaction:
+      type: object
+      properties:
+        transactionId:
+          type: string
+        amount:
+          type: number
+        merchant:
+          type: string
+        category:
+          type: string
+        date:
+          type: string
+        deviation:
+          type: number
+        reason:
+          type: string
+        severity:
+          type: string
+          enum: [low, medium, high]
+
+    Subscription:
+      type: object
+      properties:
+        name:
+          type: string
+        amount:
+          type: number
+        cycle:
+          type: string
+          enum: [Monthly, Yearly, Weekly, Quarterly]
+        category:
+          type: string
+        merchant:
+          type: string
+        lastDate:
+          type: string
+        confidence:
+          type: number
+
+    MonthlyTrend:
+      type: object
+      properties:
+        month:
+          type: string
+        income:
+          type: number
+        spending:
+          type: number
+        savings:
+          type: number
+        topCategory:
+          type: string
+
+    InsightRecommendation:
+      type: object
+      properties:
+        icon:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        saving:
+          type: string
+        color:
+          type: string
+        priority:
+          type: string
+          enum: [low, medium, high]
+
+    InsightsResponse:
+      type: object
+      properties:
+        healthScore:
+          type: number
+        healthLabel:
+          type: string
+        month:
+          type: string
+        year:
+          type: number
+        spendingSummary:
+          $ref: "#/components/schemas/SpendingSummary"
+        budgetRecommendations:
+          type: array
+          items:
+            $ref: "#/components/schemas/BudgetRecommendation"
+        savingsOpportunities:
+          type: array
+          items:
+            $ref: "#/components/schemas/SavingsOpportunity"
+        unusualTransactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/UnusualTransaction"
+        subscriptions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Subscription"
+        cashFlowForecast:
+          $ref: "#/components/schemas/CashFlowForecast"
+        monthlyTrends:
+          type: array
+          items:
+            $ref: "#/components/schemas/MonthlyTrend"
+        recommendations:
+          type: array
+          items:
+            $ref: "#/components/schemas/InsightRecommendation"
+        generatedAt:
+          type: string
+        provider:
+          type: string
+          enum: [local, llm]
+
+    CardRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        cardNetwork:
+          type: string
+          enum: [visa, mastercard, rupay, amex, discover, unknown]
+        issuer:
+          type: string
+          nullable: true
+        lastFour:
+          type: string
+        expiryMonth:
+          type: integer
+        expiryYear:
+          type: integer
+        nickname:
+          type: string
+        theme:
+          type: object
+          properties:
+            gradientColors:
+              type: array
+              items:
+                type: string
+        frozen:
+          type: boolean
+        balance:
+          type: number
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - userId
+        - cardNetwork
+        - lastFour
+        - expiryMonth
+        - expiryYear
+        - nickname
+        - theme
+        - frozen
+        - balance
+        - createdAt
+        - updatedAt
+
+    CardCreateInput:
+      type: object
+      properties:
+        cardNetwork:
+          type: string
+          enum: [visa, mastercard, rupay, amex, discover]
+        issuer:
+          type: string
+          nullable: true
+        lastFour:
+          type: string
+        expiryMonth:
+          type: integer
+        expiryYear:
+          type: integer
+        nickname:
+          type: string
+      required:
+        - cardNetwork
+        - lastFour
+        - expiryMonth
+        - expiryYear
+
+    CardUpdateInput:
+      type: object
+      properties:
+        nickname:
+          type: string
+        frozen:
+          type: boolean
+        balance:
+          type: number

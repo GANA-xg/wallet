@@ -16,13 +16,17 @@
     "ios": {
       "supportsTablet": false,
       "infoPlist": {
-        "NSCameraUsageDescription": "Vault uses the camera to scan UPI QR codes and launch payments in your UPI app.",
+        "NSCameraUsageDescription": "Vault uses the camera to scan UPI QR codes and launch payments in your UPI app, and to scan credit card details.",
+        "NFCReaderUsageDescription": "Vault uses NFC to read payment terminals for contactless UPI payments.",
         "LSApplicationQueriesSchemes": ["tez", "phonepe", "paytmmp", "upi"]
       }
     },
     "android": {
       "backgroundColor": "#0F1115",
-      "permissions": ["android.permission.CAMERA"]
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.NFC"
+      ]
     },
     "web": {
       "favicon": "./assets/images/icon.png"
@@ -41,7 +45,15 @@
         {
           "cameraPermission": "Vault uses the camera to scan UPI QR codes and launch payments in your UPI app."
         }
-      ]
+      ],
+      "react-native-nfc-manager",
+      [
+        "react-native-vision-camera",
+        {
+          "cameraPermissionText": "Vault needs camera access to scan credit cards."
+        }
+      ],
+      "@react-native-ml-kit/text-recognition"
     ],
     "experiments": {
       "typedRoutes": true,

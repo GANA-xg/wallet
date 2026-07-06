@@ -16,22 +16,18 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import CardScanner from "@/components/CardScanner";
+import OcrReviewSheet from "@/components/OcrReviewSheet";
+import QualityFeedback from "@/components/QualityFeedback";
 import { WalletStack } from "@/components/WalletStack";
 import { useWallet } from "@/context/WalletContext";
+import { useCardScanner } from "@/hooks/useCardScanner";
 import { useColors } from "@/hooks/useColors";
-import type { VaultCard } from "@/types";
+import { trackCardAdded, trackOnboardingStart } from "@/services/cards/analytics";
+import type { CardNetwork, CardRecord } from "@/types";
+import { detectCardNetwork, luhnCheck, stripNumber, formatCardNumber } from "@/services/cards/validation";
 
 const { width } = Dimensions.get("window");
-
-const CARD_GRADIENTS: [string, string][] = [
-  ["#2a2a2a", "#222222"],
-  ["#252525", "#303030"],
-  ["#202020", "#2a2a2a"],
-  ["#2b2b2b", "#1f1f1f"],
-  ["#303030", "#252525"],
-];
-
-const CARD_TYPES: VaultCard["type"][] = ["visa", "mastercard", "rupay"];
 
 const PRESET_GRADIENTS: { colors: [string, string]; label: string }[] = [
   { colors: ["#2a2a2a", "#222222"], label: "Graphite" },
@@ -42,70 +38,124 @@ const PRESET_GRADIENTS: { colors: [string, string]; label: string }[] = [
   { colors: ["#1f1f1f", "#2f2f2f"], label: "Charcoal" },
 ];
 
+const CARD_NETWORKS: CardNetwork[] = ["visa", "mastercard", "rupay", "amex", "discover"];
+
 export default function CardsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { cards, toggleFreeze, removeCard, addCard } = useWallet();
   const [showAdd, setShowAdd] = useState(false);
   const [addMode, setAddMode] = useState<"scan" | "custom" | null>(null);
-  const [customName, setCustomName] = useState("My Card");
-  const [customBank, setCustomBank] = useState("My Bank");
+  const [customNickname, setCustomNickname] = useState("My Card");
+  const [customIssuer, setCustomIssuer] = useState("");
+  const [customNumber, setCustomNumber] = useState("");
+  const [customMonth, setCustomMonth] = useState("");
+  const [customYear, setCustomYear] = useState("");
   const [customGrad, setCustomGrad] = useState(0);
-  const [customType, setCustomType] = useState<VaultCard["type"]>("visa");
+  const [customNetwork, setCustomNetwork] = useState<CardNetwork>("visa");
+  const [customError, setCustomError] = useState<string | null>(null);
+
+  const scanner = useCardScanner(cards);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const handleRemove = (id: string) => {
     const card = cards.find((c) => c.id === id);
     if (!card) return;
-    Alert.alert("Remove Card", `Remove ${card.bank}?`, [
+    Alert.alert("Remove Card", `Remove ${card.nickname}?`, [
       { text: "Cancel", style: "cancel" },
-      {
-        text: "Remove",
-        style: "destructive",
-        onPress: () => removeCard(id),
-      },
+      { text: "Remove", style: "destructive", onPress: () => removeCard(id) },
     ]);
   };
 
-  const handleAddCustom = () => {
-    const newCard: VaultCard = {
-      id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
-      name: "Aryan Sharma",
-      number: `4${Array.from({ length: 3 }, () => Math.floor(Math.random() * 9000 + 1000)).join(" ")} ${Math.floor(Math.random() * 9000 + 1000)}`,
-      expiry: "12/29",
-      cvv: `${Math.floor(Math.random() * 900 + 100)}`,
-      type: customType,
-      gradientColors: PRESET_GRADIENTS[customGrad].colors,
-      balance: Math.floor(Math.random() * 50000 + 5000),
-      frozen: false,
-      bank: customBank || "Custom Bank",
-    };
-    addCard(newCard);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setShowAdd(false);
-    setAddMode(null);
-    setCustomName("My Card");
-    setCustomBank("My Bank");
+  const handleStartScan = () => {
+    trackOnboardingStart("scan");
+    setAddMode("scan");
+    scanner.startScan();
   };
 
-  const simulateScan = () => {
-    const newCard: VaultCard = {
-      id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
-      name: "Aryan Sharma",
-      number: "4111 1111 1111 1111",
-      expiry: "08/28",
-      cvv: "737",
-      type: "visa",
-      gradientColors: CARD_GRADIENTS[Math.floor(Math.random() * CARD_GRADIENTS.length)],
-      balance: Math.floor(Math.random() * 40000 + 5000),
+  const handleScanCapture = (imagePath: string) => {
+    scanner.onImageCaptured(imagePath);
+  };
+
+  const handleScanConfirm = async (overrides?: { nickname?: string; theme?: { gradientColors: string[] } }) => {
+    const card = await scanner.confirmCard(overrides);
+    if (card) {
+      addCard(card);
+      trackCardAdded(card.cardNetwork, "scan");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setShowAdd(false);
+      setAddMode(null);
+      scanner.reset();
+    }
+  };
+
+  const handleScanCancel = () => {
+    scanner.cancelScan();
+    setAddMode(null);
+  };
+
+  const handleCustomAdd = () => {
+    setCustomError(null);
+
+    const cleaned = stripNumber(customNumber);
+    if (!cleaned || cleaned.length < 13) {
+      setCustomError("Enter a valid card number (13-19 digits)");
+      return;
+    }
+    if (!luhnCheck(cleaned)) {
+      setCustomError("Card number failed checksum validation");
+      return;
+    }
+
+    const month = parseInt(customMonth, 10);
+    const year = parseInt(customYear, 10);
+    if (!month || month < 1 || month > 12) {
+      setCustomError("Enter a valid expiry month (1-12)");
+      return;
+    }
+    if (!year || year < 2024) {
+      setCustomError("Enter a valid expiry year");
+      return;
+    }
+
+    const { network: detectedNetwork } = detectCardNetwork(cleaned);
+    const lastFour = cleaned.slice(-4);
+    const now = new Date().toISOString();
+
+    const newCard: CardRecord = {
+      id: `card_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      userId: "local",
+      cardNetwork: detectedNetwork,
+      issuer: customIssuer || null,
+      lastFour,
+      expiryMonth: month,
+      expiryYear: year,
+      nickname: customNickname || `${detectedNetwork.charAt(0).toUpperCase() + detectedNetwork.slice(1)} •••• ${lastFour}`,
+      theme: { gradientColors: PRESET_GRADIENTS[customGrad].colors },
       frozen: false,
-      bank: "Scanned Card",
+      balance: 0,
+      createdAt: now,
+      updatedAt: now,
     };
+
     addCard(newCard);
+    trackCardAdded(newCard.cardNetwork, "manual");
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    resetCustomForm();
+  };
+
+  const resetCustomForm = () => {
     setShowAdd(false);
     setAddMode(null);
+    setCustomNickname("My Card");
+    setCustomIssuer("");
+    setCustomNumber("");
+    setCustomMonth("");
+    setCustomYear("");
+    setCustomGrad(0);
+    setCustomNetwork("visa");
+    setCustomError(null);
   };
 
   return (
@@ -157,7 +207,7 @@ export default function CardsScreen() {
           <View style={styles.addMethods}>
             <TouchableOpacity
               style={[styles.addMethod, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              onPress={() => setAddMode("scan")}
+              onPress={handleStartScan}
             >
               <View style={[styles.addMethodIcon, { backgroundColor: "#3B82F620" }]}>
                 <Feather name="camera" size={24} color="#3B82F6" />
@@ -169,87 +219,175 @@ export default function CardsScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.addMethod, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              onPress={() => setAddMode("custom")}
+              onPress={() => { setAddMode("custom"); trackOnboardingStart("manual"); }}
             >
               <View style={[styles.addMethodIcon, { backgroundColor: colors.surfaceElevated }]}>
                 <Feather name="edit-3" size={24} color={colors.primary} />
               </View>
               <Text style={[styles.addMethodTitle, { color: colors.text }]}>Custom Card</Text>
               <Text style={[styles.addMethodSub, { color: colors.mutedForeground }]}>
-                Create a custom branded card
+                Enter card details manually
               </Text>
             </TouchableOpacity>
           </View>
         </View>
       )}
 
-      {/* Scan simulation */}
-      {addMode === "scan" && (
-        <View style={[styles.scanView, { backgroundColor: colors.surface }]}>
-          <View style={styles.scanViewport}>
-            <View style={styles.scanCornerTL} />
-            <View style={styles.scanCornerTR} />
-            <View style={styles.scanCornerBL} />
-            <View style={styles.scanCornerBR} />
-            <Feather name="credit-card" size={48} color="rgba(255,255,255,0.3)" />
-            <Text style={styles.scanPrompt}>Position your card within the frame</Text>
+      {/* Scan mode */}
+      {addMode === "scan" && scanner.session.state === "idle" && (
+        <View style={[styles.scanLoading, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.scanLoadingText, { color: colors.mutedForeground }]}>
+            Initializing camera...
+          </Text>
+        </View>
+      )}
+
+      {addMode === "scan" && scanner.session.state === "ready" && (
+        <CardScanner
+          onCapture={handleScanCapture}
+          onCancel={handleScanCancel}
+        />
+      )}
+
+      {addMode === "scan" && (scanner.session.state === "capturing" || scanner.session.state === "processing" || scanner.session.state === "quality_check") && (
+        <View style={[styles.scanLoading, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.scanLoadingText, { color: colors.mutedForeground }]}>
+            {scanner.session.state === "capturing" ? "Capturing..." : "Analyzing card..."}
+          </Text>
+        </View>
+      )}
+
+      {addMode === "scan" && scanner.session.state === "quality_failed" && scanner.session.error && (
+        <QualityFeedback
+          error={scanner.session.error}
+          onRetake={scanner.retake}
+          onCancel={handleScanCancel}
+        />
+      )}
+
+      {addMode === "scan" && scanner.session.state === "error" && scanner.session.error && (
+        <View style={[styles.errorBlock, { backgroundColor: colors.surface }]}>
+          <View style={[styles.errorIconBox, { backgroundColor: "#EF444420" }]}>
+            <Feather name="alert-circle" size={28} color="#EF4444" />
           </View>
-          <TouchableOpacity style={styles.scanSimBtn} onPress={simulateScan}>
-            <LinearGradient colors={[colors.primary, "#d9d9d9"]} style={styles.scanSimGrad}>
-              <Feather name="zap" size={16} color="#fff" />
-              <Text style={styles.scanSimText}>Simulate Scan (Demo)</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setAddMode(null)} style={styles.cancelLink}>
-            <Text style={[styles.cancelLinkText, { color: colors.mutedForeground }]}>Cancel</Text>
-          </TouchableOpacity>
+          <Text style={[styles.errorTitle, { color: colors.text }]}>Scan Failed</Text>
+          <Text style={[styles.errorMessage, { color: colors.mutedForeground }]}>
+            {scanner.session.error.message}
+          </Text>
+          <View style={styles.errorActions}>
+            {scanner.session.error.retryable && (
+              <TouchableOpacity
+                style={[styles.errorRetryBtn, { backgroundColor: colors.primary }]}
+                onPress={scanner.retake}
+              >
+                <Text style={styles.errorRetryBtnText}>Try Again</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity onPress={handleScanCancel}>
+              <Text style={[styles.errorCancelText, { color: colors.mutedForeground }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {addMode === "scan" && scanner.session.state === "review" && scanner.session.reviewData && (
+        <OcrReviewSheet
+          data={scanner.session.reviewData}
+          onConfirm={handleScanConfirm}
+          onCancel={handleScanCancel}
+        />
+      )}
+
+      {addMode === "scan" && scanner.session.state === "done" && (
+        <View style={[styles.doneBlock, { backgroundColor: colors.surface }]}>
+          <Feather name="check-circle" size={32} color="#22C55E" />
+          <Text style={[styles.doneText, { color: colors.text }]}>Card added to wallet</Text>
         </View>
       )}
 
       {/* Custom card creator */}
       {addMode === "custom" && (
         <View style={[styles.creator, { backgroundColor: colors.surface }]}>
-          {/* Preview */}
           <LinearGradient
             colors={PRESET_GRADIENTS[customGrad].colors}
             style={styles.previewCard}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
-            <Text style={styles.previewBank}>{customBank || "My Bank"}</Text>
-            <Text style={styles.previewType}>{customType.toUpperCase()}</Text>
-            <Text style={styles.previewNum}>•••• •••• •••• 0000</Text>
-            <Text style={styles.previewName}>Aryan Sharma</Text>
+            <Text style={styles.previewBank}>{customIssuer || "My Bank"}</Text>
+            <Text style={styles.previewType}>{customNetwork.toUpperCase()}</Text>
+            <Text style={styles.previewNum}>
+              {customNumber ? formatCardNumber(customNumber) : "•••• •••• •••• 0000"}
+            </Text>
+            <Text style={styles.previewName}>
+              {customMonth && customYear ? `${customMonth}/${customYear.slice(-2)}` : ""}
+            </Text>
           </LinearGradient>
 
-          <Text style={[styles.creatorLabel, { color: colors.mutedForeground }]}>Bank Name</Text>
-          <View style={[styles.creatorInput, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}> 
+          <Text style={[styles.creatorLabel, { color: colors.mutedForeground }]}>Card Number</Text>
+          <View style={[styles.creatorInput, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
             <TextInput
               style={[styles.creatorInputText, { color: colors.text }]}
-              value={customBank}
-              onChangeText={setCustomBank}
-              placeholder="Enter bank name"
+              value={customNumber}
+              onChangeText={(t) => setCustomNumber(t.replace(/\D/g, ""))}
+              placeholder="0000 0000 0000 0000"
               placeholderTextColor={colors.textTertiary}
-              selectionColor={colors.primary}
+              keyboardType="number-pad"
+              maxLength={19}
             />
           </View>
 
-          <Text style={[styles.creatorLabel, { color: colors.mutedForeground }]}>Card Type</Text>
-          <View style={styles.typeRow}>
-            {CARD_TYPES.map((t) => (
-              <TouchableOpacity
-                key={t}
-                style={[
-                  styles.typeChip,
-                  { backgroundColor: customType === t ? colors.primary : colors.surfaceElevated, borderColor: colors.border },
-                ]}
-                onPress={() => setCustomType(t)}
-              >
-                <Text style={[styles.typeChipText, { color: customType === t ? "#fff" : colors.mutedForeground }]}>
-                  {t.toUpperCase()}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          <View style={styles.creatorRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.creatorLabel, { color: colors.mutedForeground }]}>Expiry Month</Text>
+              <View style={[styles.creatorInput, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                <TextInput
+                  style={[styles.creatorInputText, { color: colors.text }]}
+                  value={customMonth}
+                  onChangeText={setCustomMonth}
+                  placeholder="MM"
+                  placeholderTextColor={colors.textTertiary}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                />
+              </View>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.creatorLabel, { color: colors.mutedForeground }]}>Expiry Year</Text>
+              <View style={[styles.creatorInput, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                <TextInput
+                  style={[styles.creatorInputText, { color: colors.text }]}
+                  value={customYear}
+                  onChangeText={setCustomYear}
+                  placeholder="YYYY"
+                  placeholderTextColor={colors.textTertiary}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                />
+              </View>
+            </View>
+          </View>
+
+          <Text style={[styles.creatorLabel, { color: colors.mutedForeground }]}>Issuer / Bank Name</Text>
+          <View style={[styles.creatorInput, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+            <TextInput
+              style={[styles.creatorInputText, { color: colors.text }]}
+              value={customIssuer}
+              onChangeText={setCustomIssuer}
+              placeholder="HDFC Bank"
+              placeholderTextColor={colors.textTertiary}
+            />
+          </View>
+
+          <Text style={[styles.creatorLabel, { color: colors.mutedForeground }]}>Nickname</Text>
+          <View style={[styles.creatorInput, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+            <TextInput
+              style={[styles.creatorInputText, { color: colors.text }]}
+              value={customNickname}
+              onChangeText={setCustomNickname}
+              placeholder="My Card"
+              placeholderTextColor={colors.textTertiary}
+            />
           </View>
 
           <Text style={[styles.creatorLabel, { color: colors.mutedForeground }]}>Color Theme</Text>
@@ -265,13 +403,17 @@ export default function CardsScreen() {
             ))}
           </View>
 
-          <TouchableOpacity style={styles.createBtn} onPress={handleAddCustom}>
+          {customError && (
+            <Text style={styles.customErrorText}>{customError}</Text>
+          )}
+
+          <TouchableOpacity style={styles.createBtn} onPress={handleCustomAdd}>
             <LinearGradient colors={[colors.primary, "#d9d9d9"]} style={styles.createBtnGrad}>
               <Text style={styles.createBtnText}>Add to Wallet</Text>
             </LinearGradient>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => setAddMode(null)} style={styles.cancelLink}>
+          <TouchableOpacity onPress={resetCustomForm} style={styles.cancelLink}>
             <Text style={[styles.cancelLinkText, { color: colors.mutedForeground }]}>Cancel</Text>
           </TouchableOpacity>
         </View>
@@ -282,7 +424,7 @@ export default function CardsScreen() {
         style={[styles.transportTeaser, { backgroundColor: colors.surface, borderColor: colors.border }]}
         onPress={() => router.push("/transport")}
       >
-        <View style={[styles.transportIcon, { backgroundColor: colors.surfaceElevated }]}> 
+        <View style={[styles.transportIcon, { backgroundColor: colors.surfaceElevated }]}>
           <Feather name="map" size={20} color={colors.success} />
         </View>
         <View style={{ flex: 1 }}>
@@ -314,27 +456,18 @@ const styles = StyleSheet.create({
   addMethodIcon: { width: 52, height: 52, borderRadius: 16, justifyContent: "center", alignItems: "center" },
   addMethodTitle: { fontSize: 14, fontWeight: "700", textAlign: "center" },
   addMethodSub: { fontSize: 12, textAlign: "center" },
-  scanView: { borderRadius: 20, padding: 20, gap: 16, marginBottom: 20, alignItems: "center" },
-  scanViewport: {
-    width: "100%",
-    height: 180,
-    backgroundColor: "#000",
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 12,
-    position: "relative",
-  },
-  scanCornerTL: { position: "absolute", top: 12, left: 12, width: 24, height: 24, borderTopWidth: 3, borderLeftWidth: 3, borderColor: "#F4F4F5", borderRadius: 4 },
-  scanCornerTR: { position: "absolute", top: 12, right: 12, width: 24, height: 24, borderTopWidth: 3, borderRightWidth: 3, borderColor: "#F4F4F5", borderRadius: 4 },
-  scanCornerBL: { position: "absolute", bottom: 12, left: 12, width: 24, height: 24, borderBottomWidth: 3, borderLeftWidth: 3, borderColor: "#F4F4F5", borderRadius: 4 },
-  scanCornerBR: { position: "absolute", bottom: 12, right: 12, width: 24, height: 24, borderBottomWidth: 3, borderRightWidth: 3, borderColor: "#F4F4F5", borderRadius: 4 },
-  scanPrompt: { color: "rgba(255,255,255,0.5)", fontSize: 12, textAlign: "center" },
-  scanSimBtn: { width: "100%", borderRadius: 14, overflow: "hidden" },
-  scanSimGrad: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, paddingVertical: 14 },
-  scanSimText: { color: "#fff", fontSize: 15, fontWeight: "700" },
-  cancelLink: { paddingVertical: 8 },
-  cancelLinkText: { fontSize: 14 },
+  scanLoading: { borderRadius: 20, padding: 40, marginBottom: 20, alignItems: "center" },
+  scanLoadingText: { fontSize: 14 },
+  errorBlock: { borderRadius: 20, padding: 24, gap: 12, marginBottom: 20, alignItems: "center" },
+  errorIconBox: { width: 56, height: 56, borderRadius: 16, justifyContent: "center", alignItems: "center" },
+  errorTitle: { fontSize: 17, fontWeight: "700" },
+  errorMessage: { fontSize: 13, textAlign: "center", lineHeight: 18 },
+  errorActions: { gap: 8, alignItems: "center" },
+  errorRetryBtn: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
+  errorRetryBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  errorCancelText: { fontSize: 14, paddingVertical: 8 },
+  doneBlock: { borderRadius: 20, padding: 32, marginBottom: 20, alignItems: "center", gap: 8 },
+  doneText: { fontSize: 16, fontWeight: "700" },
   creator: { borderRadius: 20, padding: 20, gap: 12, marginBottom: 20 },
   previewCard: { borderRadius: 18, padding: 20, height: 160, justifyContent: "space-between", marginBottom: 4 },
   previewBank: { color: "rgba(255,255,255,0.8)", fontSize: 13, fontWeight: "600" },
@@ -344,15 +477,16 @@ const styles = StyleSheet.create({
   creatorLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 0.5 },
   creatorInput: { borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1 },
   creatorInputText: { fontSize: 15 },
-  typeRow: { flexDirection: "row", gap: 8 },
-  typeChip: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: "center", borderWidth: 1 },
-  typeChipText: { fontSize: 12, fontWeight: "700" },
+  creatorRow: { flexDirection: "row", gap: 12 },
   gradRow: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
   gradSwatch: { width: 44, height: 44, borderRadius: 12, overflow: "hidden", padding: 2 },
   gradSwatchGrad: { flex: 1, borderRadius: 10 },
+  customErrorText: { color: "#EF4444", fontSize: 13, textAlign: "center" },
   createBtn: { borderRadius: 14, overflow: "hidden", marginTop: 4 },
   createBtnGrad: { paddingVertical: 14, alignItems: "center" },
   createBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  cancelLink: { paddingVertical: 8, alignItems: "center" },
+  cancelLinkText: { fontSize: 14 },
   transportTeaser: {
     flexDirection: "row",
     alignItems: "center",
