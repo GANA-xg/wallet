@@ -2,7 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Platform,
@@ -14,6 +14,7 @@ import {
   KeyboardAvoidingView,
   TouchableWithoutFeedback,
   Keyboard,
+  AppState,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -21,10 +22,21 @@ import { buildLaunchRequest, PaymentAppButtons } from "@/components/PaymentAppBu
 import { useAuth } from "@/context/AuthContext";
 import { useWallet } from "@/context/WalletContext";
 import { useColors } from "@/hooks/useColors";
+import { NfcService } from "@/services/nfc";
+import type { NfcScanResult, NfcStatus } from "@/services/nfc";
 import type { UpiAppId } from "@/services/payment";
 import type { Transaction } from "@/types";
 
-type Step = "ready" | "tapped" | "biometric" | "amount" | "launch" | "launched";
+type Step =
+  | "idle"
+  | "unsupported"
+  | "disabled"
+  | "scanning"
+  | "tag_detected"
+  | "biometric"
+  | "amount"
+  | "launch"
+  | "launched";
 
 const NFC_MERCHANT = {
   name: "Metro Station · Gate 4",
@@ -49,6 +61,8 @@ function PulseRing({ anim, size }: { anim: Animated.Value; size: number }) {
   );
 }
 
+const nfc = NfcService.getInstance();
+
 export default function NFCPayScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -62,31 +76,48 @@ export default function NFCPayScreen() {
     releasePaymentHold,
     commitPaymentHold,
   } = useWallet();
-  const [step, setStep] = useState<Step>("ready");
+
+  const [step, setStep] = useState<Step>("idle");
+  const [nfcStatus, setNfcStatus] = useState<NfcStatus>({ status: "unknown" });
+  const [scanResult, setScanResult] = useState<NfcScanResult | null>(null);
   const [amount, setAmount] = useState("250");
   const [launchedApp, setLaunchedApp] = useState<UpiAppId | null>(null);
   const [holdId, setHoldId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [scanningAttempted, setScanningAttempted] = useState(false);
 
   const amountValue = Number.parseFloat(amount);
   const hasAmount = Number.isFinite(amountValue) && amountValue > 0;
   const paymentPreview = hasAmount ? getPaymentPreview(amountValue) : null;
 
-  useEffect(() => {
-    return () => {
-      if (holdId) releasePaymentHold(holdId);
-    };
-  }, [holdId, releasePaymentHold]);
-
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
-
   const pulse1 = useRef(new Animated.Value(0)).current;
   const pulse2 = useRef(new Animated.Value(0)).current;
   const pulse3 = useRef(new Animated.Value(0)).current;
   const tapScale = useRef(new Animated.Value(1)).current;
+  const scanningRef = useRef(false);
 
   useEffect(() => {
-    if (step !== "ready" && step !== "tapped") return;
+    return () => {
+      nfc.cleanupScan();
+      nfc.cleanup();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (holdId) {
+      return () => {
+        releasePaymentHold(holdId);
+      };
+    }
+    return undefined;
+  }, [holdId, releasePaymentHold]);
+
+  useEffect(() => {
+    void checkNfcStatus();
+  }, []);
+
+  useEffect(() => {
+    if (step !== "idle" && step !== "scanning" && step !== "tag_detected") return;
 
     const makePulse = (anim: Animated.Value, delay: number) =>
       Animated.loop(
@@ -110,25 +141,88 @@ export default function NFCPayScreen() {
     };
   }, [step, pulse1, pulse2, pulse3]);
 
-  const handleTap = async () => {
-    if (step !== "ready") return;
+  const checkNfcStatus = async () => {
+    setNfcStatus({ status: "checking" });
+    const status = await nfc.getStatus();
+    setNfcStatus(status);
+  };
+
+  const startNfcScan = useCallback(async () => {
+    if (scanningRef.current) return;
+    scanningRef.current = true;
+    setScanningAttempted(true);
+    setErrorMessage(null);
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     Animated.sequence([
       Animated.timing(tapScale, { toValue: 0.88, duration: 80, useNativeDriver: true }),
       Animated.spring(tapScale, { toValue: 1, useNativeDriver: true, friction: 4 }),
     ]).start();
-    setStep("tapped");
-    await new Promise((r) => setTimeout(r, 500));
-    setStep("biometric");
-    const ok = await verifyBiometric();
-    if (ok) {
+
+    const status = await nfc.getStatus();
+    setNfcStatus(status);
+
+    if (status.status !== "supported") {
+      setStep("unsupported");
+      setErrorMessage("NFC is not available on this device");
+      scanningRef.current = false;
+      return;
+    }
+
+    if (!status.enabled) {
+      setStep("disabled");
+      setErrorMessage("NFC is disabled. Enable it in your device settings.");
+      scanningRef.current = false;
+      return;
+    }
+
+    setStep("scanning");
+    const result = await nfc.startScanning(45_000);
+    scanningRef.current = false;
+    setScanResult(result);
+
+    if (result.success) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setStep("amount");
+      setStep("tag_detected");
+      await new Promise((r) => setTimeout(r, 600));
+      setStep("biometric");
+      const ok = await verifyBiometric();
+      if (ok) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setStep("amount");
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        setStep("idle");
+      }
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setStep("ready");
+      switch (result.code) {
+        case "cancelled":
+          setStep("idle");
+          setErrorMessage(null);
+          break;
+        case "timeout":
+          setStep("idle");
+          setErrorMessage("No NFC tag detected. Try again.");
+          break;
+        case "disabled":
+          setStep("disabled");
+          setErrorMessage(result.message);
+          break;
+        case "unsupported":
+          setStep("unsupported");
+          setErrorMessage(result.message);
+          break;
+        default:
+          setStep("idle");
+          setErrorMessage(result.message);
+      }
     }
-  };
+  }, [tapScale, verifyBiometric]);
+
+  const handleCancelScan = useCallback(() => {
+    nfc.cancelScan();
+  }, []);
 
   const handleConfirmAmount = () => {
     const n = Number.parseFloat(amount);
@@ -191,6 +285,112 @@ export default function NFCPayScreen() {
         })
       : null;
 
+  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+
+  const renderNFCCircle = () => {
+    const showPulse = step === "idle" || step === "scanning" || step === "tag_detected";
+    const isTapTarget = step === "idle";
+    const isScanning = step === "scanning";
+    const isDetected = step === "tag_detected";
+
+    let iconName: "wifi" | "loader" | "check-circle" | "smartphone" = "wifi";
+    let iconColor = colors.text;
+
+    if (isScanning) {
+      iconName = "wifi";
+    } else if (isDetected) {
+      iconName = "check-circle";
+    }
+
+    const circleBg = isDetected
+      ? "#22C55E20"
+      : isScanning
+        ? "#F4F4F510"
+        : "#171A21";
+
+    const circleBorder = isDetected
+      ? "#22C55E"
+      : isScanning
+        ? "#F4F4F540"
+        : "#F4F4F5";
+
+    return (
+      <Animated.View style={{ transform: [{ scale: tapScale }] }}>
+        {showPulse && !isDetected && (
+          <>
+            <PulseRing anim={pulse1} size={260} />
+            <PulseRing anim={pulse2} size={210} />
+            <PulseRing anim={pulse3} size={160} />
+          </>
+        )}
+        <TouchableOpacity
+          style={[
+            styles.nfcCircle,
+            { backgroundColor: circleBg, borderColor: circleBorder },
+          ]}
+          onPress={isTapTarget ? startNfcScan : undefined}
+          onLongPress={isScanning ? handleCancelScan : undefined}
+          activeOpacity={0.8}
+          disabled={!isTapTarget && !isScanning}
+        >
+          {isScanning ? (
+            <Animated.View style={{ alignItems: "center" }}>
+              <Feather name="wifi" size={52} color={colors.text} />
+            </Animated.View>
+          ) : (
+            <Feather
+              name={iconName}
+              size={52}
+              color={isDetected ? "#22C55E" : iconColor}
+            />
+          )}
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  };
+
+  const renderStatusText = () => {
+    switch (step) {
+      case "idle":
+        return {
+          title: scanningAttempted ? "Tap to try again" : "Tap to pay with NFC",
+          subtitle: scanningAttempted
+            ? "Make sure NFC is enabled and hold your phone near the terminal"
+            : "Hold your phone near the NFC terminal to connect",
+          error: errorMessage,
+        };
+      case "unsupported":
+        return {
+          title: "NFC Not Available",
+          subtitle: "Your device does not support NFC payments",
+          error: null,
+        };
+      case "disabled":
+        return {
+          title: "NFC is Disabled",
+          subtitle: "Enable NFC in your device settings to use tap-to-pay",
+          error: null,
+        };
+      case "scanning":
+        return {
+          title: "Scanning…",
+          subtitle: "Hold your phone near the NFC terminal",
+          error: null,
+        };
+      case "tag_detected":
+        return {
+          title: "NFC Terminal Detected",
+          subtitle: "Processing payment information…",
+          error: null,
+        };
+      default:
+        return { title: "", subtitle: "", error: null };
+    }
+  };
+
+  const status = renderStatusText();
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -199,45 +399,69 @@ export default function NFCPayScreen() {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={{ flex: 1 }}>
           <View style={[styles.header, { paddingTop: topPad + 16 }]}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
+            <TouchableOpacity onPress={() => { nfc.cleanupScan(); nfc.cleanup(); router.back(); }} style={styles.closeBtn}>
               <Feather name="x" size={22} color={colors.text} />
             </TouchableOpacity>
             <Text style={[styles.headerTitle, { color: colors.text }]}>NFC Pay</Text>
             <View style={{ width: 38 }} />
           </View>
 
-          {(step === "ready" || step === "tapped") && (
+          {(step === "idle" || step === "unsupported" || step === "disabled" || step === "scanning" || step === "tag_detected") && (
             <View style={styles.content}>
               <Text style={[styles.merchantLabel, { color: colors.mutedForeground }]}>PAYING TO</Text>
               <Text style={[styles.merchantName, { color: colors.text }]}>{NFC_MERCHANT.name}</Text>
 
               <View style={styles.nfcArea}>
-                <Animated.View style={{ transform: [{ scale: tapScale }] }}>
-                  <PulseRing anim={pulse1} size={260} />
-                  <PulseRing anim={pulse2} size={210} />
-                  <PulseRing anim={pulse3} size={160} />
-                  <TouchableOpacity
-                    style={[styles.nfcCircle, { backgroundColor: step === "tapped" ? "#F4F4F5" : "#171A21" }]}
-                    onPress={handleTap}
-                    activeOpacity={0.8}
-                  >
-                    <Feather name="wifi" size={52} color={step === "tapped" ? "#151515" : "#F4F4F5"} />
-                  </TouchableOpacity>
-                </Animated.View>
+                {renderNFCCircle()}
               </View>
 
+              {(step === "scanning") && (
+                <TouchableOpacity
+                  style={styles.cancelScanBtn}
+                  onPress={handleCancelScan}
+                >
+                  <Text style={[styles.cancelScanText, { color: colors.mutedForeground }]}>
+                    Cancel scan
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {(step === "unsupported" || step === "disabled") && (
+                <TouchableOpacity
+                  style={styles.retryBtn}
+                  onPress={() => { setStep("idle"); setErrorMessage(null); void checkNfcStatus(); }}
+                >
+                  <LinearGradient colors={[colors.primary, colors.primaryLight]} style={styles.retryBtnGrad}>
+                    <Text style={styles.retryBtnText}>Check Again</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              )}
+
               <Text style={[styles.tapInstr, { color: colors.text }]}>
-                {step === "tapped" ? "Authenticating…" : "Tap to simulate NFC"}
+                {status.title}
               </Text>
               <Text style={[styles.tapSub, { color: colors.mutedForeground }]}>
-                NFC reads merchant UPI details, then launches your UPI app
+                {status.subtitle}
               </Text>
+
+              {step === "scanning" && (
+                <Text style={[styles.tapHint, { color: colors.mutedForeground }]}>
+                  Long-press the NFC icon to cancel
+                </Text>
+              )}
+
+              {status.error && (
+                <View style={[styles.errorBadge, { backgroundColor: "#EF444415" }]}>
+                  <Feather name="alert-circle" size={14} color="#EF4444" />
+                  <Text style={[styles.errorText, { color: "#EF4444" }]}>{status.error}</Text>
+                </View>
+              )}
             </View>
           )}
 
           {step === "biometric" && (
             <View style={styles.content}>
-              <View style={[styles.bioCircle, { backgroundColor: "#F4F4F515", borderColor: "#F4F4F5" }]}> 
+              <View style={[styles.bioCircle, { backgroundColor: "#F4F4F515", borderColor: "#F4F4F5" }]}>
                 <Feather name="cpu" size={52} color="#F4F4F5" />
               </View>
               <Text style={[styles.bioTitle, { color: colors.text }]}>Biometric Verification</Text>
@@ -264,30 +488,30 @@ export default function NFCPayScreen() {
                   onChangeText={setAmount}
                   keyboardType="decimal-pad"
                   autoFocus
-                    selectionColor={colors.primary}
+                  selectionColor={colors.primary}
                 />
               </View>
-                <Text style={[styles.remainingText, { color: colors.mutedForeground }]}> 
-                  {paymentPreview
-                    ? `Remaining after payment: ₹${paymentPreview.remainingSpendable.toLocaleString("en-IN")}`
-                    : `Available to spend: ₹${spendableBalance.toLocaleString("en-IN")}`}
-                </Text>
+              <Text style={[styles.remainingText, { color: colors.mutedForeground }]}>
+                {paymentPreview
+                  ? `Remaining after payment: ₹${paymentPreview.remainingSpendable.toLocaleString("en-IN")}`
+                  : `Available to spend: ₹${spendableBalance.toLocaleString("en-IN")}`}
+              </Text>
 
-                <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
-                  <View style={styles.summaryRow}>
-                    <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>Merchant</Text>
-                    <Text style={[styles.summaryValue, { color: colors.text }]}>{NFC_MERCHANT.name}</Text>
-                  </View>
-                  <View style={styles.summaryRow}>
-                    <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>Amount</Text>
-                    <Text style={[styles.summaryValue, { color: colors.text }]}>₹{amountValue.toLocaleString("en-IN") || "0"}</Text>
-                  </View>
-                  <View style={styles.summaryRow}>
-                    <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>After hold</Text>
-                    <Text style={[styles.summaryValue, { color: colors.text }]}>₹{paymentPreview?.remainingSpendable.toLocaleString("en-IN") ?? spendableBalance.toLocaleString("en-IN")}</Text>
-                  </View>
-                  <Text style={[styles.summaryNote, { color: colors.mutedForeground }]}>Funds are reserved before launch. If launch fails, the hold is released.</Text>
+              <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <View style={styles.summaryRow}>
+                  <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>Merchant</Text>
+                  <Text style={[styles.summaryValue, { color: colors.text }]}>{NFC_MERCHANT.name}</Text>
                 </View>
+                <View style={styles.summaryRow}>
+                  <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>Amount</Text>
+                  <Text style={[styles.summaryValue, { color: colors.text }]}>₹{amountValue.toLocaleString("en-IN") || "0"}</Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>After hold</Text>
+                  <Text style={[styles.summaryValue, { color: colors.text }]}>₹{paymentPreview?.remainingSpendable.toLocaleString("en-IN") ?? spendableBalance.toLocaleString("en-IN")}</Text>
+                </View>
+                <Text style={[styles.summaryNote, { color: colors.mutedForeground }]}>Funds are reserved before launch. If launch fails, the hold is released.</Text>
+              </View>
 
               <View style={styles.quickAmountsRow}>
                 {["50", "100", "250", "500"].map((a) => (
@@ -334,7 +558,7 @@ export default function NFCPayScreen() {
               <Text style={[styles.successMerchant, { color: colors.mutedForeground }]}>
                 Complete in {launchedApp === "google_pay" ? "Google Pay" : launchedApp === "phonepe" ? "PhonePe" : "Paytm"}
               </Text>
-              <TouchableOpacity style={styles.doneBtn} onPress={() => router.back()}>
+              <TouchableOpacity style={styles.doneBtn} onPress={() => { nfc.cleanup(); router.back(); }}>
                 <LinearGradient colors={["#F4F4F5", "#D4D4D8"]} style={styles.doneBtnGrad}>
                   <Text style={styles.doneBtnText}>Done</Text>
                 </LinearGradient>
@@ -376,6 +600,22 @@ const styles = StyleSheet.create({
   },
   tapInstr: { fontSize: 20, fontWeight: "700", textAlign: "center" },
   tapSub: { fontSize: 14, textAlign: "center", marginTop: -4 },
+  tapHint: { fontSize: 12, textAlign: "center", marginTop: 4, opacity: 0.6 },
+  errorBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginTop: 8,
+  },
+  errorText: { fontSize: 13, fontWeight: "600" },
+  cancelScanBtn: { marginTop: -4, marginBottom: 4 },
+  cancelScanText: { fontSize: 13, textDecorationLine: "underline" },
+  retryBtn: { borderRadius: 16, overflow: "hidden", marginTop: 4 },
+  retryBtnGrad: { paddingHorizontal: 32, paddingVertical: 14, alignItems: "center" },
+  retryBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
   bioCircle: {
     width: 120,
     height: 120,

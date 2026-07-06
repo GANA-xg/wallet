@@ -60,6 +60,9 @@
   "dependencies": {
     "assert": "^2.1.0",
     "expo-local-authentication": "^17.0.8",
-    "expo-notifications": "^56.0.18"
+    "expo-notifications": "^56.0.18",
+    "react-native-nfc-manager": "^3.17.2",
+    "react-native-vision-camera": "^4.7.0",
+    "@react-native-ml-kit/text-recognition": "^2.3.0"
   }
 }

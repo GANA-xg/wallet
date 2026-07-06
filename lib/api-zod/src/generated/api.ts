@@ -7,10 +7,164 @@
  */
 import * as zod from "zod";
 
-/**
- * Returns server health status
- * @summary Health check
- */
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
+});
+
+export const TransactionInputSchema = zod.object({
+  id: zod.string(),
+  amount: zod.number(),
+  type: zod.enum(["credit", "debit"]),
+  category: zod.string(),
+  description: zod.string(),
+  date: zod.string(),
+  status: zod.string(),
+  merchant: zod.string(),
+});
+
+export const BudgetInputSchema = zod.object({
+  id: zod.string(),
+  category: zod.string(),
+  limit: zod.number(),
+  spent: zod.number(),
+});
+
+export const ReservedAmountInputSchema = zod.object({
+  id: zod.string(),
+  label: zod.string(),
+  amount: zod.number(),
+  category: zod.string(),
+  dueDate: zod.string().optional(),
+  recurring: zod.boolean(),
+});
+
+export const InsightsGenerateRequestSchema = zod.object({
+  transactions: zod.array(TransactionInputSchema),
+  budgets: zod.array(BudgetInputSchema).optional(),
+  reservedAmounts: zod.array(ReservedAmountInputSchema).optional(),
+  balance: zod.number(),
+  upiLite: zod.number().optional(),
+  month: zod.string().optional(),
+  year: zod.number().optional(),
+});
+
+export const CategoryBreakdownSchema = zod.object({
+  category: zod.string(),
+  total: zod.number(),
+  count: zod.number(),
+  percentage: zod.number(),
+  trend: zod.enum(["up", "down", "stable"]),
+  previousPeriodAmount: zod.number(),
+});
+
+export const SpendingSummarySchema = zod.object({
+  totalIncome: zod.number(),
+  totalSpent: zod.number(),
+  incomeCount: zod.number(),
+  expenseCount: zod.number(),
+  averageDailySpend: zod.number(),
+  largestExpense: zod.object({
+    amount: zod.number(),
+    merchant: zod.string(),
+    category: zod.string(),
+  }).nullable(),
+  largestIncome: zod.object({
+    amount: zod.number(),
+    merchant: zod.string(),
+  }).nullable(),
+  byCategory: zod.record(zod.string(), CategoryBreakdownSchema),
+  topCategory: zod.string().nullable(),
+  topCategoryAmount: zod.number(),
+});
+
+export const BudgetRecommendationSchema = zod.object({
+  category: zod.string(),
+  limit: zod.number(),
+  spent: zod.number(),
+  percentage: zod.number(),
+  status: zod.enum(["on_track", "warning", "exceeded", "under_utilized"]),
+  suggestedLimit: zod.number().optional(),
+  reason: zod.string(),
+});
+
+export const CashFlowForecastSchema = zod.object({
+  currentBalance: zod.number(),
+  projectedBalance: zod.number(),
+  upcomingExpenses: zod.array(zod.object({
+    label: zod.string(),
+    amount: zod.number(),
+    dueDate: zod.string(),
+  })),
+  daysUntilDepletion: zod.number().nullable(),
+  surplus: zod.number(),
+  confidence: zod.enum(["high", "medium", "low"]),
+});
+
+export const SavingsOpportunitySchema = zod.object({
+  category: zod.string(),
+  currentSpend: zod.number(),
+  potentialSavings: zod.number(),
+  suggestion: zod.string(),
+  impact: zod.enum(["low", "medium", "high"]),
+});
+
+export const UnusualTransactionSchema = zod.object({
+  transactionId: zod.string(),
+  amount: zod.number(),
+  merchant: zod.string(),
+  category: zod.string(),
+  date: zod.string(),
+  deviation: zod.number(),
+  reason: zod.string(),
+  severity: zod.enum(["low", "medium", "high"]),
+});
+
+export const SubscriptionSchema = zod.object({
+  name: zod.string(),
+  amount: zod.number(),
+  cycle: zod.enum(["Monthly", "Yearly", "Weekly", "Quarterly"]),
+  category: zod.string(),
+  merchant: zod.string(),
+  lastDate: zod.string(),
+  confidence: zod.number(),
+});
+
+export const MonthlyTrendSchema = zod.object({
+  month: zod.string(),
+  income: zod.number(),
+  spending: zod.number(),
+  savings: zod.number(),
+  topCategory: zod.string(),
+});
+
+export const InsightRecommendationSchema = zod.object({
+  icon: zod.string(),
+  title: zod.string(),
+  body: zod.string(),
+  saving: zod.string(),
+  color: zod.string(),
+  priority: zod.enum(["low", "medium", "high"]),
+});
+
+export const InsightsResponseSchema = zod.object({
+  healthScore: zod.number(),
+  healthLabel: zod.string(),
+  month: zod.string(),
+  year: zod.number(),
+  spendingSummary: SpendingSummarySchema,
+  budgetRecommendations: zod.array(BudgetRecommendationSchema),
+  savingsOpportunities: zod.array(SavingsOpportunitySchema),
+  unusualTransactions: zod.array(UnusualTransactionSchema),
+  subscriptions: zod.array(SubscriptionSchema),
+  cashFlowForecast: CashFlowForecastSchema,
+  monthlyTrends: zod.array(MonthlyTrendSchema),
+  recommendations: zod.array(InsightRecommendationSchema),
+  generatedAt: zod.string(),
+  provider: zod.enum(["local", "llm"]),
+});
+
+export const InsightsHealthResponseSchema = zod.object({
+  status: zod.string(),
+  version: zod.string(),
+  provider: zod.string(),
 });

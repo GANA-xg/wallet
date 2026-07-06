@@ -6,17 +6,22 @@ export interface VaultUser {
   upiLite: number;
 }
 
-export interface VaultCard {
+export type CardNetwork = "visa" | "mastercard" | "rupay" | "amex" | "discover" | "unknown";
+
+export interface CardRecord {
   id: string;
-  name: string;
-  number: string;
-  expiry: string;
-  cvv: string;
-  type: "visa" | "mastercard" | "rupay";
-  gradientColors: string[];
-  balance: number;
+  userId: string;
+  cardNetwork: CardNetwork;
+  issuer: string | null;
+  lastFour: string;
+  expiryMonth: number;
+  expiryYear: number;
+  nickname: string;
+  theme: { gradientColors: string[] };
   frozen: boolean;
-  bank: string;
+  balance: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface UPIAccount {

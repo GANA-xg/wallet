@@ -11,7 +11,7 @@ import {
 } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
-import type { VaultCard } from "@/types";
+import type { CardNetwork, CardRecord } from "@/types";
 
 const { width } = Dimensions.get("window");
 const CARD_W = width - 48;
@@ -19,14 +19,15 @@ const CARD_H = CARD_W * 0.58;
 const PEEK = 72;
 const GAP = 14;
 
-function maskNumber(num: string) {
-  const parts = num.split(" ");
-  return parts.map((p, i) => (i < parts.length - 1 ? "••••" : p)).join("  ");
+function formatExpiry(month: number, year: number): string {
+  const m = String(month).padStart(2, "0");
+  const y = String(year).slice(-2);
+  return `${m}/${y}`;
 }
 
-function CardTypeLogo({ type }: { type: VaultCard["type"] }) {
-  if (type === "visa") return <Text style={styles.visaText}>VISA</Text>;
-  if (type === "mastercard") {
+function CardTypeLogo({ network }: { network: CardNetwork }) {
+  if (network === "visa") return <Text style={styles.visaText}>VISA</Text>;
+  if (network === "mastercard") {
     return (
       <View style={{ flexDirection: "row" }}>
         <View style={[styles.mcCircle, { backgroundColor: "#EB001B", marginRight: -10 }]} />
@@ -34,11 +35,14 @@ function CardTypeLogo({ type }: { type: VaultCard["type"] }) {
       </View>
     );
   }
-  return <Text style={styles.rupayText}>RuPay</Text>;
+  if (network === "rupay") return <Text style={styles.networkText}>RuPay</Text>;
+  if (network === "amex") return <Text style={styles.networkText}>AMEX</Text>;
+  if (network === "discover") return <Text style={styles.networkText}>Discover</Text>;
+  return <Text style={styles.networkText}>CARD</Text>;
 }
 
 interface CardItemProps {
-  card: VaultCard;
+  card: CardRecord;
   index: number;
   totalCards: number;
   expandedAnim: Animated.Value;
@@ -49,7 +53,6 @@ interface CardItemProps {
 
 function CardItem({ card, index, totalCards, expandedAnim, isSelected, onSelect, onDeselect }: CardItemProps) {
   const colors = useColors();
-  const [showCVV, setShowCVV] = useState(false);
 
   const topAnim = expandedAnim.interpolate({
     inputRange: [0, 1],
@@ -95,33 +98,32 @@ function CardItem({ card, index, totalCards, expandedAnim, isSelected, onSelect,
           )}
 
           <View style={styles.cardTop}>
-            <Text style={[styles.bankName, { color: colors.text }]}>{card.bank}</Text>
-            <CardTypeLogo type={card.type} />
+            <Text style={[styles.bankName, { color: colors.text }]}>{card.issuer ?? "Card"}</Text>
+            <CardTypeLogo network={card.cardNetwork} />
           </View>
 
           <View style={[styles.chip, { backgroundColor: colors.primary + "12", borderColor: colors.border }]} />
-          <Text style={[styles.cardNum, { color: colors.text }]}>{maskNumber(card.number)}</Text>
+          <Text style={[styles.cardNum, { color: colors.text }]}>•••• •••• •••• {card.lastFour}</Text>
 
           <View style={styles.cardBottom}>
             <View>
-              <Text style={[styles.cardLabel, { color: colors.mutedForeground }]}>CARD HOLDER</Text>
-              <Text style={[styles.cardValue, { color: colors.text }]}>{card.name}</Text>
-            </View>
-            <View>
               <Text style={[styles.cardLabel, { color: colors.mutedForeground }]}>EXPIRES</Text>
-              <Text style={[styles.cardValue, { color: colors.text }]}>{card.expiry}</Text>
+              <Text style={[styles.cardValue, { color: colors.text }]}>
+                {formatExpiry(card.expiryMonth, card.expiryYear)}
+              </Text>
             </View>
             <View>
-              <Text style={[styles.cardLabel, { color: colors.mutedForeground }]}>CVV</Text>
-              <TouchableOpacity onPress={() => setShowCVV(!showCVV)}>
-                <Text style={[styles.cardValue, { color: colors.text }]}>{showCVV ? card.cvv : "•••"}</Text>
-              </TouchableOpacity>
+              <Text style={[styles.cardLabel, { color: colors.mutedForeground }]}>NETWORK</Text>
+              <Text style={[styles.cardValue, { color: colors.text }]}>
+                {card.cardNetwork.toUpperCase()}
+              </Text>
             </View>
           </View>
 
-          {/* Balance overlay */}
           <View style={[styles.balanceTag, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-            <Text style={[styles.balanceText, { color: colors.text }]}>₹{card.balance.toLocaleString("en-IN")}</Text>
+            <Text style={[styles.balanceText, { color: colors.text }]}>
+              ₹{card.balance.toLocaleString("en-IN")}
+            </Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -130,7 +132,7 @@ function CardItem({ card, index, totalCards, expandedAnim, isSelected, onSelect,
 }
 
 interface Props {
-  cards: VaultCard[];
+  cards: CardRecord[];
   onToggleFreeze: (id: string) => void;
   onRemove: (id: string) => void;
 }
@@ -175,7 +177,6 @@ export function WalletStack({ cards, onToggleFreeze, onRemove }: Props) {
 
   return (
     <View style={styles.container}>
-      {/* Toggle button */}
       <TouchableOpacity style={styles.toggleBtn} onPress={toggleExpanded}>
         <Text style={[styles.toggleText, { color: colors.primary }]}>
           {expanded ? "Collapse stack" : `${cards.length} cards · tap to expand`}
@@ -187,7 +188,6 @@ export function WalletStack({ cards, onToggleFreeze, onRemove }: Props) {
         />
       </TouchableOpacity>
 
-      {/* Cards stack */}
       <Animated.View style={[styles.stack, { height: totalHeight }]}>
         {cards.map((card, i) => (
           <CardItem
@@ -206,7 +206,6 @@ export function WalletStack({ cards, onToggleFreeze, onRemove }: Props) {
         ))}
       </Animated.View>
 
-      {/* Selected card actions */}
       {selectedCard && (
         <View style={[styles.actions, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={styles.actionBalance}>
@@ -275,16 +274,8 @@ const styles = StyleSheet.create({
     alignSelf: "flex-end",
   },
   toggleText: { fontSize: 13, fontWeight: "600" },
-  stack: {
-    width: "100%",
-    position: "relative",
-    marginBottom: 16,
-  },
-  cardWrapper: {
-    position: "absolute",
-    left: 0,
-    width: "100%",
-  },
+  stack: { width: "100%", position: "relative", marginBottom: 16 },
+  cardWrapper: { position: "absolute", left: 0, width: "100%" },
   card: {
     width: CARD_W,
     height: CARD_H,
@@ -298,11 +289,7 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 4,
   },
-  cardSelected: {
-    shadowOpacity: 0.22,
-    shadowRadius: 18,
-    elevation: 6,
-  },
+  cardSelected: { shadowOpacity: 0.22, shadowRadius: 18, elevation: 6 },
   frozenBanner: {
     position: "absolute",
     top: 12,
@@ -319,7 +306,7 @@ const styles = StyleSheet.create({
   cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
   bankName: { fontSize: 12, fontWeight: "700" },
   visaText: { color: "#F5F5F5", fontSize: 18, fontWeight: "900", fontStyle: "italic" },
-  rupayText: { color: "#F5F5F5", fontSize: 12, fontWeight: "800" },
+  networkText: { color: "#F5F5F5", fontSize: 12, fontWeight: "800" },
   mcCircle: { width: 22, height: 22, borderRadius: 11 },
   chip: { width: 34, height: 24, borderRadius: 6, borderWidth: 1, marginBottom: 10 },
   cardNum: { fontSize: 14, fontWeight: "700", letterSpacing: 3, marginBottom: 14 },
@@ -336,13 +323,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   balanceText: { fontSize: 12, fontWeight: "800" },
-  actions: {
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    gap: 12,
-    marginTop: 4,
-  },
+  actions: { borderRadius: 20, padding: 16, borderWidth: 1, gap: 12, marginTop: 4 },
   actionBalance: { alignItems: "center", gap: 2 },
   actionBalLabel: { fontSize: 11, fontWeight: "600" },
   actionBalAmount: { fontSize: 28, fontWeight: "800" },

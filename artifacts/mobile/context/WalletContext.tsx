@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 
 import type {
   Budget,
+  CardRecord,
   Reward,
   ReservedAmount,
   Ticket,
@@ -11,7 +12,6 @@ import type {
   PaymentHold,
   ScheduledPayment,
   UPIAccount,
-  VaultCard,
   VaultDocument,
   VaultNotification,
 } from "@/types";
@@ -30,8 +30,8 @@ interface WalletContextType {
   commitPaymentHold: (holdId: string, transaction: Transaction) => void;
   schedulePayment: (input: { amount: number; merchant: string; payeeAddress: string; note?: string; scheduledFor: string }) => ScheduledPayment | null;
   cancelScheduledPayment: (paymentId: string) => void;
-  cards: VaultCard[];
-  addCard: (c: VaultCard) => void;
+  cards: CardRecord[];
+  addCard: (c: CardRecord) => void;
   removeCard: (id: string) => void;
   toggleFreeze: (id: string) => void;
   upiAccounts: UPIAccount[];
@@ -104,10 +104,12 @@ const WalletContext = createContext<WalletContextType>({
   upiLite: 0,
 });
 
-const SEED_CARDS: VaultCard[] = [
-  { id: "c1", name: "Aryan Sharma", number: "4539 1488 0343 6467", expiry: "09/27", cvv: "847", type: "visa", gradientColors: ["#1a1a2e", "#16213e"], balance: 84320, frozen: false, bank: "HDFC Regalia" },
-  { id: "c2", name: "Aryan Sharma", number: "5234 8901 2345 6789", expiry: "03/26", cvv: "392", type: "mastercard", gradientColors: ["#0d0d0d", "#1a0000"], balance: 32100, frozen: false, bank: "SBI Elite" },
-  { id: "c3", name: "Aryan Sharma", number: "6069 8234 5678 9012", expiry: "11/28", cvv: "561", type: "rupay", gradientColors: ["#0a1628", "#1a2f4e"], balance: 12500, frozen: true, bank: "ICICI Coral" },
+const NOW = "2025-06-18T00:00:00Z";
+
+const SEED_CARDS: CardRecord[] = [
+  { id: "c1", userId: "local", cardNetwork: "visa", issuer: "HDFC Regalia", lastFour: "6467", expiryMonth: 9, expiryYear: 2027, nickname: "HDFC Regalia", theme: { gradientColors: ["#1a1a2e", "#16213e"] }, frozen: false, balance: 84320, createdAt: NOW, updatedAt: NOW },
+  { id: "c2", userId: "local", cardNetwork: "mastercard", issuer: "SBI Elite", lastFour: "6789", expiryMonth: 3, expiryYear: 2026, nickname: "SBI Elite", theme: { gradientColors: ["#0d0d0d", "#1a0000"] }, frozen: false, balance: 32100, createdAt: NOW, updatedAt: NOW },
+  { id: "c3", userId: "local", cardNetwork: "rupay", issuer: "ICICI Coral", lastFour: "9012", expiryMonth: 11, expiryYear: 2028, nickname: "ICICI Coral", theme: { gradientColors: ["#0a1628", "#1a2f4e"] }, frozen: true, balance: 12500, createdAt: NOW, updatedAt: NOW },
 ];
 
 const SEED_UPI: UPIAccount[] = [
@@ -209,7 +211,7 @@ async function save(key: string, data: unknown) {
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [balance, setBalanceState] = useState(128420);
-  const [cards, setCards] = useState<VaultCard[]>([]);
+  const [cards, setCards] = useState<CardRecord[]>([]);
   const [upiAccounts, setUpiAccounts] = useState<UPIAccount[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [documents, setDocuments] = useState<VaultDocument[]>([]);
@@ -260,7 +262,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   });
   const canAffordPayment = (amount: number) => Number.isFinite(amount) && amount > 0 && amount <= spendableBalance;
 
-  const addCard = (c: VaultCard) => { const next = [c, ...cards]; setCards(next); save(KEYS.cards, next); };
+  const addCard = (c: CardRecord) => { const next = [c, ...cards]; setCards(next); save(KEYS.cards, next); };
   const removeCard = (id: string) => { const next = cards.filter((c) => c.id !== id); setCards(next); save(KEYS.cards, next); };
   const toggleFreeze = (id: string) => { const next = cards.map((c) => c.id === id ? { ...c, frozen: !c.frozen } : c); setCards(next); save(KEYS.cards, next); };
   const setPrimaryUPI = (id: string) => { const next = upiAccounts.map((u) => ({ ...u, primary: u.id === id })); setUpiAccounts(next); save(KEYS.upi, next); };
