@@ -13,9 +13,11 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useAuth } from "@/context/AuthContext";
 import { useWallet } from "@/context/WalletContext";
 import { useColors } from "@/hooks/useColors";
 import type { VaultDocument } from "@/types";
+import BiometricPrompt from "@/app/biometric-prompt";
 
 const DOC_INFO: Record<VaultDocument["type"], { label: string; icon: keyof typeof Feather.glyphMap; color: string; gradient: [string, string] }> = {
   aadhaar: { label: "Aadhaar Card", icon: "user", color: "#3B82F6", gradient: ["#1e3a5f", "#0f2040"] },
@@ -37,7 +39,9 @@ export default function DocumentsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { documents, addDocument, removeDocument } = useWallet();
+  const { verifyBiometric } = useAuth();
   const [showAdd, setShowAdd] = useState(false);
+  const [biometricPending, setBiometricPending] = useState(false);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
@@ -63,6 +67,10 @@ export default function DocumentsScreen() {
       { text: "Cancel", style: "cancel" },
       { text: "Remove", style: "destructive", onPress: () => removeDocument(id) },
     ]);
+  };
+
+  const handleViewDocument = () => {
+    setBiometricPending(true);
   };
 
   return (
@@ -136,7 +144,7 @@ export default function DocumentsScreen() {
           {documents.map((doc) => {
             const info = DOC_INFO[doc.type];
             return (
-              <View key={doc.id} style={styles.docCardWrap}>
+                  <TouchableOpacity key={doc.id} style={styles.docCardWrap} onPress={handleViewDocument} activeOpacity={0.9}>
                 <LinearGradient
                   colors={info.gradient}
                   style={styles.docCard}
@@ -159,11 +167,18 @@ export default function DocumentsScreen() {
                     <Text style={styles.verifiedText}>Verified</Text>
                   </View>
                 </LinearGradient>
-              </View>
+              </TouchableOpacity>
             );
           })}
         </View>
       )}
+      <BiometricPrompt
+        visible={biometricPending}
+        title="View Document"
+        subtitle="Authorize with biometrics to access your document"
+        onSuccess={() => setBiometricPending(false)}
+        onCancel={() => setBiometricPending(false)}
+      />
     </ScrollView>
   );
 }

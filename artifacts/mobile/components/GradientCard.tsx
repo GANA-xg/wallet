@@ -38,12 +38,20 @@ function CardTypeLogo({ network }: { network: CardNetwork }) {
   return <Text style={styles.networkText}>CARD</Text>;
 }
 
+const DEFAULT_GRADIENT: [string, string] = ["#1a1a2e", "#16213e"];
+
 export function GradientCard({ card, style }: Props) {
+  const gradientColors: [string, string] = card.theme?.gradientColors?.length >= 2
+    ? [card.theme.gradientColors[0], card.theme.gradientColors[1]]
+    : DEFAULT_GRADIENT;
+  const network = card.cardNetwork ?? "visa";
+  const lastFour = card.lastFour ?? "0000";
+
   return (
     <View style={[styles.container, style]}>
       <View style={styles.card}>
         <LinearGradient
-          colors={card.theme.gradientColors as [string, string]}
+          colors={gradientColors}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.gradient}
@@ -57,24 +65,24 @@ export function GradientCard({ card, style }: Props) {
 
           <View style={styles.topRow}>
             <Text style={styles.bankName}>{card.issuer ?? "Card"}</Text>
-            <CardTypeLogo network={card.cardNetwork} />
+            <CardTypeLogo network={network} />
           </View>
 
           <View style={styles.chipRow}>
             <View style={styles.chip} />
           </View>
 
-          <Text style={styles.cardNumber}>•••• •••• •••• {card.lastFour}</Text>
+          <Text style={styles.cardNumber}>•••• •••• •••• {lastFour}</Text>
 
           <View style={styles.bottomRow}>
             <View>
               <Text style={styles.label}>EXPIRES</Text>
               <Text style={styles.value}>
-                {String(card.expiryMonth).padStart(2, "0")}/{String(card.expiryYear).slice(-2)}
+                {String(card.expiryMonth ?? "").padStart(2, "0")}/{String(card.expiryYear ?? "").slice(-2)}
               </Text>
             </View>
             <View>
-              <Text style={styles.label}>{card.cardNetwork.toUpperCase()}</Text>
+              <Text style={styles.label}>{network.toUpperCase()}</Text>
             </View>
           </View>
         </LinearGradient>

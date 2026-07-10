@@ -20,7 +20,7 @@ import { useAuth } from "@/context/AuthContext";
 
 export default function Login() {
   const insets = useSafeAreaInsets();
-  const { setPendingPhone } = useAuth();
+  const { sendOtp, setPendingPhone } = useAuth();
   const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
   const inputRef = useRef<TextInput>(null);
@@ -44,14 +44,21 @@ export default function Login() {
     };
   }, []);
 
-  const handleSendOTP = () => {
+  const handleSendOTP = async () => {
     if (phone.length !== 10 || !/^\d+$/.test(phone)) {
       setError("Enter a valid 10-digit phone number");
       return;
     }
     setError("");
-    setPendingPhone(phone);
-    router.push("/(auth)/otp");
+    try {
+      await sendOtp(phone);
+      setPendingPhone(phone);
+      router.push("/(auth)/otp");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Unknown error";
+      console.warn(`[login] sendOtp failed: ${msg}`);
+      setError(`Failed to send OTP (${msg})`);
+    }
   };
 
   const handleFocus = () => {

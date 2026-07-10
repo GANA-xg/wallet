@@ -26,7 +26,7 @@ type Step = "info" | "kyc" | "bank";
 
 export default function Register() {
   const insets = useSafeAreaInsets();
-  const { pendingPhone, login } = useAuth();
+  const { pendingPhone } = useAuth();
   const { addDocument, addUPIAccount } = useWallet();
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -252,8 +252,6 @@ export default function Register() {
     };
     addUPIAccount(newUPI);
 
-    // 4. Log in
-    await login(newUser);
     router.replace("/(tabs)");
   };
 

@@ -168,3 +168,96 @@ export const InsightsHealthResponseSchema = zod.object({
   version: zod.string(),
   provider: zod.string(),
 });
+
+export const OtpSendRequestSchema = zod.object({
+  phone: zod.string().min(10),
+});
+
+export const OtpSendResponseSchema = zod.object({
+  message: zod.string(),
+  expiresIn: zod.number(),
+});
+
+export const OtpVerifyRequestSchema = zod.object({
+  phone: zod.string().min(10),
+  otp: zod.string().length(6),
+  deviceName: zod.string().optional(),
+  deviceIdentifier: zod.string().optional(),
+});
+
+export const AuthUserSchema = zod.object({
+  id: zod.string(),
+  phone: zod.string(),
+  name: zod.string().nullable(),
+  email: zod.string().nullable(),
+  avatarUrl: zod.string().nullable(),
+  kycStatus: zod.string(),
+  twoFactorEnabled: zod.boolean(),
+  biometricEnabled: zod.boolean(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+export const OtpVerifyResponseSchema = zod.object({
+  user: AuthUserSchema,
+  accessToken: zod.string(),
+  refreshToken: zod.string(),
+});
+
+export const RefreshTokenRequestSchema = zod.object({
+  refreshToken: zod.string(),
+});
+
+export const RefreshTokenResponseSchema = zod.object({
+  accessToken: zod.string(),
+  refreshToken: zod.string(),
+});
+
+export const MeResponseSchema = zod.object({
+  user: AuthUserSchema,
+});
+
+export const LogoutResponseSchema = zod.object({
+  message: zod.string(),
+});
+
+export const RegisterDeviceRequestSchema = zod.object({
+  deviceName: zod.string().optional(),
+  deviceIdentifier: zod.string(),
+  pushToken: zod.string().optional(),
+});
+
+export const RegisteredDeviceSchema = zod.object({
+  id: zod.string(),
+  userId: zod.string(),
+  deviceName: zod.string().nullable(),
+  deviceIdentifier: zod.string(),
+  pushToken: zod.string().nullable(),
+  lastUsedAt: zod.string(),
+  enrolledAt: zod.string(),
+  revokedAt: zod.string().nullable(),
+});
+
+export const DeviceListResponseSchema = zod.object({
+  devices: zod.array(RegisteredDeviceSchema),
+});
+
+export const SessionSchema = zod.object({
+  id: zod.string(),
+  userId: zod.string(),
+  deviceId: zod.string().nullable(),
+  ipAddress: zod.string().nullable(),
+  userAgent: zod.string().nullable(),
+  lastActiveAt: zod.string(),
+  expiresAt: zod.string(),
+  revokedAt: zod.string().nullable(),
+  createdAt: zod.string(),
+});
+
+export const SessionListResponseSchema = zod.object({
+  sessions: zod.array(SessionSchema),
+});
+
+export const RevokeSessionRequestSchema = zod.object({
+  sessionId: zod.string(),
+});

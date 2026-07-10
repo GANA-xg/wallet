@@ -13,6 +13,8 @@ tags:
     description: AI-powered financial insights
   - name: cards
     description: Card onboarding and management
+  - name: auth
+    description: Authentication and session management
 paths:
   /healthz:
     get:
@@ -196,7 +198,198 @@ paths:
         "200":
           description: Card unfrozen
 
+  /auth/otp/send:
+    post:
+      operationId: sendOtp
+      tags: [auth]
+      summary: Send OTP to phone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OtpSendRequest"
+      responses:
+        "200":
+          description: OTP sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OtpSendResponse"
+        "400":
+          description: Invalid phone
+
+  /auth/otp/verify:
+    post:
+      operationId: verifyOtp
+      tags: [auth]
+      summary: Verify OTP and authenticate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OtpVerifyRequest"
+      responses:
+        "200":
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OtpVerifyResponse"
+        "401":
+          description: Invalid OTP
+
+  /auth/refresh:
+    post:
+      operationId: refreshToken
+      tags: [auth]
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshTokenRequest"
+      responses:
+        "200":
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefreshTokenResponse"
+        "401":
+          description: Invalid refresh token
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout current session
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogoutResponse"
+        "401":
+          description: Unauthorized
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeResponse"
+        "401":
+          description: Unauthorized
+
+  /auth/devices:
+    get:
+      operationId: listDevices
+      tags: [auth]
+      summary: List registered devices
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Device list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceListResponse"
+    post:
+      operationId: registerDevice
+      tags: [auth]
+      summary: Register a device
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterDeviceRequest"
+      responses:
+        "201":
+          description: Device registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisteredDevice"
+        "400":
+          description: Invalid request
+
+  /auth/devices/{id}:
+    delete:
+      operationId: removeDevice
+      tags: [auth]
+      summary: Remove a device and revoke its sessions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Device removed
+        "404":
+          description: Device not found
+
+  /auth/sessions:
+    get:
+      operationId: listSessions
+      tags: [auth]
+      summary: List active sessions
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Session list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionListResponse"
+
+  /auth/sessions/revoke:
+    post:
+      operationId: revokeSession
+      tags: [auth]
+      summary: Revoke a session
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RevokeSessionRequest"
+      responses:
+        "200":
+          description: Session revoked
+        "400":
+          description: Invalid request
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     HealthStatus:
       type: object
@@ -633,3 +826,184 @@ components:
           type: boolean
         balance:
           type: number
+
+    OtpSendRequest:
+      type: object
+      required:
+        - phone
+      properties:
+        phone:
+          type: string
+
+    OtpSendResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        expiresIn:
+          type: integer
+
+    OtpVerifyRequest:
+      type: object
+      required:
+        - phone
+        - otp
+      properties:
+        phone:
+          type: string
+        otp:
+          type: string
+        deviceName:
+          type: string
+        deviceIdentifier:
+          type: string
+
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: string
+        phone:
+          type: string
+        name:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+        kycStatus:
+          type: string
+        twoFactorEnabled:
+          type: boolean
+        biometricEnabled:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    OtpVerifyResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/AuthUser"
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+
+    RefreshTokenResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+
+    LogoutResponse:
+      type: object
+      properties:
+        message:
+          type: string
+
+    MeResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/AuthUser"
+
+    RegisterDeviceRequest:
+      type: object
+      required:
+        - deviceIdentifier
+      properties:
+        deviceName:
+          type: string
+        deviceIdentifier:
+          type: string
+        pushToken:
+          type: string
+
+    RegisteredDevice:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        deviceName:
+          type: string
+          nullable: true
+        deviceIdentifier:
+          type: string
+        pushToken:
+          type: string
+          nullable: true
+        lastUsedAt:
+          type: string
+        enrolledAt:
+          type: string
+        revokedAt:
+          type: string
+          nullable: true
+
+    DeviceListResponse:
+      type: object
+      properties:
+        devices:
+          type: array
+          items:
+            $ref: "#/components/schemas/RegisteredDevice"
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        deviceId:
+          type: string
+          nullable: true
+        ipAddress:
+          type: string
+          nullable: true
+        userAgent:
+          type: string
+          nullable: true
+        lastActiveAt:
+          type: string
+        expiresAt:
+          type: string
+        revokedAt:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+
+    SessionListResponse:
+      type: object
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Session"
+
+    RevokeSessionRequest:
+      type: object
+      required:
+        - sessionId
+      properties:
+        sessionId:
+          type: string
