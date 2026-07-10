@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import {
   Alert,
   Dimensions,
@@ -17,8 +17,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GradientCard } from "@/components/GradientCard";
 import { SectionHeader } from "@/components/SectionHeader";
 import { TransactionItem } from "@/components/TransactionItem";
+import { useAuth } from "@/context/AuthContext";
 import { useWallet } from "@/context/WalletContext";
 import { useColors } from "@/hooks/useColors";
+import BiometricPrompt from "@/app/biometric-prompt";
 
 const { width } = Dimensions.get("window");
 
@@ -27,11 +29,23 @@ export default function CardDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { cards, transactions, toggleFreeze, removeCard } = useWallet();
+  const { verifyBiometric } = useAuth();
+  const [biometricAction, setBiometricAction] = useState<"freeze" | "remove" | null>(null);
 
   const card = cards.find((c) => c.id === id);
   const cardTransactions = transactions.filter(() => true).slice(0, 10);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
+
+  const handleBiometricSuccess = async () => {
+    if (biometricAction === "freeze") {
+      toggleFreeze(card!.id);
+    } else if (biometricAction === "remove") {
+      removeCard(card!.id);
+      router.back();
+    }
+    setBiometricAction(null);
+  };
 
   if (!card) {
     return (
@@ -48,25 +62,11 @@ export default function CardDetailScreen() {
   }
 
   const handleFreeze = () => {
-    toggleFreeze(card.id);
+    setBiometricAction("freeze");
   };
 
   const handleRemove = () => {
-    Alert.alert(
-      "Remove Card",
-      `Remove "${card.nickname}"? This cannot be undone.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Remove",
-          style: "destructive",
-          onPress: () => {
-            removeCard(card.id);
-            router.back();
-          },
-        },
-      ],
-    );
+    setBiometricAction("remove");
   };
 
   return (
@@ -156,6 +156,14 @@ export default function CardDetailScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <BiometricPrompt
+        visible={biometricAction !== null}
+        title={biometricAction === "freeze" ? (card.frozen ? "Unfreeze Card" : "Freeze Card") : "Remove Card"}
+        subtitle={biometricAction === "freeze" ? "Authorize with biometrics to change card status" : "Authorize with biometrics to remove this card"}
+        onSuccess={handleBiometricSuccess}
+        onCancel={() => setBiometricAction(null)}
+      />
     </View>
   );
 }

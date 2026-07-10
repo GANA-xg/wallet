@@ -15,16 +15,14 @@ import {
   ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { useAuth } from "@/context/AuthContext";
-import type { VaultUser } from "@/types";
 
 const OTP_LENGTH = 6;
 
 export default function OTP() {
   const insets = useSafeAreaInsets();
-  const { pendingPhone, login } = useAuth();
+  const { pendingPhone, verifyOtp, sendOtp } = useAuth();
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [resendTimer, setResendTimer] = useState(30);
@@ -62,29 +60,25 @@ export default function OTP() {
       return;
     }
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
+    setError("");
 
-    const normalizedPhone = pendingPhone || "9876543210";
-    
-    // Check if the user is registered in AsyncStorage
-    const registeredUserRaw = await AsyncStorage.getItem(`@vault_user_profile_${normalizedPhone}`);
-    if (registeredUserRaw || normalizedPhone === "9876543210") {
-      const user: VaultUser = registeredUserRaw
-        ? JSON.parse(registeredUserRaw)
-        : {
-            id: "default_aryan",
-            name: "Aryan Sharma",
-            phone: "9876543210",
-            balance: 128420,
-            upiLite: 1500,
-          };
-
-      await login(user);
-      router.replace("/(tabs)");
-    } else {
-      router.push("/(auth)/register" as any);
+    try {
+      await verifyOtp(pendingPhone, otp);
+      router.replace("/(auth)/register");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Verification failed");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
+  };
+
+  const handleResend = async () => {
+    setResendTimer(30);
+    try {
+      await sendOtp(pendingPhone);
+    } catch {
+      setError("Failed to resend OTP");
+    }
   };
 
   const displayPhone = pendingPhone
@@ -159,13 +153,11 @@ export default function OTP() {
                         Resend OTP in <Text style={styles.timer}>{resendTimer}s</Text>
                       </Text>
                     ) : (
-                      <TouchableOpacity onPress={() => setResendTimer(30)}>
+                      <TouchableOpacity onPress={handleResend}>
                         <Text style={styles.resendBtn}>Resend OTP</Text>
                       </TouchableOpacity>
                     )}
                   </View>
-
-                  <Text style={styles.hint}>Use any 6 digits to verify (demo mode)</Text>
                 </View>
               </View>
 
@@ -292,11 +284,6 @@ const styles = StyleSheet.create({
     color: "#F4F4F5",
     fontSize: 14,
     fontWeight: "700",
-  },
-  hint: {
-    color: "#6B7280",
-    fontSize: 12,
-    marginTop: 16,
   },
   btnWrap: {
     borderRadius: 16,

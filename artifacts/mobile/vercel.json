@@ -1,0 +1,9 @@
+{
+  "crons": {
+    "clearOutputDirectories": false
+  },
+  "installCommand": "pnpm install",
+  "buildCommand": "cd ../.. && pnpm run build",
+  "outputDirectory": "dist",
+  "framework": "vite"
+}

@@ -238,7 +238,22 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       loadOrSeed(KEYS.transport, SEED_TRANSPORT),
       AsyncStorage.getItem(KEYS.balance),
     ]).then(([c, u, tx, docs, tix, rwd, notifs, bdg, res, tp, balRaw]) => {
-      setCards(c);
+      const migratedCards: CardRecord[] = (c as CardRecord[]).map((card) => ({
+        id: card.id,
+        userId: card.userId ?? "local",
+        cardNetwork: card.cardNetwork ?? "visa",
+        issuer: card.issuer ?? "Card",
+        lastFour: card.lastFour ?? "0000",
+        expiryMonth: card.expiryMonth ?? 1,
+        expiryYear: card.expiryYear ?? 2025,
+        nickname: card.nickname ?? "",
+        theme: card.theme ?? { gradientColors: ["#1a1a2e", "#16213e"] },
+        frozen: card.frozen ?? false,
+        balance: card.balance ?? 0,
+        createdAt: card.createdAt ?? NOW,
+        updatedAt: card.updatedAt ?? NOW,
+      }));
+      setCards(migratedCards);
       setUpiAccounts(u);
       setTransactions(tx);
       setDocuments(docs);

@@ -13,15 +13,32 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
+import BiometricPrompt from "@/app/biometric-prompt";
+import { useAuth } from "@/context/AuthContext";
 
 export default function SecurityScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { verifyBiometric } = useAuth();
   const [biometric, setBiometric] = useState(true);
   const [twoFA, setTwoFA] = useState(false);
   const [transactionPin, setTransactionPin] = useState(true);
   const [loginAlerts, setLoginAlerts] = useState(true);
   const [deviceBinding, setDeviceBinding] = useState(true);
+  const [biometricPending, setBiometricPending] = useState<string | null>(null);
+
+  const guardedToggle = (key: string, setter: (v: boolean) => void, newValue: boolean) => {
+    setBiometricPending(key);
+  };
+
+  const handleBiometricSuccess = () => {
+    if (biometricPending === "biometric") setBiometric(!biometric);
+    if (biometricPending === "twoFA") setTwoFA(!twoFA);
+    if (biometricPending === "transactionPin") setTransactionPin(!transactionPin);
+    if (biometricPending === "loginAlerts") setLoginAlerts(!loginAlerts);
+    if (biometricPending === "deviceBinding") setDeviceBinding(!deviceBinding);
+    setBiometricPending(null);
+  };
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
@@ -31,7 +48,7 @@ export default function SecurityScreen() {
       label: "Biometric Login",
       sub: "Use fingerprint or Face ID",
       value: biometric,
-      onToggle: setBiometric,
+      onToggle: () => guardedToggle("biometric", setBiometric, !biometric),
       color: "#22C55E",
     },
     {
@@ -39,7 +56,7 @@ export default function SecurityScreen() {
       label: "2-Factor Authentication",
       sub: "Extra security for your account",
       value: twoFA,
-      onToggle: setTwoFA,
+      onToggle: () => guardedToggle("twoFA", setTwoFA, !twoFA),
       color: "#3B82F6",
     },
     {
@@ -47,7 +64,7 @@ export default function SecurityScreen() {
       label: "Transaction PIN",
       sub: "Require PIN for every payment",
       value: transactionPin,
-      onToggle: setTransactionPin,
+      onToggle: () => guardedToggle("transactionPin", setTransactionPin, !transactionPin),
       color: "#F59E0B",
     },
     {
@@ -55,7 +72,7 @@ export default function SecurityScreen() {
       label: "Login Alerts",
       sub: "Get notified on new logins",
       value: loginAlerts,
-      onToggle: setLoginAlerts,
+      onToggle: () => guardedToggle("loginAlerts", setLoginAlerts, !loginAlerts),
       color: "#8B5CF6",
     },
     {
@@ -63,7 +80,7 @@ export default function SecurityScreen() {
       label: "Device Binding",
       sub: "This device is trusted",
       value: deviceBinding,
-      onToggle: setDeviceBinding,
+      onToggle: () => guardedToggle("deviceBinding", setDeviceBinding, !deviceBinding),
       color: "#EF4444",
     },
   ];
@@ -176,6 +193,14 @@ export default function SecurityScreen() {
         <Text style={[styles.changePinText, { color: colors.text }]}>Change Transaction PIN</Text>
         <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
       </TouchableOpacity>
+
+      <BiometricPrompt
+        visible={biometricPending !== null}
+        title="Change Security Setting"
+        subtitle="Authorize with biometrics to update your security preferences"
+        onSuccess={handleBiometricSuccess}
+        onCancel={() => setBiometricPending(null)}
+      />
     </ScrollView>
   );
 }

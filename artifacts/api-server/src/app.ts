@@ -25,9 +25,34 @@ app.use(
     },
   }),
 );
-app.use(cors());
+
+// Production-ready CORS — allow known origins or comma-separated list from env
+const allowedOrigins = (process.env.CORS_ORIGINS ?? "http://localhost:5173,http://localhost:3001")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, same-origin)
+      if (!origin || allowedOrigins.includes("*")) {
+        callback(null, true);
+        return;
+      }
+      callback(null, allowedOrigins.includes(origin));
+    },
+    credentials: true,
+  }),
+);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Root health check — required by Railway
+app.get("/", (_req, res) => {
+  res.json({ status: "ok", service: "vault-api" });
+});
 
 app.use("/api", router);
 
