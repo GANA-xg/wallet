@@ -95,6 +95,7 @@ interface AuthContextType {
   verifyBiometric: () => Promise<boolean>;
   validateSession: () => Promise<boolean>;
   refreshAuth: () => Promise<boolean>;
+  updateUser: (updates: { name?: string; email?: string }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -112,6 +113,7 @@ const AuthContext = createContext<AuthContextType>({
   verifyBiometric: async () => false,
   validateSession: async () => false,
   refreshAuth: async () => false,
+  updateUser: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -311,6 +313,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return validateSessionToken(token);
   }, []);
 
+  const updateUser = useCallback(async (updates: { name?: string; email?: string }) => {
+    const data = await authedFetch<{ user: AuthUser }>("/auth/me", {
+      method: "PATCH",
+      body: JSON.stringify(updates),
+    });
+
+    setAuthUser(data.user);
+    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(data.user));
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -328,6 +340,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         verifyBiometric,
         validateSession,
         refreshAuth,
+        updateUser,
       }}
     >
       {children}

@@ -367,6 +367,38 @@ router.get("/auth/me", requireAuth, (req: Request, res: Response) => {
   res.json({ user: toUserJson(user) });
 });
 
+// PATCH /auth/me
+router.patch("/auth/me", requireAuth, (req: Request, res: Response) => {
+  const user = users.get(req.user!.userId);
+  if (!user) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+
+  const session = sessions.get(req.user!.sessionId);
+  if (!session || session.revokedAt) {
+    res.status(401).json({ error: "Session has been revoked" });
+    return;
+  }
+
+  const { name, email } = req.body as { name?: string; email?: string };
+
+  // Only update fields that are explicitly provided
+  if (name !== undefined) {
+    user.name = name;
+  }
+  if (email !== undefined) {
+    user.email = email;
+  }
+  user.updatedAt = new Date().toISOString();
+
+  users.set(req.user!.userId, user);
+  session.lastActiveAt = user.updatedAt;
+  sessions.set(req.user!.sessionId, session);
+
+  res.json({ user: toUserJson(user) });
+});
+
 // POST /auth/devices/register
 router.post("/auth/devices/register", requireAuth, (req: Request, res: Response) => {
   const { deviceName, deviceIdentifier, pushToken } = req.body as {
