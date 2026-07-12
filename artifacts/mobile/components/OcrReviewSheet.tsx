@@ -85,6 +85,8 @@ export default function OcrReviewSheet({ data, onConfirm, onCancel, submitting }
     mastercard: "#EB001B",
     rupay: "#007B5E",
     amex: "#2E77BC",
+    diners: "#0F4C81",
+    jcb: "#0B6B3D",
     discover: "#FF6000",
     unknown: "#666",
   };

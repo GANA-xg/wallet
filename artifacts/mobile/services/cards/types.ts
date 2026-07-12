@@ -1,4 +1,4 @@
-export type CardNetwork = "visa" | "mastercard" | "rupay" | "amex" | "discover" | "unknown";
+export type CardNetwork = "visa" | "mastercard" | "rupay" | "amex" | "diners" | "jcb" | "discover" | "unknown";
 
 export type CardErrorCode =
   | "camera_permission_denied"
