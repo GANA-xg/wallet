@@ -5,33 +5,30 @@ import type { InsightsRequestPayload, InsightsResponse } from "./types";
 
 const CACHE_KEY = "@vault_insights_cache";
 const API_BASE_KEY = "@vault_api_base";
-const DEFAULT_API_PORT = 3001;
 
-function getDefaultApiBase(): string {
+/**
+ * Resolve the API base URL.
+ * Priority: 1) EXPO_PUBLIC_API_URL env var  2) AsyncStorage override  3) hostUri heuristic
+ */
+async function getBaseUrl(): Promise<string> {
+  // 1) Env var at build time (production) or explicit Expo config
+  const envUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (envUrl) return envUrl.replace(/\/+$/, "");
+
+  // 2) Runtime override stored by user
+  try {
+    const stored = await AsyncStorage.getItem(API_BASE_KEY);
+    if (stored) return stored.replace(/\/+$/, "");
+  } catch {}
+
+  // 3) Dev heuristic: Expo Go hostUri → infer API server address
   const hostUri = Constants.expoConfig?.hostUri;
   if (hostUri) {
     const host = hostUri.split(":")[0];
-    return `http://${host}:${DEFAULT_API_PORT}`;
+    return `http://${host}:3001`;
   }
+
   return "";
-}
-
-async function getApiBase(): Promise<string> {
-  try {
-    const stored = await AsyncStorage.getItem(API_BASE_KEY);
-    if (stored) return stored;
-  } catch {}
-  return "";
-}
-
-export async function setApiBase(url: string): Promise<void> {
-  await AsyncStorage.setItem(API_BASE_KEY, url);
-}
-
-async function getBaseUrl(): Promise<string> {
-  const custom = await getApiBase();
-  if (custom) return custom.replace(/\/+$/, "");
-  return getDefaultApiBase();
 }
 
 export async function generateInsights(

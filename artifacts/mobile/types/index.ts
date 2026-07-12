@@ -6,7 +6,7 @@ export interface VaultUser {
   upiLite: number;
 }
 
-export type CardNetwork = "visa" | "mastercard" | "rupay" | "amex" | "discover" | "unknown";
+export type CardNetwork = "visa" | "mastercard" | "rupay" | "amex" | "diners" | "jcb" | "discover" | "unknown";
 
 export interface CardRecord {
   id: string;
