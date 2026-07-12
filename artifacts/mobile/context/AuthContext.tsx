@@ -75,7 +75,7 @@ async function authedFetch<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
     headers: {
       ...init?.headers,
-      Authorization: Bearer ${token}`
+      Authorization: `Bearer ${token}`
     },
   });
 }
