@@ -54,6 +54,20 @@ const sessions = new Map<string, SessionRecord>();
 const devices = new Map<string, DeviceRecord>();
 const otpStore = new Map<string, { otp: string; expiresAt: number }>();
 
+// In-memory OTP rate limiter (per phone number)
+// Configured via OTP_RATE_LIMIT_MAX (default: 0 = disabled in dev, 5 in prod)
+// and OTP_RATE_LIMIT_WINDOW_MS (default: 60000)
+const otpRateLimitEnabled: boolean = (() => {
+  const raw = process.env.OTP_RATE_LIMIT_MAX ?? "";
+  if (raw === "0") return false;
+  if (raw) return true;
+  // Default: disabled in development, enabled in production
+  return process.env.NODE_ENV === "production";
+})();
+const otpRateLimitMax: number = parseInt(process.env.OTP_RATE_LIMIT_MAX || "5", 10);
+const otpRateLimitWindowMs: number = parseInt(process.env.OTP_RATE_LIMIT_WINDOW_MS || "60000", 10);
+const otpRequestLog = new Map<string, number[]>();
+
 function paramId(req: Request): string {
   const id = req.params["id"];
   return Array.isArray(id) ? id[0] : id;
@@ -191,6 +205,28 @@ router.post("/auth/otp/send", (req: Request, res: Response) => {
   if (!phone || phone.length < 10) {
     res.status(400).json({ error: "Valid phone number is required" });
     return;
+  }
+
+  // Rate limit check
+  if (otpRateLimitEnabled) {
+    const now = Date.now();
+    const timestamps = otpRequestLog.get(phone) || [];
+    const recent = timestamps.filter((t) => now - t < otpRateLimitWindowMs);
+    if (recent.length >= otpRateLimitMax) {
+      logger.warn({ phone }, "OTP rate limit exceeded");
+      res.status(429).json({ error: "Too many OTP requests. Please try again later." });
+      return;
+    }
+    recent.push(now);
+    otpRequestLog.set(phone, recent);
+    // Cleanup stale entries periodically (every 10 successful checks)
+    if (otpRequestLog.size > 1000) {
+      const cutoff = now - otpRateLimitWindowMs;
+      for (const [key, timestamps] of otpRequestLog) {
+        otpRequestLog.set(key, timestamps.filter((t) => now - t < otpRateLimitWindowMs));
+        if (otpRequestLog.get(key)!.length === 0) otpRequestLog.delete(key);
+      }
+    }
   }
 
   const otp = process.env.DEV_OTP || "000000";
