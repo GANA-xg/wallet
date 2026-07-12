@@ -11,6 +11,13 @@ out-tsc
 # dependencies
 node_modules
 
+# Mobile build artifacts
+artifacts/
+ios/build/
+ios/Pods/
+android/build/
+android/.gradle/
+
 # IDEs and editors
 /.idea
 .project
