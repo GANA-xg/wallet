@@ -193,7 +193,7 @@ router.post("/auth/otp/send", (req: Request, res: Response) => {
     return;
   }
 
-  const otp = "000000";
+  const otp = process.env.DEV_OTP || "000000";
   otpStore.set(phone, { otp, expiresAt: Date.now() + 5 * 60 * 1000 });
 
   cleanExpired();
