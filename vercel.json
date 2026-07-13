@@ -1,0 +1,5 @@
+{
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm --filter ./artifacts/mobile run build",
+  "outputDirectory": "artifacts/mobile/dist"
+}

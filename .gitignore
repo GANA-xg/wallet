@@ -11,8 +11,17 @@ out-tsc
 # dependencies
 node_modules
 
-# Mobile build artifacts
-artifacts/
+# Artifact app caches and build outputs
+artifacts/api-server/dist/
+artifacts/*/.env
+artifacts/*/.replit-artifact/
+artifacts/*/.tsbuildinfo
+artifacts/*/node_modules/
+artifacts/mobile/.expo/
+artifacts/mobile/.payment-test-dist/
+artifacts/mobile/dist/
+artifacts/mobile/ios/build/
+artifacts/mobile/ios/Pods/
 ios/build/
 ios/Pods/
 android/build/

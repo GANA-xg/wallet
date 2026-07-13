@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": ".payment-test-dist",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": false,
+    "declaration": false,
+    "incremental": false
+  },
+  "include": [
+    "services/payment/types.ts",
+    "services/payment/UpiQrParser.ts",
+    "services/payment/PaymentLinkBuilder.ts"
+  ],
+  "exclude": []
+}
