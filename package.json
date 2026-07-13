@@ -7,7 +7,7 @@
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "test": "pnpm -r --filter \"./artifacts/mobile\" --if-present run test",
     "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
+    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --if-present run typecheck"
   },
   "private": true,
   "devDependencies": {
