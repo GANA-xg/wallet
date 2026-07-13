@@ -4,7 +4,6 @@ import Constants from "expo-constants";
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
 import type { VaultUser } from "@/types";
-import { setAuthTokenGetter } from "@workspace/api-client-react";
 
 const ACCESS_TOKEN_KEY = "vault_access_token";
 const REFRESH_TOKEN_KEY = "vault_refresh_token";
@@ -37,7 +36,10 @@ const API_PORT = 3001;
 
 function apiBaseUrl(): string {
   const envUrl = process.env.EXPO_PUBLIC_API_URL;
-  if (envUrl) return envUrl;
+  if (envUrl) {
+    console.log(`[env-check] EXPO_PUBLIC_API_URL = ${envUrl}`);
+    return envUrl;
+  }
   const hostUri = Constants.expoConfig?.hostUri;
   if (hostUri) {
     const host = hostUri.split(":")[0];
@@ -123,16 +125,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [pendingPhone, setPendingPhone] = useState("");
   const refreshPromise = useRef<Promise<boolean> | null>(null);
-
-  useEffect(() => {
-    setAuthTokenGetter(async () => {
-      try {
-        return await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
-      } catch {
-        return null;
-      }
-    });
-  }, []);
 
   useEffect(() => {
     restoreSession();
