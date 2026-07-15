@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
+import Animated, { FadeInDown } from "react-native-reanimated";
 
 const SECTIONS = [
   {
@@ -68,6 +69,7 @@ export default function SettingsScreen() {
       contentContainerStyle={[styles.content, { paddingTop: topPad + 16, paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 40 }]}
       showsVerticalScrollIndicator={false}
     >
+      <Animated.View entering={FadeInDown.duration(500).delay(100)}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Feather name="arrow-left" size={22} color={colors.text} />
@@ -122,6 +124,7 @@ export default function SettingsScreen() {
       <Text style={[styles.footer, { color: colors.textTertiary }]}>
         Vault · Version 1.0.0{"\n"}Made with ❤️ in India
       </Text>
+      </Animated.View>
     </ScrollView>
   );
 }

@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TransactionItem } from "@/components/TransactionItem";
 import { useWallet } from "@/context/WalletContext";
 import { useColors } from "@/hooks/useColors";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import type { Transaction } from "@/types";
 
 type Filter = "all" | "credit" | "debit" | "pending";
@@ -65,6 +66,7 @@ export default function TransactionsScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
+      <Animated.View entering={FadeInDown.duration(500).delay(100)}>
       <View style={[styles.header, { paddingTop: topPad + 16 }]}>
         <Text style={[styles.title, { color: colors.text }]}>Transactions</Text>
 
@@ -134,6 +136,7 @@ export default function TransactionsScreen() {
           ))}
         </View>
       </View>
+      </Animated.View>
 
       {/* Transaction List */}
       <FlatList

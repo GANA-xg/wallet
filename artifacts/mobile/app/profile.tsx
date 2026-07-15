@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
+import Animated, { FadeInDown } from "react-native-reanimated";
 
 export default function ProfileScreen() {
   const colors = useColors();
@@ -35,6 +36,7 @@ export default function ProfileScreen() {
       contentContainerStyle={[styles.content, { paddingTop: topPad + 16, paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 40 }]}
       showsVerticalScrollIndicator={false}
     >
+      <Animated.View entering={FadeInDown.duration(500).delay(100)}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Feather name="arrow-left" size={22} color={colors.text} />
@@ -113,6 +115,7 @@ export default function ProfileScreen() {
           <Text style={styles.kycBadgeText}>FULL KYC</Text>
         </View>
       </View>
+      </Animated.View>
     </ScrollView>
   );
 }

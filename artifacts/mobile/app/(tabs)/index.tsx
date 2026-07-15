@@ -21,6 +21,7 @@ import { TransactionItem } from "@/components/TransactionItem";
 import { useAuth } from "@/context/AuthContext";
 import { useWallet } from "@/context/WalletContext";
 import { useColors } from "@/hooks/useColors";
+import Animated, { FadeInDown } from "react-native-reanimated";
 
 function greeting() {
   const h = new Date().getHours();
@@ -75,7 +76,8 @@ export default function HomeScreen() {
       }
     >
       {/* Header */}
-      <View style={styles.header}>
+      <Animated.View entering={FadeInDown.duration(500).delay(100)}>
+        <View style={styles.header}>
         <View>
           <Text style={[styles.greeting, { color: colors.mutedForeground }]}>{greeting()},</Text>
           <Text style={[styles.name, { color: colors.text }]}>
@@ -102,11 +104,14 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
       </View>
+      </Animated.View>
 
       {/* Balance */}
+      <Animated.View entering={FadeInDown.duration(500).delay(200)}>
       <View style={styles.section}>
         <BalanceWidget balance={balance} upiLite={upiLite} />
       </View>
+      </Animated.View>
 
       {/* Smart Expense Guard */}
       {reservedAmounts.length > 0 && (
@@ -166,11 +171,14 @@ export default function HomeScreen() {
       )}
 
       {/* Quick Actions */}
+      <Animated.View entering={FadeInDown.duration(500).delay(300)}>
       <View style={styles.section}>
         <QuickActions />
       </View>
+      </Animated.View>
 
       {/* AI Insights Teaser */}
+      <Animated.View entering={FadeInDown.duration(500).delay(350)}>
       <TouchableOpacity
         style={[styles.aiCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
         onPress={() => router.push("/ai-insights")}
@@ -187,9 +195,11 @@ export default function HomeScreen() {
         </View>
         <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
       </TouchableOpacity>
+      </Animated.View>
 
       {/* Cards Strip */}
       {cards.length > 0 && (
+        <Animated.View entering={FadeInDown.duration(500).delay(400)}>
         <View style={styles.section}>
           <SectionHeader
             title="My Cards"
@@ -214,9 +224,11 @@ export default function HomeScreen() {
             ))}
           </ScrollView>
         </View>
+        </Animated.View>
       )}
 
       {/* Recent Transactions */}
+      <Animated.View entering={FadeInDown.duration(500).delay(500)}>
       <View style={styles.section}>
         <SectionHeader
           title="Recent"
@@ -229,6 +241,7 @@ export default function HomeScreen() {
           ))}
         </View>
       </View>
+      </Animated.View>
     </ScrollView>
   );
 }

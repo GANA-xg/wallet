@@ -15,12 +15,58 @@ import {
   ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, {
+  FadeInDown,
+  FadeIn,
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSequence,
+  Easing,
+} from "react-native-reanimated";
 
 import { useAuth } from "@/context/AuthContext";
+import { useColors } from "@/hooks/useColors";
 
 const OTP_LENGTH = 6;
 
+function OtpBox({ char, isActive, isFilled, index, colors }: { char: string; isActive: boolean; isFilled: boolean; index: number; colors: ReturnType<typeof useColors> }) {
+  const scale = useSharedValue(1);
+
+  useEffect(() => {
+    if (isFilled) {
+      scale.value = withSequence(
+        withTiming(1.08, { duration: 80, easing: Easing.out(Easing.exp) }),
+        withTiming(1, { duration: 120, easing: Easing.out(Easing.exp) }),
+      );
+    }
+  }, [isFilled]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    borderColor: withTiming(
+      isActive ? colors.primary : isFilled ? colors.primary : colors.border,
+      { duration: 200 },
+    ),
+    backgroundColor: withTiming(
+      isActive ? colors.surface : isFilled ? colors.surface : colors.surface,
+      { duration: 200 },
+    ),
+  }));
+
+  return (
+    <Animated.View
+      key={index}
+      style={[styles.otpBox, animatedStyle]}
+      entering={FadeInDown.duration(300).delay(index * 60)}
+    >
+      <Text style={[styles.otpChar, { color: colors.text }]}>{char}</Text>
+    </Animated.View>
+  );
+}
+
 export default function OTP() {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   const { pendingPhone, verifyOtp, sendOtp } = useAuth();
   const [otp, setOtp] = useState("");
@@ -85,10 +131,12 @@ export default function OTP() {
     ? `+91 ${pendingPhone.slice(0, 5)} ${pendingPhone.slice(5)}`
     : "+91 98765 43210";
 
+  const isValid = otp.length === OTP_LENGTH;
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={{ flex: 1 }}>
@@ -100,83 +148,118 @@ export default function OTP() {
           >
             <View style={[styles.innerContent, { paddingTop: topPad, paddingBottom: bottomPad }]}>
               <View>
-                <TouchableOpacity style={styles.back} onPress={() => router.back()}>
-                  <Feather name="arrow-left" size={22} color="#fff" />
-                </TouchableOpacity>
+                <Animated.View entering={FadeInDown.duration(400)}>
+                  <TouchableOpacity style={styles.back} onPress={() => router.back()}>
+                    <Feather name="arrow-left" size={22} color={colors.text} />
+                  </TouchableOpacity>
+                </Animated.View>
 
                 <View style={styles.content}>
-                  <View style={styles.iconWrap}>
-                    <LinearGradient colors={["#171A21", "#1E2128"]} style={styles.iconBg}>
-                      <Feather name="message-circle" size={32} color="#F4F4F5" />
-                    </LinearGradient>
-                  </View>
-
-                  <Text style={styles.heading}>Verify your{"\n"}number</Text>
-                  <Text style={styles.subheading}>
-                    OTP sent to <Text style={styles.phone}>{displayPhone}</Text>
-                  </Text>
-
-                  <TouchableOpacity style={styles.otpContainer} onPress={() => inputRef.current?.focus()}>
-                    {Array.from({ length: OTP_LENGTH }).map((_, i) => (
-                      <View
-                        key={i}
-                        style={[
-                          styles.otpBox,
-                          otp.length === i && styles.otpBoxActive,
-                          otp.length > i && styles.otpBoxFilled,
-                        ]}
-                      >
-                        <Text style={styles.otpChar}>{otp[i] || ""}</Text>
+                  <Animated.View entering={FadeInDown.duration(500).delay(120)}>
+                    <View style={styles.iconWrap}>
+                      <View style={[styles.iconBg, { borderColor: colors.border }]}>
+                        <Feather name="message-circle" size={32} color={colors.primary} />
                       </View>
-                    ))}
-                  </TouchableOpacity>
+                    </View>
+                  </Animated.View>
 
-                  <TextInput
-                    ref={inputRef}
-                    style={styles.hiddenInput}
-                    keyboardType="number-pad"
-                    maxLength={OTP_LENGTH}
-                    value={otp}
-                    onChangeText={(t) => {
-                      setOtp(t);
-                      if (error) setError("");
-                    }}
-                    autoFocus
-                    caretHidden
-                  />
+                  <Animated.View entering={FadeInDown.duration(500).delay(200)}>
+                    <Text style={[styles.heading, { color: colors.text }]}>
+                      Verify your{"\n"}number
+                    </Text>
+                    <Text style={[styles.subheading, { color: colors.mutedForeground }]}>
+                      OTP sent to{" "}
+                      <Text style={[styles.phone, { color: colors.primary }]}>{displayPhone}</Text>
+                    </Text>
+                  </Animated.View>
 
-                  {!!error && <Text style={styles.errorText}>{error}</Text>}
+                  <Animated.View entering={FadeInDown.duration(500).delay(280)}>
+                    <TouchableOpacity
+                      style={styles.otpContainer}
+                      onPress={() => inputRef.current?.focus()}
+                    >
+                      {Array.from({ length: OTP_LENGTH }).map((_, i) => (
+                        <OtpBox
+                          key={i}
+                          index={i}
+                          char={otp[i] || ""}
+                          isActive={otp.length === i}
+                          isFilled={otp.length > i}
+                          colors={colors}
+                        />
+                      ))}
+                    </TouchableOpacity>
 
-                  <View style={styles.resendRow}>
-                    {resendTimer > 0 ? (
-                      <Text style={styles.resendInfo}>
-                        Resend OTP in <Text style={styles.timer}>{resendTimer}s</Text>
-                      </Text>
-                    ) : (
-                      <TouchableOpacity onPress={handleResend}>
-                        <Text style={styles.resendBtn}>Resend OTP</Text>
-                      </TouchableOpacity>
+                    <TextInput
+                      ref={inputRef}
+                      style={styles.hiddenInput}
+                      keyboardType="number-pad"
+                      maxLength={OTP_LENGTH}
+                      value={otp}
+                      onChangeText={(t) => {
+                        setOtp(t);
+                        if (error) setError("");
+                      }}
+                      autoFocus
+                      caretHidden
+                    />
+
+                    {!!error && (
+                      <Animated.View entering={FadeIn.duration(200)}>
+                        <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+                      </Animated.View>
                     )}
-                  </View>
+
+                    <View style={styles.resendRow}>
+                      {resendTimer > 0 ? (
+                        <Text style={[styles.resendInfo, { color: colors.mutedForeground }]}>
+                          Resend OTP in{" "}
+                          <Text style={[styles.timer, { color: colors.primary }]}>
+                            {resendTimer}s
+                          </Text>
+                        </Text>
+                      ) : (
+                        <TouchableOpacity onPress={handleResend} activeOpacity={0.7}>
+                          <Text style={[styles.resendBtn, { color: colors.primary }]}>
+                            Resend OTP
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </Animated.View>
                 </View>
               </View>
 
-              <TouchableOpacity
-                style={[styles.btnWrap, (otp.length !== OTP_LENGTH || loading) && styles.btnDisabled]}
-                onPress={handleVerify}
-                activeOpacity={0.85}
-                disabled={otp.length !== OTP_LENGTH || loading}
-              >
-                <LinearGradient
-                  colors={otp.length === OTP_LENGTH ? ["#F4F4F5", "#D4D4D8"] : ["#262B36", "#262B36"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.btn}
+              <Animated.View entering={FadeInDown.duration(500).delay(360)}>
+                <TouchableOpacity
+                  style={[styles.btnWrap, (!isValid || loading) && styles.btnDisabled]}
+                  onPress={handleVerify}
+                  activeOpacity={0.85}
+                  disabled={!isValid || loading}
                 >
-                  <Text style={styles.btnText}>{loading ? "Verifying..." : "Verify & Continue"}</Text>
-                  {!loading && <Feather name="arrow-right" size={18} color="#fff" />}
-                </LinearGradient>
-              </TouchableOpacity>
+                  <LinearGradient
+                    colors={
+                      isValid
+                        ? [colors.primary, colors.primaryLight]
+                        : [colors.surface, colors.surface]
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.btn}
+                  >
+                    <Text style={[styles.btnText, !isValid && { color: colors.textTertiary }]}>
+                      {loading ? "Verifying..." : "Verify & Continue"}
+                    </Text>
+                    {!loading && (
+                      <Feather
+                        name="arrow-right"
+                        size={18}
+                        color={isValid ? colors.text : colors.textTertiary}
+                      />
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+              </Animated.View>
             </View>
           </ScrollView>
         </View>
@@ -200,8 +283,8 @@ const styles = StyleSheet.create({
   },
   back: {
     marginBottom: 24,
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     justifyContent: "center",
   },
   content: { flex: 1 },
@@ -227,6 +310,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#B0B7C3",
     marginBottom: 40,
+    lineHeight: 22,
   },
   phone: {
     color: "#F4F4F5",
@@ -239,7 +323,7 @@ const styles = StyleSheet.create({
   },
   otpBox: {
     flex: 1,
-    height: 56,
+    height: 58,
     borderRadius: 14,
     backgroundColor: "#171A21",
     borderWidth: 1.5,
@@ -247,16 +331,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  otpBoxActive: {
-    borderColor: "#F4F4F5",
-    backgroundColor: "#1a1208",
-  },
-  otpBoxFilled: {
-    borderColor: "#F4F4F5",
-  },
   otpChar: {
     color: "#fff",
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "700",
   },
   hiddenInput: {
@@ -268,6 +345,7 @@ const styles = StyleSheet.create({
     color: "#EF4444",
     fontSize: 13,
     marginBottom: 12,
+    fontWeight: "500",
   },
   resendRow: {
     marginTop: 20,
@@ -290,7 +368,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     marginBottom: 8,
   },
-  btnDisabled: { opacity: 0.6 },
+  btnDisabled: { opacity: 0.5 },
   btn: {
     paddingVertical: 16,
     flexDirection: "row",
@@ -302,5 +380,8 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 17,
     fontWeight: "700",
+  },
+  btnTextDisabled: {
+    color: "#6B7280",
   },
 });
