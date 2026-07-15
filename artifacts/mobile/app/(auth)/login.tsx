@@ -15,16 +15,28 @@ import {
   Keyboard,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, {
+  FadeInDown,
+  FadeIn,
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from "react-native-reanimated";
 
 import { useAuth } from "@/context/AuthContext";
+import { useColors } from "@/hooks/useColors";
 
 export default function Login() {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   const { sendOtp, setPendingPhone } = useAuth();
   const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
   const inputRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  const borderProgress = useSharedValue(0);
+  const buttonScale = useSharedValue(1);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -33,7 +45,6 @@ export default function Login() {
     const showSubscription = Keyboard.addListener(
       Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
       () => {
-        // Wait a tiny bit for layout adjustment, then scroll to end
         setTimeout(() => {
           scrollViewRef.current?.scrollToEnd({ animated: true });
         }, 80);
@@ -62,15 +73,40 @@ export default function Login() {
   };
 
   const handleFocus = () => {
+    borderProgress.value = withTiming(1, { duration: 250 });
     setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated: true });
     }, 100);
   };
 
+  const handleBlur = () => {
+    borderProgress.value = withTiming(0, { duration: 250 });
+  };
+
+  const animatedBorderStyle = useAnimatedStyle(() => ({
+    borderColor: withTiming(
+      error ? colors.error : borderProgress.value ? colors.primary : colors.border,
+      { duration: 200 }
+    ),
+  }));
+
+  const animatedBtnStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: buttonScale.value }],
+  }));
+
+  const isValid = phone.length === 10 && /^\d+$/.test(phone);
+
+  const handlePressIn = () => {
+    buttonScale.value = withTiming(0.98, { duration: 80 });
+  };
+  const handlePressOut = () => {
+    buttonScale.value = withTiming(1, { duration: 80 });
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={{ flex: 1 }}>
@@ -82,68 +118,110 @@ export default function Login() {
           >
             <View style={[styles.innerContent, { paddingTop: topPad, paddingBottom: bottomPad }]}>
               <View>
-                <TouchableOpacity style={styles.back} onPress={() => router.back()}>
-                  <Feather name="arrow-left" size={22} color="#fff" />
-                </TouchableOpacity>
+                <Animated.View entering={FadeInDown.duration(400)}>
+                  <TouchableOpacity style={styles.back} onPress={() => router.back()}>
+                    <Feather name="arrow-left" size={22} color={colors.text} />
+                  </TouchableOpacity>
+                </Animated.View>
 
-                <View style={styles.logo}>
-                  <LinearGradient colors={["#F4F4F5", "#D4D4D8"]} style={styles.logoGradient}>
-                    <Feather name="layers" size={24} color="#fff" />
-                  </LinearGradient>
-                  <Text style={styles.logoText}>Vault</Text>
-                </View>
-
-                <Text style={styles.heading}>Enter your{"\n"}phone number</Text>
-                <Text style={styles.subheading}>We'll send you a verification code</Text>
-
-                <View style={[styles.inputWrap, error ? styles.inputError : null]}>
-                  <View style={styles.countryCode}>
-                    <Text style={styles.flag}>🇮🇳</Text>
-                    <Text style={styles.code}>+91</Text>
+                <Animated.View entering={FadeInDown.duration(500).delay(120)}>
+                  <View style={styles.logo}>
+                    <LinearGradient
+                      colors={[colors.primary, colors.primaryLight]}
+                      style={styles.logoGradient}
+                    >
+                      <Feather name="layers" size={24} color={colors.background} />
+                    </LinearGradient>
+                    <Text style={[styles.logoText, { color: colors.text }]}>Vault</Text>
                   </View>
-                  <View style={styles.divider} />
-                  <TextInput
-                    ref={inputRef}
-                    style={styles.input}
-                    placeholder="Mobile Number"
-                    placeholderTextColor="#6B7280"
-                    keyboardType="phone-pad"
-                    maxLength={10}
-                    value={phone}
-                    onChangeText={(t) => {
-                      setPhone(t);
-                      if (error) setError("");
-                    }}
-                    onFocus={handleFocus}
-                    selectionColor="#F4F4F5"
-                  />
-                </View>
+                </Animated.View>
 
-                {!!error && <Text style={styles.errorText}>{error}</Text>}
+                <Animated.View entering={FadeInDown.duration(500).delay(200)}>
+                  <Text style={[styles.heading, { color: colors.text }]}>
+                    Enter your{"\n"}phone number
+                  </Text>
+                  <Text style={[styles.subheading, { color: colors.mutedForeground }]}>
+                    We'll send you a verification code
+                  </Text>
+                </Animated.View>
 
-                <Text style={styles.terms}>
-                  By continuing, you agree to Vault's{" "}
-                  <Text style={styles.link}>Terms of Service</Text> and{" "}
-                  <Text style={styles.link}>Privacy Policy</Text>
-                </Text>
+                <Animated.View entering={FadeInDown.duration(500).delay(280)}>
+                  <Animated.View
+                    style={[
+                      styles.inputWrap,
+                      animatedBorderStyle,
+                      { backgroundColor: colors.surface },
+                    ]}
+                  >
+                    <View style={styles.countryCode}>
+                      <Text style={styles.flag}>🇮🇳</Text>
+                      <Text style={[styles.code, { color: colors.text }]}>+91</Text>
+                    </View>
+                    <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                    <TextInput
+                      ref={inputRef}
+                      style={[styles.input, { color: colors.text }]}
+                      placeholder="Mobile Number"
+                      placeholderTextColor={colors.textTertiary}
+                      keyboardType="phone-pad"
+                      maxLength={10}
+                      value={phone}
+                      onChangeText={(t) => {
+                        setPhone(t);
+                        if (error) setError("");
+                      }}
+                      onFocus={handleFocus}
+                      onBlur={handleBlur}
+                      selectionColor={colors.primary}
+                    />
+                  </Animated.View>
+
+                  {!!error && (
+                    <Animated.View entering={FadeIn.duration(200)}>
+                      <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+                    </Animated.View>
+                  )}
+
+                  <Text style={[styles.terms, { color: colors.textTertiary }]}>
+                    By continuing, you agree to Vault's{" "}
+                    <Text style={[styles.link, { color: colors.primary }]}>Terms of Service</Text>{" "}
+                    and <Text style={[styles.link, { color: colors.primary }]}>Privacy Policy</Text>
+                  </Text>
+                </Animated.View>
               </View>
 
-              <TouchableOpacity
-                style={[styles.btnWrap, phone.length !== 10 && styles.btnDisabled]}
-                onPress={handleSendOTP}
-                activeOpacity={0.85}
-                disabled={phone.length !== 10}
-              >
-                <LinearGradient
-                  colors={phone.length === 10 ? ["#F4F4F5", "#D4D4D8"] : ["#262B36", "#262B36"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.btn}
-                >
-                  <Text style={styles.btnText}>Send OTP</Text>
-                  <Feather name="arrow-right" size={18} color="#fff" />
-                </LinearGradient>
-              </TouchableOpacity>
+              <Animated.View entering={FadeInDown.duration(500).delay(360)}>
+                <Animated.View style={animatedBtnStyle}>
+                  <TouchableOpacity
+                    style={[styles.btnWrap, !isValid && styles.btnDisabled]}
+                    onPress={handleSendOTP}
+                    activeOpacity={0.85}
+                    disabled={!isValid}
+                    onPressIn={handlePressIn}
+                    onPressOut={handlePressOut}
+                  >
+                    <LinearGradient
+                      colors={
+                        isValid
+                          ? [colors.primary, colors.primaryLight]
+                          : [colors.surface, colors.surface]
+                      }
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.btn}
+                    >
+                      <Text style={[styles.btnText, !isValid && { color: colors.textTertiary }]}>
+                        Send OTP
+                      </Text>
+                      <Feather
+                        name="arrow-right"
+                        size={18}
+                        color={isValid ? colors.text : colors.textTertiary}
+                      />
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </Animated.View>
+              </Animated.View>
             </View>
           </ScrollView>
         </View>
@@ -167,12 +245,9 @@ const styles = StyleSheet.create({
   },
   back: {
     marginBottom: 24,
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     justifyContent: "center",
-  },
-  content: {
-    flex: 1,
   },
   logo: {
     flexDirection: "row",
@@ -205,6 +280,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#B0B7C3",
     marginBottom: 40,
+    lineHeight: 22,
   },
   inputWrap: {
     flexDirection: "row",
@@ -216,9 +292,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 4,
     marginBottom: 12,
-  },
-  inputError: {
-    borderColor: "#EF4444",
   },
   countryCode: {
     flexDirection: "row",
@@ -250,6 +323,7 @@ const styles = StyleSheet.create({
     color: "#EF4444",
     fontSize: 13,
     marginBottom: 12,
+    fontWeight: "500",
   },
   terms: {
     color: "#6B7280",
@@ -259,13 +333,14 @@ const styles = StyleSheet.create({
   },
   link: {
     color: "#F4F4F5",
+    fontWeight: "600",
   },
   btnWrap: {
     borderRadius: 16,
     overflow: "hidden",
     marginBottom: 8,
   },
-  btnDisabled: { opacity: 0.6 },
+  btnDisabled: { opacity: 0.5 },
   btn: {
     paddingVertical: 16,
     flexDirection: "row",
@@ -277,5 +352,8 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 17,
     fontWeight: "700",
+  },
+  btnTextDisabled: {
+    color: "#6B7280",
   },
 });
