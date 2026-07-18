@@ -1,9 +1,9 @@
 import { Feather } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
-  Animated,
   Dimensions,
   Platform,
   ScrollView,
@@ -13,6 +13,18 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, {
+  FadeInDown,
+  FadeIn,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  useSharedValue,
+  interpolate,
+  Extrapolation,
+} from "react-native-reanimated";
+
+import { useColors } from "@/hooks/useColors";
 
 const { width } = Dimensions.get("window");
 
@@ -22,31 +34,52 @@ const SLIDES = [
     icon: "layers" as const,
     title: "Your Wallet,\nReinvented",
     subtitle: "One premium wallet for all your cards, UPI, and money — designed with intention.",
-    gradient: ["#F4F4F5", "#D4D4D8"] as [string, string],
+    gradient: ["#D06224", "#AE431E"] as [string, string],
+    decorativeColor: "rgba(208, 98, 36, 0.15)",
   },
   {
     id: 2,
     icon: "zap" as const,
     title: "Pay Instantly,\nAnywhere",
     subtitle: "Send money, scan QR, pay bills — all in seconds. No friction, just flow.",
-    gradient: ["#7C3AED", "#4F46E5"] as [string, string],
+    gradient: ["#2E7D32", "#1B5E20"] as [string, string],
+    decorativeColor: "rgba(46, 125, 50, 0.15)",
   },
   {
     id: 3,
     icon: "bar-chart-2" as const,
     title: "Smart Money\nInsights",
     subtitle: "AI-powered analysis of your spending, budgets, and subscriptions — beautifully clear.",
-    gradient: ["#059669", "#0D9488"] as [string, string],
+    gradient: ["#EAC891", "#D4B07A"] as [string, string],
+    decorativeColor: "rgba(234, 200, 145, 0.15)",
   },
 ];
 
+function Dot({ index, currentIndex }: { index: number; currentIndex: number }) {
+  const widthAnim = useAnimatedStyle(() => ({
+    width: withSpring(index === currentIndex ? 32 : 8, {
+      damping: 15,
+      stiffness: 200,
+    }),
+    backgroundColor: withTiming(
+      index === currentIndex ? "#D06224" : "#2A2520",
+      { duration: 300 },
+    ),
+  }));
+
+  return <Animated.View style={[styles.dot, widthAnim]} />;
+}
+
 export default function Onboarding() {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
-  const dotAnimations = SLIDES.map(() => useRef(new Animated.Value(0)).current);
 
   const handleNext = () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     if (currentIndex < SLIDES.length - 1) {
       const nextIndex = currentIndex + 1;
       scrollRef.current?.scrollTo({ x: nextIndex * width, animated: true });
@@ -54,6 +87,13 @@ export default function Onboarding() {
     } else {
       router.push("/(auth)/login");
     }
+  };
+
+  const handleSkip = () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    router.push("/(auth)/login");
   };
 
   const handleScroll = (e: { nativeEvent: { contentOffset: { x: number } } }) => {
@@ -77,14 +117,30 @@ export default function Onboarding() {
       >
         {SLIDES.map((slide) => (
           <View key={slide.id} style={[styles.slide, { width }]}>
-            <LinearGradient
-              colors={slide.gradient}
-              style={styles.iconContainer}
-            >
-              <Feather name={slide.icon} size={40} color="#fff" />
-            </LinearGradient>
-            <Text style={styles.title}>{slide.title}</Text>
-            <Text style={styles.subtitle}>{slide.subtitle}</Text>
+            {/* Decorative background circle */}
+            <View
+              style={[
+                styles.decorativeCircle,
+                { backgroundColor: slide.decorativeColor },
+              ]}
+            />
+
+            <Animated.View entering={FadeInDown.duration(600).springify().damping(28)}>
+              <LinearGradient
+                colors={slide.gradient}
+                style={styles.iconContainer}
+              >
+                <Feather name={slide.icon} size={44} color="#FFFDF9" />
+              </LinearGradient>
+            </Animated.View>
+
+            <Animated.View entering={FadeInDown.duration(600).delay(150).springify().damping(28)}>
+              <Text style={[styles.title, { color: colors.text }]}>{slide.title}</Text>
+            </Animated.View>
+
+            <Animated.View entering={FadeInDown.duration(600).delay(250).springify().damping(28)}>
+              <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>{slide.subtitle}</Text>
+            </Animated.View>
           </View>
         ))}
       </ScrollView>
@@ -92,19 +148,13 @@ export default function Onboarding() {
       <View style={[styles.footer, { paddingBottom: bottomPad + 24 }]}>
         <View style={styles.dots}>
           {SLIDES.map((_, i) => (
-            <View
-              key={i}
-              style={[
-                styles.dot,
-                i === currentIndex && styles.dotActive,
-              ]}
-            />
+            <Dot key={i} index={i} currentIndex={currentIndex} />
           ))}
         </View>
 
         <TouchableOpacity style={styles.btn} onPress={handleNext} activeOpacity={0.85}>
           <LinearGradient
-            colors={["#F4F4F5", "#D4D4D8"]}
+            colors={["#D06224", "#AE431E"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.btnGradient}
@@ -112,12 +162,12 @@ export default function Onboarding() {
             <Text style={styles.btnText}>
               {currentIndex === SLIDES.length - 1 ? "Get Started" : "Continue"}
             </Text>
-            <Feather name="arrow-right" size={18} color="#fff" />
+            <Feather name="arrow-right" size={18} color="#FFFDF9" />
           </LinearGradient>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.push("/(auth)/login")} style={styles.skip}>
-          <Text style={styles.skipText}>Skip</Text>
+        <TouchableOpacity onPress={handleSkip} style={styles.skip}>
+          <Text style={[styles.skipText, { color: colors.mutedForeground }]}>Skip</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -125,7 +175,7 @@ export default function Onboarding() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0F1115" },
+  container: { flex: 1, backgroundColor: "#0F0D0A" },
   scroll: { flex: 1 },
   slide: {
     alignItems: "center",
@@ -133,25 +183,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 36,
     gap: 24,
   },
+  decorativeCircle: {
+    position: "absolute",
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    top: "20%",
+    opacity: 0.5,
+  },
   iconContainer: {
-    width: 96,
-    height: 96,
-    borderRadius: 28,
+    width: 100,
+    height: 100,
+    borderRadius: 30,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,
   },
   title: {
-    fontSize: 36,
+    fontSize: 38,
     fontWeight: "800",
-    color: "#fff",
     textAlign: "center",
-    lineHeight: 44,
+    lineHeight: 46,
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
-    color: "#B0B7C3",
     textAlign: "center",
     lineHeight: 24,
   },
@@ -166,14 +222,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#262B36",
-  },
-  dotActive: {
-    width: 24,
-    backgroundColor: "#F4F4F5",
+    height: 8,
+    borderRadius: 4,
   },
   btn: {
     borderRadius: 16,
@@ -187,7 +237,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   btnText: {
-    color: "#fff",
+    color: "#FFFDF9",
     fontSize: 17,
     fontWeight: "700",
   },
@@ -196,7 +246,6 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   skipText: {
-    color: "#B0B7C3",
     fontSize: 15,
   },
 });

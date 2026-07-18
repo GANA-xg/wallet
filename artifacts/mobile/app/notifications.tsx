@@ -11,16 +11,17 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { FadeInDown } from "react-native-reanimated";
 
 import { useWallet } from "@/context/WalletContext";
 import { useColors } from "@/hooks/useColors";
 import type { VaultNotification } from "@/types";
 
 const TYPE_COLORS = {
-  payment: "#22C55E",
-  reward: "#F59E0B",
-  security: "#EF4444",
-  info: "#3B82F6",
+  payment: "#2E7D32",
+  reward: "#EAC891",
+  security: "#D06224",
+  info: "#AE431E",
 };
 
 const TYPE_ICONS: Record<VaultNotification["type"], keyof typeof Feather.glyphMap> = {
@@ -55,65 +56,72 @@ export default function NotificationsScreen() {
     markRead(id);
   };
 
-  const renderNotif = (n: VaultNotification) => {
+  const renderNotif = (n: VaultNotification, index: number) => {
     const typeColor = TYPE_COLORS[n.type];
     const icon = TYPE_ICONS[n.type];
 
     return (
-      <TouchableOpacity
-        key={n.id}
-        style={[
-          styles.notifRow,
-          {
-            backgroundColor: n.read ? colors.surface : colors.surfaceElevated,
-            borderLeftColor: n.read ? "transparent" : typeColor,
-          },
-        ]}
-        onPress={() => handleMarkRead(n.id)}
-        activeOpacity={0.8}
-      >
-        <View style={[styles.iconWrap, { backgroundColor: typeColor + "20" }]}>
-          <Feather name={icon} size={18} color={typeColor} />
-        </View>
-        <View style={styles.notifBody}>
-          <View style={styles.notifTop}>
-            <Text style={[styles.notifTitle, { color: colors.text }]} numberOfLines={1}>
-              {n.title}
-            </Text>
-            {!n.read && <View style={[styles.dot, { backgroundColor: typeColor }]} />}
+      <Animated.View key={n.id} entering={FadeInDown.duration(300).delay(index * 30)}>
+        <TouchableOpacity
+          style={[
+            styles.notifRow,
+            {
+              backgroundColor: n.read ? colors.surface : colors.surfaceElevated,
+            },
+          ]}
+          onPress={() => handleMarkRead(n.id)}
+          activeOpacity={0.8}
+        >
+          <View style={[styles.iconWrap, { backgroundColor: typeColor + "18" }]}>
+            <Feather name={icon} size={16} color={typeColor} />
           </View>
-          <Text style={[styles.notifText, { color: colors.mutedForeground }]} numberOfLines={2}>
-            {n.body}
-          </Text>
-          <Text style={[styles.notifTime, { color: colors.textTertiary }]}>
-            {timeAgo(n.date)}
-          </Text>
-        </View>
-      </TouchableOpacity>
+          <View style={styles.notifBody}>
+            <View style={styles.notifTop}>
+              <Text style={[styles.notifTitle, { color: colors.text }]} numberOfLines={1}>
+                {n.title}
+              </Text>
+              {!n.read && <View style={[styles.dot, { backgroundColor: typeColor }]} />}
+            </View>
+            <Text style={[styles.notifText, { color: colors.mutedForeground }]} numberOfLines={2}>
+              {n.body}
+            </Text>
+            <Text style={[styles.notifTime, { color: colors.textTertiary }]}>
+              {timeAgo(n.date)}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
     );
   };
 
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={[styles.content, { paddingTop: topPad + 16, paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 40 }]}
+      contentContainerStyle={[styles.content, { paddingTop: topPad + 12, paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 40 }]}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Feather name="arrow-left" size={22} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>Notifications</Text>
-        <View style={{ width: 22 }} />
-      </View>
+      {/* Header */}
+      <Animated.View entering={FadeInDown.duration(400).delay(50)}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => {
+              router.back();
+            }}
+          >
+            <Feather name="arrow-left" size={22} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.title, { color: colors.text }]}>Notifications</Text>
+          <View style={{ width: 22 }} />
+        </View>
+      </Animated.View>
 
       {unread.length > 0 && (
         <View style={styles.section}>
           <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
             NEW · {unread.length}
           </Text>
-          <View style={[styles.notifList, { borderColor: colors.border }]}>
-            {unread.map(renderNotif)}
+          <View style={[styles.notifList, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            {unread.map((n, i) => renderNotif(n, i))}
           </View>
         </View>
       )}
@@ -121,15 +129,15 @@ export default function NotificationsScreen() {
       {read.length > 0 && (
         <View style={styles.section}>
           <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>EARLIER</Text>
-          <View style={[styles.notifList, { borderColor: colors.border }]}>
-            {read.map(renderNotif)}
+          <View style={[styles.notifList, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            {read.map((n, i) => renderNotif(n, unread.length + i))}
           </View>
         </View>
       )}
 
       {notifications.length === 0 && (
         <View style={styles.empty}>
-          <Feather name="bell-off" size={40} color={colors.border} />
+          <Feather name="bell-off" size={36} color={colors.border} />
           <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
             No notifications yet
           </Text>
@@ -156,31 +164,32 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     marginBottom: 10,
   },
-  notifList: { borderRadius: 16, overflow: "hidden", gap: 1 },
+  notifList: { borderRadius: 16, overflow: "hidden", borderWidth: 1 },
   notifRow: {
     flexDirection: "row",
     gap: 12,
-    padding: 16,
-    borderLeftWidth: 3,
+    padding: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(0,0,0,0.05)",
   },
   iconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
     flexShrink: 0,
   },
-  notifBody: { flex: 1, gap: 4 },
+  notifBody: { flex: 1, gap: 3 },
   notifTop: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  notifTitle: { fontSize: 14, fontWeight: "700", flex: 1 },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  notifText: { fontSize: 13, lineHeight: 18 },
-  notifTime: { fontSize: 11 },
-  empty: { alignItems: "center", paddingTop: 80, gap: 12 },
-  emptyText: { fontSize: 16 },
+  notifTitle: { fontSize: 13, fontWeight: "700", flex: 1 },
+  dot: { width: 7, height: 7, borderRadius: 4, marginLeft: 6 },
+  notifText: { fontSize: 12, lineHeight: 17 },
+  notifTime: { fontSize: 10 },
+  empty: { alignItems: "center", paddingTop: 80, gap: 10 },
+  emptyText: { fontSize: 14 },
 });

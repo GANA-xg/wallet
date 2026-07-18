@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { buildLaunchRequest, PaymentAppButtons } from "@/components/PaymentAppButtons";
@@ -24,15 +25,14 @@ import type { Transaction } from "@/types";
 
 type Step = "details" | "launch" | "launched";
 
-const QUICK_CONTACTS = [
-  { name: "Rahul Kumar", upi: "rahul@paytm", initials: "RK", color: "#3B82F6" },
-  { name: "Priya Singh", upi: "priya@gpay", initials: "PS", color: "#8B5CF6" },
-  { name: "Amit Gupta", upi: "amit.gupta@icici", initials: "AG", color: "#22C55E" },
-  { name: "Sneha Patel", upi: "sneha@sbi", initials: "SP", color: "#F59E0B" },
-];
-
 export default function SendScreen() {
   const colors = useColors();
+  const QUICK_CONTACTS = [
+    { name: "Rahul Kumar", upi: "rahul@paytm", initials: "RK", color: colors.primary },
+    { name: "Priya Singh", upi: "priya@gpay", initials: "PS", color: colors.secondary },
+    { name: "Amit Gupta", upi: "amit.gupta@icici", initials: "AG", color: colors.success },
+    { name: "Sneha Patel", upi: "sneha@sbi", initials: "SP", color: colors.sunset },
+  ];
   const insets = useSafeAreaInsets();
   const { verifyBiometric } = useAuth();
   const {
@@ -153,7 +153,7 @@ export default function SendScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: topPad + 16 }]}>
+      <Animated.View entering={FadeInDown.duration(500).delay(0)} style={[styles.header, { paddingTop: topPad + 16 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
           <Feather name="x" size={22} color={colors.text} />
         </TouchableOpacity>
@@ -161,7 +161,7 @@ export default function SendScreen() {
         <TouchableOpacity onPress={() => router.replace("/pay" as never)}>
           <Feather name="maximize" size={20} color={colors.primary} />
         </TouchableOpacity>
-      </View>
+      </Animated.View>
 
       <ScrollView
         style={{ flex: 1 }}
@@ -169,15 +169,16 @@ export default function SendScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={[styles.infoBanner, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Feather name="shield" size={16} color="#22C55E" />
+        <Animated.View entering={FadeInDown.duration(500).delay(100)} style={[styles.infoBanner, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Feather name="shield" size={16} color={colors.success} />
           <Text style={[styles.infoBannerText, { color: colors.mutedForeground }]}>
             Vault launches Google Pay, PhonePe, or Paytm. We never store bank accounts, UPI PINs, or process payments.
           </Text>
-        </View>
+        </Animated.View>
 
         {step !== "launched" && (
           <>
+            <Animated.View entering={FadeInDown.duration(500).delay(200)}>
             <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>RECENT CONTACTS</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.contactsScroll}>
               {QUICK_CONTACTS.map((c) => (
@@ -190,13 +191,15 @@ export default function SendScreen() {
                   }}
                 >
                   <View style={[styles.contactAvatar, { backgroundColor: c.color }]}>
-                    <Text style={styles.contactInitials}>{c.initials}</Text>
+                    <Text style={[styles.contactInitials, { color: colors.text }]}>{c.initials}</Text>
                   </View>
                   <Text style={[styles.contactName, { color: colors.text }]}>{c.name.split(" ")[0]}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
+            </Animated.View>
 
+            <Animated.View entering={FadeInDown.duration(500).delay(300)}>
             <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>UPI ID</Text>
             <View style={[styles.inputRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Feather name="at-sign" size={18} color={colors.mutedForeground} />
@@ -212,7 +215,9 @@ export default function SendScreen() {
                 selectionColor={colors.primary}
               />
             </View>
+            </Animated.View>
 
+            <Animated.View entering={FadeInDown.duration(500).delay(400)}>
             <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>AMOUNT</Text>
             <View style={[styles.amountRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={[styles.rupeeText, { color: colors.text }]}>₹</Text>
@@ -232,8 +237,9 @@ export default function SendScreen() {
                 ? `Remaining after payment: ₹${paymentPreview.remainingSpendable.toLocaleString("en-IN")}`
                 : `Available to spend: ₹${spendableBalance.toLocaleString("en-IN")}`}
             </Text>
+            </Animated.View>
 
-            <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+            <Animated.View entering={FadeInDown.duration(500).delay(500)} style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
               <View style={styles.summaryRow}>
                 <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>Recipient</Text>
                 <Text style={[styles.summaryValue, { color: colors.text }]}>{recipient}</Text>
@@ -247,9 +253,9 @@ export default function SendScreen() {
                 <Text style={[styles.summaryValue, { color: colors.text }]}>₹{paymentPreview?.remainingSpendable.toLocaleString("en-IN") ?? spendableBalance.toLocaleString("en-IN")}</Text>
               </View>
               <Text style={[styles.summaryNote, { color: colors.mutedForeground }]}>Funds are reserved before launch. If launch fails, the hold is released.</Text>
-            </View>
+            </Animated.View>
 
-            <View style={styles.quickAmounts}>
+            <Animated.View entering={FadeInDown.duration(500).delay(600)} style={styles.quickAmounts}>
               {["100", "500", "1000", "2000"].map((a) => (
                 <TouchableOpacity
                   key={a}
@@ -257,13 +263,14 @@ export default function SendScreen() {
                   onPress={() => setAmount(a)}
                   disabled={step !== "details"}
                 >
-                  <Text style={[styles.quickAmtText, { color: amount === a ? "#fff" : colors.mutedForeground }]}>
+                  <Text style={[styles.quickAmtText, { color: amount === a ? colors.text : colors.mutedForeground }]}>
                     ₹{a}
                   </Text>
                 </TouchableOpacity>
               ))}
-            </View>
+            </Animated.View>
 
+            <Animated.View entering={FadeInDown.duration(500).delay(700)}>
             <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>NOTE (OPTIONAL)</Text>
             <View style={[styles.inputRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Feather name="edit-3" size={18} color={colors.mutedForeground} />
@@ -277,37 +284,42 @@ export default function SendScreen() {
                 selectionColor={colors.primary}
               />
             </View>
+            </Animated.View>
 
             {!!errorMsg && (
               <View style={styles.errorRow}>
-                <Feather name="alert-circle" size={14} color="#EF4444" />
-                <Text style={styles.errorText}>{errorMsg}</Text>
+                <Feather name="alert-circle" size={14} color={colors.error} />
+                <Text style={[styles.errorText, { color: colors.error }]}>{errorMsg}</Text>
               </View>
             )}
           </>
         )}
 
         {step === "details" && (
+          <Animated.View entering={FadeInDown.duration(500).delay(800)}>
           <TouchableOpacity
             style={[styles.continueBtn, { opacity: recipient && hasAmount && canAffordPayment(amountValue) ? 1 : 0.5 }]}
             onPress={handleContinue}
             disabled={!recipient || !hasAmount || !canAffordPayment(amountValue)}
           >
             <LinearGradient colors={[colors.primary, colors.primaryLight]} style={styles.continueBtnGrad}>
-              <Feather name="shield" size={18} color="#fff" />
-              <Text style={styles.continueBtnText}>Verify & Choose UPI App</Text>
+              <Feather name="shield" size={18} color={colors.text} />
+              <Text style={[styles.continueBtnText, { color: colors.text }]}>Verify & Choose UPI App</Text>
             </LinearGradient>
           </TouchableOpacity>
+          </Animated.View>
         )}
 
         {step === "launch" && launchRequest && (
+          <Animated.View entering={FadeInDown.duration(500).delay(200)}>
           <PaymentAppButtons request={launchRequest} onLaunched={handleLaunched} onLaunchFailed={handleLaunchFailed} />
+          </Animated.View>
         )}
 
         {step === "launched" && launchedApp && (
-          <View style={styles.launchedCard}>
-            <View style={[styles.launchedIcon, { backgroundColor: "#22C55E20" }]}>
-              <Feather name="external-link" size={28} color="#22C55E" />
+          <Animated.View entering={FadeInDown.duration(500).delay(0)} style={styles.launchedCard}>
+            <View style={[styles.launchedIcon, { backgroundColor: colors.successLight }]}>
+              <Feather name="external-link" size={28} color={colors.success} />
             </View>
             <Text style={[styles.launchedTitle, { color: colors.text }]}>Payment Launched</Text>
             <Text style={[styles.launchedSub, { color: colors.mutedForeground }]}>
@@ -315,11 +327,11 @@ export default function SendScreen() {
               {launchedApp === "google_pay" ? "Google Pay" : launchedApp === "phonepe" ? "PhonePe" : "Paytm"}.
             </Text>
             <TouchableOpacity style={styles.doneBtn} onPress={() => router.back()}>
-              <LinearGradient colors={["#F4F4F5", "#D4D4D8"]} style={styles.doneBtnGrad}>
-                <Text style={styles.doneBtnText}>Done</Text>
+              <LinearGradient colors={[colors.sunset, colors.sunsetDark]} style={styles.doneBtnGrad}>
+                <Text style={[styles.doneBtnText, { color: colors.text }]}>Done</Text>
               </LinearGradient>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         )}
       </ScrollView>
     </View>
@@ -351,7 +363,7 @@ const styles = StyleSheet.create({
   contactsScroll: { marginBottom: 8 },
   contactChip: { alignItems: "center", marginRight: 16, gap: 6 },
   contactAvatar: { width: 52, height: 52, borderRadius: 16, justifyContent: "center", alignItems: "center" },
-  contactInitials: { color: "#fff", fontSize: 16, fontWeight: "800" },
+  contactInitials: { fontSize: 16, fontWeight: "800" },
   contactName: { fontSize: 12, fontWeight: "500" },
   inputRow: {
     flexDirection: "row",
@@ -393,7 +405,7 @@ const styles = StyleSheet.create({
   quickAmtBtn: { flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: "center" },
   quickAmtText: { fontSize: 13, fontWeight: "700" },
   errorRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8 },
-  errorText: { color: "#EF4444", fontSize: 13 },
+  errorText: { fontSize: 13 },
   continueBtn: { borderRadius: 16, overflow: "hidden", marginTop: 20 },
   continueBtnGrad: {
     flexDirection: "row",
@@ -402,7 +414,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 16,
   },
-  continueBtnText: { color: "#fff", fontSize: 17, fontWeight: "700" },
+  continueBtnText: { fontSize: 17, fontWeight: "700" },
   launchedCard: { alignItems: "center", gap: 12, marginTop: 24 },
   launchedIcon: {
     width: 72,
@@ -415,5 +427,5 @@ const styles = StyleSheet.create({
   launchedSub: { fontSize: 14, textAlign: "center", lineHeight: 20 },
   doneBtn: { width: "100%", borderRadius: 16, overflow: "hidden", marginTop: 8 },
   doneBtnGrad: { paddingVertical: 16, alignItems: "center" },
-  doneBtnText: { color: "#fff", fontSize: 17, fontWeight: "700" },
+  doneBtnText: { fontSize: 17, fontWeight: "700" },
 });

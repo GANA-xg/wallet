@@ -17,6 +17,7 @@ import {
   ScrollView,
 } from "react-native";
 import Svg, { Rect } from "react-native-svg";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/AuthContext";
@@ -96,7 +97,7 @@ export default function ReceiveScreen() {
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={{ flex: 1 }}>
-          <View style={[styles.header, { paddingTop: topPad + 16 }]}>
+          <Animated.View entering={FadeInDown.duration(500).delay(0)} style={[styles.header, { paddingTop: topPad + 16 }]}>
             <TouchableOpacity onPress={() => router.back()}>
               <Feather name="arrow-left" size={22} color={colors.text} />
             </TouchableOpacity>
@@ -104,7 +105,7 @@ export default function ReceiveScreen() {
             <TouchableOpacity onPress={handleShare}>
               <Feather name="share-2" size={20} color={colors.text} />
             </TouchableOpacity>
-          </View>
+          </Animated.View>
 
           <ScrollView
             contentContainerStyle={styles.scrollContent}
@@ -113,7 +114,7 @@ export default function ReceiveScreen() {
           >
             <View style={[styles.content, { paddingBottom: bottomPad + 24 }]}>
               {/* QR Card */}
-              <View style={[styles.qrCard, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+              <Animated.View entering={FadeInDown.duration(500).delay(100)} style={[styles.qrCard, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
                 <Text style={[styles.cardName, { color: colors.text }]}>
                   {user?.name ?? "Aryan Sharma"}
                 </Text>
@@ -121,9 +122,9 @@ export default function ReceiveScreen() {
 
                 <View style={[styles.qrContainer, { backgroundColor: colors.surfaceElevated, borderRadius: 16 }]}> 
                   <QRPattern fill={colors.primary} />
-                  <View style={styles.qrCenter}>
-                    <LinearGradient colors={[colors.primary, "#d9d9d9"]} style={styles.qrLogo}>
-                      <Feather name="layers" size={16} color="#fff" />
+                  <View style={[styles.qrCenter, { backgroundColor: colors.surface }]}>
+                    <LinearGradient colors={[colors.primary, colors.sunset]} style={styles.qrLogo}>
+                      <Feather name="layers" size={16} color={colors.text} />
                     </LinearGradient>
                   </View>
                 </View>
@@ -134,10 +135,10 @@ export default function ReceiveScreen() {
                     Scan to pay via any UPI app
                   </Text>
                 </View>
-              </View>
+              </Animated.View>
 
               {/* Amount */}
-              <View style={[styles.amountCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Animated.View entering={FadeInDown.duration(500).delay(200)} style={[styles.amountCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <Text style={[styles.amountLabel, { color: colors.mutedForeground }]}>
                   Request specific amount (optional)
                 </Text>
@@ -153,29 +154,31 @@ export default function ReceiveScreen() {
                     selectionColor={colors.primary}
                   />
                 </View>
-              </View>
+              </Animated.View>
 
               {/* UPI Apps */}
-              <View style={styles.appsRow}>
+              <Animated.View entering={FadeInDown.duration(500).delay(300)} style={styles.appsRow}>
                 {["GPay", "PhonePe", "Paytm", "BHIM"].map((app) => (
                   <View key={app} style={[styles.appChip, { backgroundColor: colors.surface }]}>
                     <Text style={[styles.appChipText, { color: colors.mutedForeground }]}>{app}</Text>
                   </View>
                 ))}
-              </View>
+              </Animated.View>
 
               {/* Share Button */}
+              <Animated.View entering={FadeInDown.duration(500).delay(400)}>
               <TouchableOpacity style={styles.shareBtn} onPress={handleShare} activeOpacity={0.85}>
                 <LinearGradient
-                  colors={[colors.primary, "#d9d9d9"]}
+                  colors={[colors.primary, colors.sunset]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.shareBtnGrad}
                 >
-                  <Feather name="share-2" size={18} color="#fff" />
-                  <Text style={styles.shareBtnText}>Share Payment Link</Text>
+                  <Feather name="share-2" size={18} color={colors.text} />
+                  <Text style={[styles.shareBtnText, { color: colors.text }]}>Share Payment Link</Text>
                 </LinearGradient>
               </TouchableOpacity>
+              </Animated.View>
             </View>
           </ScrollView>
         </View>
@@ -225,7 +228,6 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 10,
     overflow: "hidden",
-    backgroundColor: "#151515",
     padding: 2,
   },
   qrLogo: {
@@ -266,5 +268,5 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 16,
   },
-  shareBtnText: { color: "#fff", fontSize: 17, fontWeight: "700" },
+  shareBtnText: { fontSize: 17, fontWeight: "700" },
 });

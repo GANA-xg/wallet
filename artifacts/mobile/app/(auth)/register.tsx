@@ -1,5 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
@@ -17,14 +18,17 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { FadeInRight, FadeOutLeft, FadeInDown } from "react-native-reanimated";
 
 import { useAuth } from "@/context/AuthContext";
 import { useWallet } from "@/context/WalletContext";
+import { useColors } from "@/hooks/useColors";
 import type { UPIAccount, VaultDocument, VaultUser } from "@/types";
 
 type Step = "info" | "kyc" | "bank";
 
 export default function Register() {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   const { pendingPhone } = useAuth();
   const { addDocument, addUPIAccount } = useWallet();
@@ -108,6 +112,9 @@ export default function Register() {
 
   // Validate Basic Info Form
   const handleInfoNext = () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     if (!fullName.trim()) {
       setInfoError("Enter your full name");
       return;
@@ -134,6 +141,9 @@ export default function Register() {
 
   // Run simulated OCR + Selfie Check
   const runKycVerification = async (dobMode: "valid" | "underage") => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     setKycStatus("scanning");
     setKycError("");
     
@@ -199,6 +209,9 @@ export default function Register() {
 
   // Run Bank verification
   const runBankVerification = async () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     if (!accountNo || accountNo !== confirmAccountNo) {
       setBankError("Account numbers do not match");
       return;
@@ -221,6 +234,9 @@ export default function Register() {
 
   // Complete Registration & Log User In
   const handleFinalSubmit = async () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     // 1. Create wallet user profile
     const newUser: VaultUser = {
       id: Date.now().toString(),
@@ -257,36 +273,36 @@ export default function Register() {
 
   // Render Step 1: Basic Info Screen
   const renderInfoStep = () => (
-    <View style={styles.stepContainer}>
-      <Text style={styles.title}>Basic Information</Text>
-      <Text style={styles.subtitle}>Enter your details exactly as shown on your documents.</Text>
+    <Animated.View entering={FadeInRight.duration(350)} exiting={FadeOutLeft.duration(250)} style={styles.stepContainer}>
+      <Text style={[styles.title, { color: colors.text }]}>Basic Information</Text>
+      <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Enter your details exactly as shown on your documents.</Text>
 
       <View style={styles.inputLabelWrap}>
-        <Text style={styles.inputLabel}>Full Name</Text>
-        <View style={styles.fieldWrap}>
-          <Feather name="user" size={18} color="#F4F4F5" style={styles.fieldIcon} />
+        <Text style={[styles.inputLabel, { color: colors.mutedForeground }]}>Full Name</Text>
+        <View style={[styles.fieldWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Feather name="user" size={18} color={colors.text} style={styles.fieldIcon} />
           <TextInput
-            style={styles.textInput}
+            style={[styles.textInput, { color: colors.text }]}
             placeholder="Aryan Sharma"
-            placeholderTextColor="#6B7280"
+            placeholderTextColor={colors.textTertiary}
             value={fullName}
             onChangeText={(t) => {
               setFullName(t);
               if (infoError) setInfoError("");
             }}
-            selectionColor="#F4F4F5"
+            selectionColor={colors.primary}
           />
         </View>
       </View>
 
       <View style={styles.inputLabelWrap}>
-        <Text style={styles.inputLabel}>Mobile Number</Text>
-        <View style={[styles.fieldWrap, styles.disabledWrap]}>
-          <Feather name="phone" size={18} color="#6B7280" style={styles.fieldIcon} />
+        <Text style={[styles.inputLabel, { color: colors.mutedForeground }]}>Mobile Number</Text>
+        <View style={[styles.fieldWrap, styles.disabledWrap, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+          <Feather name="phone" size={18} color={colors.textTertiary} style={styles.fieldIcon} />
           <TextInput
-            style={[styles.textInput, styles.disabledInput]}
+            style={[styles.textInput, { color: colors.textTertiary }]}
             placeholder="Mobile Number"
-            placeholderTextColor="#6B7280"
+            placeholderTextColor={colors.textTertiary}
             value={phone}
             editable={false}
             keyboardType="phone-pad"
@@ -295,49 +311,49 @@ export default function Register() {
       </View>
 
       <View style={styles.inputLabelWrap}>
-        <Text style={styles.inputLabel}>Date of Birth (DD/MM/YYYY)</Text>
-        <View style={styles.fieldWrap}>
-          <Feather name="calendar" size={18} color="#F4F4F5" style={styles.fieldIcon} />
+        <Text style={[styles.inputLabel, { color: colors.mutedForeground }]}>Date of Birth (DD/MM/YYYY)</Text>
+        <View style={[styles.fieldWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Feather name="calendar" size={18} color={colors.text} style={styles.fieldIcon} />
           <TextInput
-            style={styles.textInput}
+            style={[styles.textInput, { color: colors.text }]}
             placeholder="15/08/2000"
-            placeholderTextColor="#6B7280"
+            placeholderTextColor={colors.textTertiary}
             value={dob}
             onChangeText={handleDobChange}
             keyboardType="numeric"
             maxLength={10}
-            selectionColor="#F4F4F5"
+            selectionColor={colors.primary}
           />
         </View>
       </View>
 
       <View style={styles.inputLabelWrap}>
-        <Text style={styles.inputLabel}>Email Address (Optional)</Text>
-        <View style={styles.fieldWrap}>
-          <Feather name="mail" size={18} color="#F4F4F5" style={styles.fieldIcon} />
+        <Text style={[styles.inputLabel, { color: colors.mutedForeground }]}>Email Address (Optional)</Text>
+        <View style={[styles.fieldWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Feather name="mail" size={18} color={colors.text} style={styles.fieldIcon} />
           <TextInput
-            style={styles.textInput}
+            style={[styles.textInput, { color: colors.text }]}
             placeholder="name@email.com"
-            placeholderTextColor="#6B7280"
+            placeholderTextColor={colors.textTertiary}
             value={email}
             onChangeText={(t) => setEmail(t)}
             keyboardType="email-address"
             autoCapitalize="none"
-            selectionColor="#F4F4F5"
+            selectionColor={colors.primary}
           />
         </View>
       </View>
 
       {!!infoError && (
         <View style={styles.errorBox}>
-          <Feather name="alert-triangle" size={16} color="#EF4444" />
-          <Text style={styles.errorText}>{infoError}</Text>
+          <Feather name="alert-triangle" size={16} color={colors.error} />
+          <Text style={[styles.errorText, { color: colors.error }]}>{infoError}</Text>
         </View>
       )}
 
       <TouchableOpacity style={styles.nextBtn} onPress={handleInfoNext} activeOpacity={0.85}>
         <LinearGradient
-          colors={["#F4F4F5", "#D4D4D8"]}
+          colors={[colors.primary, colors.secondary]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.btnGradient}
@@ -346,104 +362,110 @@ export default function Register() {
           <Feather name="arrow-right" size={18} color="#fff" />
         </LinearGradient>
       </TouchableOpacity>
-    </View>
+    </Animated.View>
   );
 
   // Render Step 2: KYC Screen
   const renderKycStep = () => (
-    <View style={styles.stepContainer}>
-      <Text style={styles.title}>KYC Verification</Text>
-      <Text style={styles.subtitle}>Upload a valid identification card and verify matching identity.</Text>
+    <Animated.View entering={FadeInRight.duration(350)} exiting={FadeOutLeft.duration(250)} style={styles.stepContainer}>
+      <Text style={[styles.title, { color: colors.text }]}>KYC Verification</Text>
+      <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Upload a valid identification card and verify matching identity.</Text>
 
       <View style={styles.kycTypeRow}>
         <TouchableOpacity
-          style={[styles.kycTypeTab, kycType === "aadhaar" && styles.kycTypeActive]}
+          style={[styles.kycTypeTab, { backgroundColor: colors.surface, borderColor: colors.border }, kycType === "aadhaar" && { backgroundColor: colors.surfaceElevated, borderColor: colors.primary }]}
           onPress={() => {
+            if (Platform.OS !== "web") {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }
             setKycType("aadhaar");
             setKycStatus("idle");
           }}
         >
-          <Feather name="user" size={18} color={kycType === "aadhaar" ? "#F4F4F5" : "#B0B7C3"} />
-          <Text style={[styles.kycTypeText, kycType === "aadhaar" && styles.kycTypeActiveText]}>Aadhaar Card</Text>
+          <Feather name="user" size={18} color={kycType === "aadhaar" ? colors.primary : colors.mutedForeground} />
+          <Text style={[styles.kycTypeText, { color: kycType === "aadhaar" ? colors.primary : colors.mutedForeground }]}>Aadhaar Card</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.kycTypeTab, kycType === "pan" && styles.kycTypeActive]}
+          style={[styles.kycTypeTab, { backgroundColor: colors.surface, borderColor: colors.border }, kycType === "pan" && { backgroundColor: colors.surfaceElevated, borderColor: colors.primary }]}
           onPress={() => {
+            if (Platform.OS !== "web") {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }
             setKycType("pan");
             setKycStatus("idle");
           }}
         >
-          <Feather name="credit-card" size={18} color={kycType === "pan" ? "#F4F4F5" : "#B0B7C3"} />
-          <Text style={[styles.kycTypeText, kycType === "pan" && styles.kycTypeActiveText]}>PAN Card</Text>
+          <Feather name="credit-card" size={18} color={kycType === "pan" ? colors.primary : colors.mutedForeground} />
+          <Text style={[styles.kycTypeText, { color: kycType === "pan" ? colors.primary : colors.mutedForeground }]}>PAN Card</Text>
         </TouchableOpacity>
       </View>
 
       {kycStatus === "idle" && (
-        <View style={styles.uploadPlaceholder}>
-          <Feather name="upload-cloud" size={44} color="#F4F4F5" />
-          <Text style={styles.uploadTitle}>Scan or Upload Document</Text>
-          <Text style={styles.uploadSub}>Select a demo scenario below to simulate verification</Text>
+        <View style={[styles.uploadPlaceholder, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Feather name="upload-cloud" size={44} color={colors.text} />
+          <Text style={[styles.uploadTitle, { color: colors.text }]}>Scan or Upload Document</Text>
+          <Text style={[styles.uploadSub, { color: colors.textTertiary }]}>Select a demo scenario below to simulate verification</Text>
         </View>
       )}
 
       {kycStatus === "scanning" && (
-        <View style={styles.scannerBox}>
-          <ActivityIndicator size="large" color="#F4F4F5" />
-          <Text style={styles.scanLogText}>{kycLog}</Text>
+        <View style={[styles.scannerBox, { backgroundColor: colors.surface, borderColor: colors.primary }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.scanLogText, { color: colors.text }]}>{kycLog}</Text>
           <LinearGradient
-            colors={["rgba(255, 107, 0, 0.4)", "rgba(255, 146, 64, 0.0)"]}
+            colors={[`${colors.primary}66`, `${colors.primary}00`]}
             style={styles.laserLine}
           />
         </View>
       )}
 
       {kycStatus === "verified" && (
-        <View style={styles.verifiedKycBox}>
+        <View style={[styles.verifiedKycBox, { backgroundColor: colors.surface, borderColor: colors.success }]}>
           <View style={styles.verifiedHeader}>
-            <Feather name="check-circle" size={32} color="#22C55E" />
-            <Text style={styles.verifiedTitle}>KYC Verified Successfully</Text>
+            <Feather name="check-circle" size={32} color={colors.success} />
+            <Text style={[styles.verifiedTitle, { color: colors.success }]}>KYC Verified Successfully</Text>
           </View>
           <View style={styles.verifiedDetails}>
-            <Text style={styles.verifiedDetailText}>
-              <Text style={styles.bold}>Document:</Text> {kycType.toUpperCase()} ({kycDocNum})
+            <Text style={[styles.verifiedDetailText, { color: colors.mutedForeground }]}>
+              <Text style={[styles.bold, { color: colors.text }]}>Document:</Text> {kycType.toUpperCase()} ({kycDocNum})
             </Text>
-            <Text style={styles.verifiedDetailText}>
-              <Text style={styles.bold}>Extracted DOB:</Text> {extractedDob}
+            <Text style={[styles.verifiedDetailText, { color: colors.mutedForeground }]}>
+              <Text style={[styles.bold, { color: colors.text }]}>Extracted DOB:</Text> {extractedDob}
             </Text>
-            <Text style={styles.verifiedDetailText}>
-              <Text style={styles.bold}>Identity Match Score:</Text> 98.4% Match
+            <Text style={[styles.verifiedDetailText, { color: colors.mutedForeground }]}>
+              <Text style={[styles.bold, { color: colors.text }]}>Identity Match Score:</Text> 98.4% Match
             </Text>
           </View>
         </View>
       )}
 
       {kycStatus === "failed" && (
-        <View style={styles.failedKycBox}>
+        <View style={[styles.failedKycBox, { backgroundColor: colors.surface, borderColor: colors.error }]}>
           <View style={styles.verifiedHeader}>
-            <Feather name="x-circle" size={32} color="#EF4444" />
-            <Text style={styles.failedTitle}>KYC Verification Blocked</Text>
+            <Feather name="x-circle" size={32} color={colors.error} />
+            <Text style={[styles.failedTitle, { color: colors.error }]}>KYC Verification Blocked</Text>
           </View>
-          <Text style={styles.failedReasonText}>{kycError}</Text>
-          <Text style={styles.failedExtractedDob}>Extracted DOB from Document: {extractedDob}</Text>
+          <Text style={[styles.failedReasonText, { color: colors.error }]}>{kycError}</Text>
+          <Text style={[styles.failedExtractedDob, { color: colors.textTertiary }]}>Extracted DOB from Document: {extractedDob}</Text>
         </View>
       )}
 
       {kycStatus === "idle" && (
-        <View style={styles.demoKycSelector}>
-          <Text style={styles.demoTitle}>Simulate Scan Options:</Text>
+        <View style={[styles.demoKycSelector, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.demoTitle, { color: colors.text }]}>Simulate Scan Options:</Text>
           <TouchableOpacity
-            style={styles.demoBtn}
+            style={[styles.demoBtn, { backgroundColor: colors.surfaceElevated }]}
             onPress={() => runKycVerification("valid")}
           >
-            <Feather name="play-circle" size={18} color="#22C55E" />
-            <Text style={styles.demoBtnText}>Simulate Valid KYC (Age 27)</Text>
+            <Feather name="play-circle" size={18} color={colors.success} />
+            <Text style={[styles.demoBtnText, { color: colors.text }]}>Simulate Valid KYC (Age 27)</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.demoBtn, styles.demoBtnDanger]}
+            style={[styles.demoBtn, { backgroundColor: colors.surfaceElevated }]}
             onPress={() => runKycVerification("underage")}
           >
-            <Feather name="alert-triangle" size={18} color="#EF4444" />
-            <Text style={[styles.demoBtnText, styles.dangerText]}>Simulate Underage (Age 16)</Text>
+            <Feather name="alert-triangle" size={18} color={colors.error} />
+            <Text style={[styles.demoBtnText, { color: colors.error }]}>Simulate Underage (Age 16)</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -451,11 +473,16 @@ export default function Register() {
       {kycStatus === "verified" && (
         <TouchableOpacity
           style={styles.nextBtn}
-          onPress={() => setCurrentStep("bank")}
+          onPress={() => {
+            if (Platform.OS !== "web") {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }
+            setCurrentStep("bank");
+          }}
           activeOpacity={0.85}
         >
           <LinearGradient
-            colors={["#F4F4F5", "#D4D4D8"]}
+            colors={[colors.primary, colors.secondary]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.btnGradient}
@@ -471,115 +498,120 @@ export default function Register() {
           style={[styles.nextBtn, styles.blockedBtn]}
           disabled
         >
-          <View style={styles.blockedContent}>
-            <Feather name="lock" size={18} color="#6B7280" />
-            <Text style={styles.blockedBtnText}>Registration Blocked</Text>
+          <View style={[styles.blockedContent, { backgroundColor: colors.surfaceElevated }]}>
+            <Feather name="lock" size={18} color={colors.textTertiary} />
+            <Text style={[styles.blockedBtnText, { color: colors.textTertiary }]}>Registration Blocked</Text>
           </View>
         </TouchableOpacity>
       )}
 
       <TouchableOpacity
         style={styles.backLink}
-        onPress={() => setCurrentStep("info")}
+        onPress={() => {
+          if (Platform.OS !== "web") {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          }
+          setCurrentStep("info");
+        }}
       >
-        <Text style={styles.backLinkText}>Back to Profile Info</Text>
+        <Text style={[styles.backLinkText, { color: colors.primary }]}>Back to Profile Info</Text>
       </TouchableOpacity>
-    </View>
+    </Animated.View>
   );
 
   // Render Step 3: Bank Verification Screen
   const renderBankStep = () => (
-    <View style={styles.stepContainer}>
-      <Text style={styles.title}>Bank Verification</Text>
-      <Text style={styles.subtitle}>Link a primary bank account to fund your Vault wallet.</Text>
+    <Animated.View entering={FadeInRight.duration(350)} exiting={FadeOutLeft.duration(250)} style={styles.stepContainer}>
+      <Text style={[styles.title, { color: colors.text }]}>Bank Verification</Text>
+      <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Link a primary bank account to fund your Vault wallet.</Text>
 
       <View style={styles.inputLabelWrap}>
-        <Text style={styles.inputLabel}>IFSC Code</Text>
-        <View style={styles.fieldWrap}>
-          <Feather name="hash" size={18} color="#F4F4F5" style={styles.fieldIcon} />
+        <Text style={[styles.inputLabel, { color: colors.mutedForeground }]}>IFSC Code</Text>
+        <View style={[styles.fieldWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Feather name="hash" size={18} color={colors.text} style={styles.fieldIcon} />
           <TextInput
-            style={styles.textInput}
+            style={[styles.textInput, { color: colors.text }]}
             placeholder="HDFC0000240"
-            placeholderTextColor="#6B7280"
+            placeholderTextColor={colors.textTertiary}
             value={ifsc}
             onChangeText={handleIfscChange}
             maxLength={11}
             autoCapitalize="characters"
-            selectionColor="#F4F4F5"
+            selectionColor={colors.primary}
           />
         </View>
       </View>
 
       {!!bankName && (
-        <View style={styles.bankNameBox}>
-          <Feather name="briefcase" size={16} color="#F4F4F5" />
-          <Text style={styles.bankNameText}>Resolved Bank: <Text style={styles.bold}>{bankName}</Text></Text>
+        <View style={[styles.bankNameBox, { backgroundColor: `${colors.primary}1a`, borderColor: `${colors.primary}33` }]}>
+          <Feather name="briefcase" size={16} color={colors.primary} />
+          <Text style={[styles.bankNameText, { color: colors.mutedForeground }]}>Resolved Bank: <Text style={[styles.bold, { color: colors.text }]}>{bankName}</Text></Text>
         </View>
       )}
 
       <View style={styles.inputLabelWrap}>
-        <Text style={styles.inputLabel}>Account Number</Text>
-        <View style={styles.fieldWrap}>
-          <Feather name="credit-card" size={18} color="#F4F4F5" style={styles.fieldIcon} />
+        <Text style={[styles.inputLabel, { color: colors.mutedForeground }]}>Account Number</Text>
+        <View style={[styles.fieldWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Feather name="credit-card" size={18} color={colors.text} style={styles.fieldIcon} />
           <TextInput
-            style={styles.textInput}
+            style={[styles.textInput, { color: colors.text }]}
             placeholder="123456789012"
-            placeholderTextColor="#6B7280"
+            placeholderTextColor={colors.textTertiary}
             value={accountNo}
             onChangeText={(t) => {
               setAccountNo(t);
               if (bankError) setBankError("");
             }}
             keyboardType="numeric"
-            selectionColor="#F4F4F5"
+            selectionColor={colors.primary}
           />
         </View>
       </View>
 
       <View style={styles.inputLabelWrap}>
-        <Text style={styles.inputLabel}>Confirm Account Number</Text>
-        <View style={styles.fieldWrap}>
-          <Feather name="credit-card" size={18} color="#F4F4F5" style={styles.fieldIcon} />
+        <Text style={[styles.inputLabel, { color: colors.mutedForeground }]}>Confirm Account Number</Text>
+        <View style={[styles.fieldWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Feather name="credit-card" size={18} color={colors.text} style={styles.fieldIcon} />
           <TextInput
-            style={styles.textInput}
+            style={[styles.textInput, { color: colors.text }]}
             placeholder="Re-enter Account Number"
-            placeholderTextColor="#6B7280"
+            placeholderTextColor={colors.textTertiary}
             value={confirmAccountNo}
             onChangeText={(t) => {
               setConfirmAccountNo(t);
               if (bankError) setBankError("");
             }}
             keyboardType="numeric"
-            selectionColor="#F4F4F5"
+            selectionColor={colors.primary}
           />
         </View>
       </View>
 
       {!!bankError && (
         <View style={styles.errorBox}>
-          <Feather name="alert-triangle" size={16} color="#EF4444" />
-          <Text style={styles.errorText}>{bankError}</Text>
+          <Feather name="alert-triangle" size={16} color={colors.error} />
+          <Text style={[styles.errorText, { color: colors.error }]}>{bankError}</Text>
         </View>
       )}
 
       {bankStatus === "verifying" && (
         <View style={styles.verifyingBankLoader}>
-          <ActivityIndicator size="small" color="#F4F4F5" />
-          <Text style={styles.verifyingBankText}>Verifying bank ownership...</Text>
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={[styles.verifyingBankText, { color: colors.text }]}>Verifying bank ownership...</Text>
         </View>
       )}
 
       {bankStatus === "verified" && (
-        <View style={styles.verifiedBankBox}>
-          <Feather name="check-circle" size={18} color="#22C55E" />
-          <Text style={styles.verifiedBankText}>Bank Account Verified Successfully</Text>
+        <View style={[styles.verifiedBankBox, { backgroundColor: `${colors.success}1a`, borderColor: `${colors.success}33` }]}>
+          <Feather name="check-circle" size={18} color={colors.success} />
+          <Text style={[styles.verifiedBankText, { color: colors.success }]}>Bank Account Verified Successfully</Text>
         </View>
       )}
 
       {bankStatus === "idle" && (
         <TouchableOpacity style={styles.nextBtn} onPress={runBankVerification} activeOpacity={0.85}>
           <LinearGradient
-            colors={["#F4F4F5", "#D4D4D8"]}
+            colors={[colors.primary, colors.secondary]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.btnGradient}
@@ -593,7 +625,7 @@ export default function Register() {
       {bankStatus === "verified" && (
         <TouchableOpacity style={styles.nextBtn} onPress={handleFinalSubmit} activeOpacity={0.85}>
           <LinearGradient
-            colors={["#22C55E", "#10B981"]}
+            colors={[colors.success, "#1B5E20"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.btnGradient}
@@ -606,38 +638,59 @@ export default function Register() {
 
       <TouchableOpacity
         style={styles.backLink}
-        onPress={() => setCurrentStep("kyc")}
+        onPress={() => {
+          if (Platform.OS !== "web") {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          }
+          setCurrentStep("kyc");
+        }}
       >
-        <Text style={styles.backLinkText}>Back to KYC</Text>
+        <Text style={[styles.backLinkText, { color: colors.primary }]}>Back to KYC</Text>
       </TouchableOpacity>
-    </View>
+    </Animated.View>
   );
+
+  const getStepIndex = () => {
+    if (currentStep === "info") return 0;
+    if (currentStep === "kyc") return 1;
+    return 2;
+  };
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={{ flex: 1 }}>
           {/* Progress Header */}
-          <View style={[styles.progressHeader, { paddingTop: topPad }]}>
-            <Text style={styles.progressTitle}>Vault Setup</Text>
+          <View style={[styles.progressHeader, { paddingTop: topPad, backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+            <Text style={[styles.progressTitle, { color: colors.text }]}>Vault Setup</Text>
             <View style={styles.progressRow}>
-              <View style={[styles.progressStep, currentStep === "info" && styles.progressStepActive, (currentStep === "kyc" || currentStep === "bank") && styles.progressStepDone]}>
-                <Text style={styles.progressStepNum}>1</Text>
-                <Text style={styles.progressStepLabel}>Profile</Text>
-              </View>
-              <View style={styles.progressLine} />
-              <View style={[styles.progressStep, currentStep === "kyc" && styles.progressStepActive, currentStep === "bank" && styles.progressStepDone]}>
-                <Text style={styles.progressStepNum}>2</Text>
-                <Text style={styles.progressStepLabel}>KYC</Text>
-              </View>
-              <View style={styles.progressLine} />
-              <View style={[styles.progressStep, currentStep === "bank" && styles.progressStepActive]}>
-                <Text style={styles.progressStepNum}>3</Text>
-                <Text style={styles.progressStepLabel}>Bank</Text>
-              </View>
+              {[0, 1, 2].map((idx) => (
+                <React.Fragment key={idx}>
+                  <View style={styles.progressStepWrap}>
+                    <View
+                      style={[
+                        styles.progressStepNum,
+                        {
+                          backgroundColor: getStepIndex() >= idx ? colors.primary : colors.surfaceElevated,
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.progressStepNumText, { color: getStepIndex() >= idx ? "#FFF" : colors.textTertiary }]}>
+                        {idx + 1}
+                      </Text>
+                    </View>
+                    <Text style={[styles.progressStepLabel, { color: getStepIndex() >= idx ? colors.text : colors.textTertiary }]}>
+                      {["Profile", "KYC", "Bank"][idx]}
+                    </Text>
+                  </View>
+                  {idx < 2 && (
+                    <View style={[styles.progressLine, { backgroundColor: getStepIndex() > idx ? colors.primary : colors.surfaceElevated }]} />
+                  )}
+                </React.Fragment>
+              ))}
             </View>
           </View>
 
@@ -662,22 +715,18 @@ export default function Register() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0F1115",
   },
   scrollContent: {
     flexGrow: 1,
   },
   progressHeader: {
-    backgroundColor: "#171A21",
     paddingHorizontal: 24,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#262B36",
   },
   progressTitle: {
     fontSize: 22,
     fontWeight: "800",
-    color: "#fff",
     marginBottom: 16,
   },
   progressRow: {
@@ -685,39 +734,31 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  progressStep: {
+  progressStepWrap: {
     alignItems: "center",
     flexDirection: "row",
     gap: 6,
-    opacity: 0.4,
-  },
-  progressStepActive: {
-    opacity: 1,
-  },
-  progressStepDone: {
-    opacity: 0.8,
   },
   progressStepNum: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "#262B36",
-    color: "#fff",
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  progressStepNumText: {
     fontSize: 12,
     fontWeight: "700",
-    textAlign: "center",
-    lineHeight: 24,
   },
   progressStepLabel: {
-    color: "#fff",
     fontSize: 13,
     fontWeight: "600",
   },
   progressLine: {
     flex: 1,
-    height: 1.5,
-    backgroundColor: "#262B36",
+    height: 2,
     marginHorizontal: 12,
+    borderRadius: 1,
   },
   stepContainer: {
     paddingHorizontal: 24,
@@ -727,12 +768,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#fff",
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
-    color: "#B0B7C3",
     marginBottom: 24,
     lineHeight: 20,
   },
@@ -741,32 +780,24 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 13,
-    color: "#B0B7C3",
     fontWeight: "600",
     marginBottom: 8,
   },
   fieldWrap: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#171A21",
     borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: "#262B36",
     paddingHorizontal: 16,
   },
   disabledWrap: {
-    backgroundColor: "#0d0f13",
-    borderColor: "#171a21",
-  },
-  disabledInput: {
-    color: "#6B7280",
+    opacity: 0.6,
   },
   fieldIcon: {
     marginRight: 12,
   },
   textInput: {
     flex: 1,
-    color: "#fff",
     fontSize: 16,
     fontWeight: "600",
     paddingVertical: 14,
@@ -783,7 +814,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   errorText: {
-    color: "#EF4444",
     fontSize: 13,
     fontWeight: "500",
     flex: 1,
@@ -802,7 +832,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   btnText: {
-    color: "#fff",
+    color: "#FFFDF9",
     fontSize: 16,
     fontWeight: "700",
   },
@@ -817,50 +847,34 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#171A21",
     borderWidth: 1.5,
-    borderColor: "#262B36",
     paddingVertical: 14,
     borderRadius: 14,
   },
-  kycTypeActive: {
-    borderColor: "#F4F4F5",
-    backgroundColor: "#1a1208",
-  },
   kycTypeText: {
-    color: "#B0B7C3",
     fontSize: 14,
     fontWeight: "600",
-  },
-  kycTypeActiveText: {
-    color: "#F4F4F5",
   },
   uploadPlaceholder: {
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#171A21",
     borderWidth: 1.5,
     borderStyle: "dashed",
-    borderColor: "#262B36",
     paddingVertical: 44,
     borderRadius: 20,
     marginBottom: 24,
   },
   uploadTitle: {
-    color: "#fff",
     fontSize: 16,
     fontWeight: "700",
     marginTop: 12,
   },
   uploadSub: {
-    color: "#6B7280",
     fontSize: 12,
     marginTop: 4,
   },
   scannerBox: {
-    backgroundColor: "#171A21",
     borderWidth: 1.5,
-    borderColor: "#F4F4F5",
     paddingVertical: 40,
     borderRadius: 20,
     alignItems: "center",
@@ -870,7 +884,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   scanLogText: {
-    color: "#fff",
     fontSize: 14,
     marginTop: 16,
     fontWeight: "600",
@@ -883,17 +896,13 @@ const styles = StyleSheet.create({
     height: 60,
   },
   verifiedKycBox: {
-    backgroundColor: "#171A21",
     borderWidth: 1.5,
-    borderColor: "#22C55E",
     padding: 20,
     borderRadius: 20,
     marginBottom: 24,
   },
   failedKycBox: {
-    backgroundColor: "#171A21",
     borderWidth: 1.5,
-    borderColor: "#EF4444",
     padding: 20,
     borderRadius: 20,
     marginBottom: 24,
@@ -905,12 +914,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   verifiedTitle: {
-    color: "#22C55E",
     fontSize: 16,
     fontWeight: "700",
   },
   failedTitle: {
-    color: "#EF4444",
     fontSize: 16,
     fontWeight: "700",
   },
@@ -918,34 +925,27 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   verifiedDetailText: {
-    color: "#B0B7C3",
     fontSize: 14,
   },
   failedReasonText: {
-    color: "#EF4444",
     fontSize: 14,
     fontWeight: "600",
     marginBottom: 8,
   },
   failedExtractedDob: {
-    color: "#6B7280",
     fontSize: 13,
   },
   bold: {
     fontWeight: "700",
-    color: "#fff",
   },
   demoKycSelector: {
-    backgroundColor: "#171A21",
     padding: 16,
     borderRadius: 16,
     gap: 10,
     marginBottom: 20,
     borderWidth: 1.5,
-    borderColor: "#262B36",
   },
   demoTitle: {
-    color: "#fff",
     fontSize: 14,
     fontWeight: "700",
     marginBottom: 4,
@@ -954,19 +954,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#262B36",
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 10,
   },
-  demoBtnDanger: {
-    backgroundColor: "#2d1616",
-  },
-  dangerText: {
-    color: "#EF4444",
-  },
   demoBtnText: {
-    color: "#fff",
     fontSize: 13,
     fontWeight: "600",
   },
@@ -976,7 +968,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   backLinkText: {
-    color: "#F4F4F5",
     fontSize: 14,
     fontWeight: "600",
   },
@@ -984,15 +975,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#1a1208",
     padding: 12,
     borderRadius: 10,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "rgba(255, 107, 0, 0.2)",
   },
   bankNameText: {
-    color: "#B0B7C3",
     fontSize: 13,
   },
   verifyingBankLoader: {
@@ -1003,7 +991,6 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   verifyingBankText: {
-    color: "#F4F4F5",
     fontSize: 14,
     fontWeight: "600",
   },
@@ -1012,15 +999,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "rgba(34, 197, 94, 0.1)",
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(34, 197, 94, 0.2)",
     marginBottom: 20,
   },
   verifiedBankText: {
-    color: "#22C55E",
     fontSize: 14,
     fontWeight: "600",
   },
@@ -1032,11 +1016,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#262B36",
     paddingVertical: 16,
   },
   blockedBtnText: {
-    color: "#6B7280",
     fontSize: 16,
     fontWeight: "700",
   },

@@ -35,9 +35,9 @@ export default function TicketTimeline({
           const isCurrent = index === displayStations.length - 2;
 
           let dotColor = "rgba(255,255,255,0.2)";
-          if (isFirst) dotColor = "#22C55E";
-          else if (isLast) dotColor = "#FF6B00";
-          else if (isCurrent) dotColor = "#3B82F6";
+          if (isFirst) dotColor = "#2E7D32";
+          else if (isLast) dotColor = "#D06224";
+          else if (isCurrent) dotColor = "#AE431E";
 
           return (
             <View key={`${station}-${index}`} style={styles.stationRow}>
@@ -49,7 +49,7 @@ export default function TicketTimeline({
                   <View
                     style={[
                       styles.line,
-                      { backgroundColor: isCompleted ? "#22C55E" : "rgba(255,255,255,0.1)" },
+                      { backgroundColor: isCompleted ? "#2E7D32" : "rgba(255,255,255,0.1)" },
                     ]}
                   />
                 )}
@@ -65,9 +65,9 @@ export default function TicketTimeline({
                   {station}
                 </Text>
                 {isFirst && <Text style={styles.stationTag}>DEPARTURE</Text>}
-                {isLast && <Text style={[styles.stationTag, { color: "#FF6B00" }]}>DESTINATION</Text>}
+                {isLast && <Text style={[styles.stationTag, { color: "#D06224" }]}>DESTINATION</Text>}
                 {isCurrent && !isLast && (
-                  <Text style={[styles.stationTag, { color: "#3B82F6" }]}>CURRENT</Text>
+                  <Text style={[styles.stationTag, { color: "#AE431E" }]}>CURRENT</Text>
                 )}
               </View>
             </View>
@@ -118,22 +118,22 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   stationName: {
-    color: "#fff",
+    color: "#FFFDF9",
     fontSize: 14,
     fontWeight: "600",
   },
   departureStation: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#22C55E",
+    color: "#2E7D32",
   },
   destinationStation: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#FF6B00",
+    color: "#D06224",
   },
   stationTag: {
-    color: "#22C55E",
+    color: "#2E7D32",
     fontSize: 9,
     fontWeight: "700",
     letterSpacing: 1,

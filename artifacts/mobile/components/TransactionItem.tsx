@@ -28,7 +28,7 @@ function formatDate(dateStr: string) {
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   if (days === 0) return "Today";
   if (days === 1) return "Yesterday";
-  if (days < 7) return `${days} days ago`;
+  if (days < 7) return `${days}d ago`;
   return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 }
 
@@ -42,6 +42,7 @@ export function TransactionItem({ transaction, onPress }: Props) {
   const icon = (CATEGORY_ICONS[transaction.category] ?? CATEGORY_ICONS.default) as keyof typeof Feather.glyphMap;
   const isCredit = transaction.type === "credit";
   const amountColor = isCredit ? colors.success : colors.text;
+  const iconColor = isCredit ? colors.success : colors.textSecondary;
 
   return (
     <TouchableOpacity
@@ -49,8 +50,8 @@ export function TransactionItem({ transaction, onPress }: Props) {
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.iconWrap, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-        <Feather name={icon} size={18} color={isCredit ? colors.success : colors.primary} />
+      <View style={[styles.iconWrap, { backgroundColor: colors.surfaceElevated }]}>
+        <Feather name={icon} size={16} color={iconColor} />
       </View>
 
       <View style={styles.info}>
@@ -69,7 +70,7 @@ export function TransactionItem({ transaction, onPress }: Props) {
 
       <View style={styles.right}>
         <Text style={[styles.amount, { color: amountColor }]}>
-          {isCredit ? "+" : "-"}₹{formatAmount(transaction.amount)}
+          {isCredit ? "+" : "−"}₹{formatAmount(transaction.amount)}
         </Text>
         {transaction.status === "failed" && (
           <Text style={[styles.failedBadge, { color: colors.error }]}>Failed</Text>
@@ -83,24 +84,23 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     gap: 12,
   },
   iconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
   },
   info: {
     flex: 1,
     gap: 2,
   },
   merchant: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "600",
   },
   date: {
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   amount: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
   },
   failedBadge: {

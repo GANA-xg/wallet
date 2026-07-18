@@ -54,7 +54,8 @@ function ClassicTabLayout() {
           borderTopWidth: isWeb ? 1 : StyleSheet.hairlineWidth,
           borderTopColor: colors.border,
           elevation: 0,
-          height: isWeb ? 84 : 60,
+          height: isWeb ? 84 : 64,
+          paddingTop: 6,
         },
         tabBarBackground: () =>
           isIOS ? (
@@ -65,11 +66,11 @@ function ClassicTabLayout() {
             />
           ) : isWeb ? (
             <View
-              style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]}
+              style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? colors.surface : colors.background }]}
             />
           ) : null,
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: "600",
           marginBottom: 4,
         },
@@ -79,8 +80,10 @@ function ClassicTabLayout() {
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ color }) => (
-            <Feather name="home" size={22} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <View style={focused ? styles.activeIconWrap : undefined}>
+              <Feather name="home" size={20} color={color} />
+            </View>
           ),
         }}
       />
@@ -88,8 +91,10 @@ function ClassicTabLayout() {
         name="cards"
         options={{
           title: "Cards",
-          tabBarIcon: ({ color }) => (
-            <Feather name="credit-card" size={22} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <View style={focused ? styles.activeIconWrap : undefined}>
+              <Feather name="credit-card" size={20} color={color} />
+            </View>
           ),
         }}
       />
@@ -97,8 +102,10 @@ function ClassicTabLayout() {
         name="upi"
         options={{
           title: "UPI",
-          tabBarIcon: ({ color }) => (
-            <Feather name="send" size={22} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <View style={focused ? styles.activeIconWrap : undefined}>
+              <Feather name="send" size={20} color={color} />
+            </View>
           ),
         }}
       />
@@ -106,8 +113,10 @@ function ClassicTabLayout() {
         name="transactions"
         options={{
           title: "History",
-          tabBarIcon: ({ color }) => (
-            <Feather name="list" size={22} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <View style={focused ? styles.activeIconWrap : undefined}>
+              <Feather name="list" size={20} color={color} />
+            </View>
           ),
         }}
       />
@@ -115,8 +124,10 @@ function ClassicTabLayout() {
         name="more"
         options={{
           title: "More",
-          tabBarIcon: ({ color }) => (
-            <Feather name="grid" size={22} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <View style={focused ? styles.activeIconWrap : undefined}>
+              <Feather name="grid" size={20} color={color} />
+            </View>
           ),
         }}
       />
@@ -130,3 +141,12 @@ export default function TabLayout() {
   }
   return <ClassicTabLayout />;
 }
+
+const styles = StyleSheet.create({
+  activeIconWrap: {
+    backgroundColor: "rgba(208,98,36,0.12)",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+});

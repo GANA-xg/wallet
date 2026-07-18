@@ -1,4 +1,5 @@
 import { Feather } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useState } from "react";
@@ -11,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/AuthContext";
@@ -20,11 +22,11 @@ import type { VaultDocument } from "@/types";
 import BiometricPrompt from "@/app/biometric-prompt";
 
 const DOC_INFO: Record<VaultDocument["type"], { label: string; icon: keyof typeof Feather.glyphMap; color: string; gradient: [string, string] }> = {
-  aadhaar: { label: "Aadhaar Card", icon: "user", color: "#3B82F6", gradient: ["#1e3a5f", "#0f2040"] },
-  pan: { label: "PAN Card", icon: "credit-card", color: "#F59E0B", gradient: ["#5f3e0f", "#3d2700"] },
-  driving_license: { label: "Driving License", icon: "navigation", color: "#22C55E", gradient: ["#0f4a1e", "#073010"] },
-  passport: { label: "Passport", icon: "bookmark", color: "#8B5CF6", gradient: ["#3b1f5f", "#200f40"] },
-  vehicle_rc: { label: "Vehicle RC", icon: "truck", color: "#EF4444", gradient: ["#5f1f1f", "#400f0f"] },
+  aadhaar: { label: "Aadhaar Card", icon: "user", color: "#D06224", gradient: ["#3A1A10", "#1A1510"] },
+  pan: { label: "PAN Card", icon: "credit-card", color: "#EAC891", gradient: ["#3A2A10", "#1A1510"] },
+  driving_license: { label: "Driving License", icon: "navigation", color: "#2E7D32", gradient: ["#1A2A10", "#0F1A08"] },
+  passport: { label: "Passport", icon: "bookmark", color: "#AE431E", gradient: ["#2A1510", "#1A0F08"] },
+  vehicle_rc: { label: "Vehicle RC", icon: "truck", color: "#D06224", gradient: ["#3A1A10", "#1A1510"] },
 };
 
 const AVAILABLE_TYPES: VaultDocument["type"][] = [
@@ -46,6 +48,7 @@ export default function DocumentsScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const handleAdd = (type: VaultDocument["type"]) => {
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const info = DOC_INFO[type];
     const alreadyHas = documents.some((d) => d.type === type);
     if (alreadyHas) {
@@ -63,6 +66,7 @@ export default function DocumentsScreen() {
   };
 
   const handleDelete = (id: string, name: string) => {
+    if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     Alert.alert("Remove Document", `Remove ${name}?`, [
       { text: "Cancel", style: "cancel" },
       { text: "Remove", style: "destructive", onPress: () => removeDocument(id) },
@@ -70,6 +74,7 @@ export default function DocumentsScreen() {
   };
 
   const handleViewDocument = () => {
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setBiometricPending(true);
   };
 
@@ -79,28 +84,31 @@ export default function DocumentsScreen() {
       contentContainerStyle={[styles.content, { paddingTop: topPad + 16, paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 40 }]}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.header}>
+      <Animated.View entering={FadeInDown.duration(500).delay(0)} style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Feather name="arrow-left" size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.text }]}>Documents</Text>
         <TouchableOpacity
           style={[styles.addBtn, { backgroundColor: colors.primary }]}
-          onPress={() => setShowAdd(!showAdd)}
+          onPress={() => {
+            if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setShowAdd(!showAdd);
+          }}
         >
-          <Feather name={showAdd ? "x" : "plus"} size={18} color="#fff" />
+          <Feather name={showAdd ? "x" : "plus"} size={18} color={colors.primaryForeground} />
         </TouchableOpacity>
-      </View>
+      </Animated.View>
 
-      <View style={[styles.securityNote, { backgroundColor: "#0a1a0a" }]}>
-        <Feather name="shield" size={16} color="#22C55E" />
-        <Text style={styles.securityText}>
+      <Animated.View entering={FadeInDown.duration(500).delay(100)} style={[styles.securityNote, { backgroundColor: colors.successLight }]}>
+        <Feather name="shield" size={16} color={colors.success} />
+        <Text style={[styles.securityText, { color: colors.success }]}>
           Documents are encrypted and stored securely on your device
         </Text>
-      </View>
+      </Animated.View>
 
       {showAdd && (
-        <View style={styles.addSection}>
+        <Animated.View entering={FadeInDown.duration(500).delay(200)} style={styles.addSection}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Add Document</Text>
           <View style={styles.typeGrid}>
             {AVAILABLE_TYPES.map((type) => {
@@ -128,46 +136,48 @@ export default function DocumentsScreen() {
               );
             })}
           </View>
-        </View>
+        </Animated.View>
       )}
 
       {documents.length === 0 ? (
-        <View style={[styles.empty, { backgroundColor: colors.surface }]}>
+        <Animated.View entering={FadeInDown.duration(500).delay(300)} style={[styles.empty, { backgroundColor: colors.surface }]}>
           <Feather name="file-text" size={40} color={colors.mutedForeground} />
           <Text style={[styles.emptyTitle, { color: colors.text }]}>No documents yet</Text>
           <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
             Add your important documents for quick access
           </Text>
-        </View>
+        </Animated.View>
       ) : (
         <View style={styles.docGrid}>
-          {documents.map((doc) => {
+          {documents.map((doc, index) => {
             const info = DOC_INFO[doc.type];
             return (
-                  <TouchableOpacity key={doc.id} style={styles.docCardWrap} onPress={handleViewDocument} activeOpacity={0.9}>
-                <LinearGradient
-                  colors={info.gradient}
-                  style={styles.docCard}
-                >
-                  <View style={styles.docTop}>
-                    <View style={[styles.docIcon, { backgroundColor: info.color + "30" }]}>
-                      <Feather name={info.icon} size={20} color={info.color} />
+              <Animated.View key={doc.id} entering={FadeInDown.duration(500).delay(300 + index * 100)}>
+                <TouchableOpacity style={styles.docCardWrap} onPress={handleViewDocument} activeOpacity={0.9}>
+                  <LinearGradient
+                    colors={info.gradient}
+                    style={styles.docCard}
+                  >
+                    <View style={styles.docTop}>
+                      <View style={[styles.docIcon, { backgroundColor: info.color + "30" }]}>
+                        <Feather name={info.icon} size={20} color={info.color} />
+                      </View>
+                      <TouchableOpacity onPress={() => handleDelete(doc.id, doc.name)}>
+                        <Feather name="trash-2" size={16} color="rgba(255,255,255,0.4)" />
+                      </TouchableOpacity>
                     </View>
-                    <TouchableOpacity onPress={() => handleDelete(doc.id, doc.name)}>
-                      <Feather name="trash-2" size={16} color="rgba(255,255,255,0.4)" />
-                    </TouchableOpacity>
-                  </View>
-                  <Text style={styles.docName}>{doc.name}</Text>
-                  <Text style={styles.docNumber}>{doc.number}</Text>
-                  {doc.expiry && (
-                    <Text style={styles.docExpiry}>Expires: {doc.expiry}</Text>
-                  )}
-                  <View style={styles.verifiedBadge}>
-                    <Feather name="check-circle" size={12} color="#22C55E" />
-                    <Text style={styles.verifiedText}>Verified</Text>
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
+                    <Text style={[styles.docName, { color: colors.primaryForeground }]}>{doc.name}</Text>
+                    <Text style={styles.docNumber}>{doc.number}</Text>
+                    {doc.expiry && (
+                      <Text style={styles.docExpiry}>Expires: {doc.expiry}</Text>
+                    )}
+                    <View style={styles.verifiedBadge}>
+                      <Feather name="check-circle" size={12} color={colors.success} />
+                      <Text style={[styles.verifiedText, { color: colors.success }]}>Verified</Text>
+                    </View>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </Animated.View>
             );
           })}
         </View>
@@ -208,7 +218,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 20,
   },
-  securityText: { color: "#22C55E", fontSize: 12, flex: 1 },
+  securityText: { fontSize: 12, flex: 1 },
   addSection: { marginBottom: 24 },
   sectionTitle: { fontSize: 16, fontWeight: "700", marginBottom: 12 },
   typeGrid: { gap: 8 },
@@ -239,11 +249,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  docName: { color: "#fff", fontSize: 16, fontWeight: "700", marginTop: 8 },
+  docName: { fontSize: 16, fontWeight: "700", marginTop: 8 },
   docNumber: { color: "rgba(255,255,255,0.7)", fontSize: 14, letterSpacing: 1 },
   docExpiry: { color: "rgba(255,255,255,0.5)", fontSize: 12 },
   verifiedBadge: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 },
-  verifiedText: { color: "#22C55E", fontSize: 12, fontWeight: "600" },
+  verifiedText: { fontSize: 12, fontWeight: "600" },
   empty: { alignItems: "center", padding: 40, borderRadius: 20, gap: 12 },
   emptyTitle: { fontSize: 18, fontWeight: "700" },
   emptySub: { fontSize: 14, textAlign: "center" },

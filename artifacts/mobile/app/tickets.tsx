@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import RnAnimated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useWallet } from "@/context/WalletContext";
@@ -21,14 +22,15 @@ import type { Ticket } from "@/types";
 import TicketCard from "../components/TicketCard";
 
 const TICKET_STYLES: Record<Ticket["type"], { gradient: [string, string]; icon: keyof typeof Feather.glyphMap; color: string }> = {
-  flight: { gradient: ["#0f2040", "#1e3a5f"], icon: "navigation", color: "#3B82F6" },
+  flight: { gradient: ["#0f2040", "#1e3a5f"], icon: "navigation", color: "#AE431E" },
   movie: { gradient: ["#200f40", "#3b1f5f"], icon: "film", color: "#8B5CF6" },
-  train: { gradient: ["#0f3320", "#1a5c35"], icon: "truck", color: "#22C55E" },
-  bus: { gradient: ["#3d2700", "#5f3e0f"], icon: "map", color: "#F59E0B" },
+  train: { gradient: ["#0f3320", "#1a5c35"], icon: "truck", color: "#2E7D32" },
+  bus: { gradient: ["#3d2700", "#5f3e0f"], icon: "map", color: "#EAC891" },
   event: { gradient: ["#3d0f1f", "#5c1a2e"], icon: "star", color: "#EC4899" },
 };
 
 function LegacyTicketCard({ ticket }: { ticket: Ticket }) {
+  const colors = useColors();
   const style = TICKET_STYLES[ticket.type];
   const [revealed, setRevealed] = useState(false);
   const shakeAnim = React.useRef(new Animated.Value(0)).current;
@@ -52,24 +54,24 @@ function LegacyTicketCard({ ticket }: { ticket: Ticket }) {
               <Feather name={style.icon} size={20} color={style.color} />
             </View>
             <View>
-              <Text style={styles.ticketType}>{ticket.type.toUpperCase()}</Text>
-              <Text style={styles.ticketDate}>{ticket.date}</Text>
+              <Text style={[styles.ticketType]}>{ticket.type.toUpperCase()}</Text>
+              <Text style={[styles.ticketDate, { color: colors.text }]}>{ticket.date}</Text>
             </View>
-            {ticket.time && <Text style={styles.ticketTime}>{ticket.time}</Text>}
+            {ticket.time && <Text style={[styles.ticketTime, { color: colors.text }]}>{ticket.time}</Text>}
           </View>
 
           {ticket.from && ticket.to ? (
             <View style={styles.routeRow}>
-              <Text style={styles.station}>{ticket.from}</Text>
+              <Text style={[styles.station, { color: colors.text }]}>{ticket.from}</Text>
               <View style={styles.routeLine}>
                 <View style={styles.routeDot} />
                 <View style={[styles.routeLineLine, { backgroundColor: style.color + "60" }]} />
                 <Feather name="arrow-right" size={14} color={style.color} />
               </View>
-              <Text style={styles.station}>{ticket.to}</Text>
+              <Text style={[styles.station, { color: colors.text }]}>{ticket.to}</Text>
             </View>
           ) : (
-            <Text style={styles.ticketTitle}>{ticket.title}</Text>
+            <Text style={[styles.ticketTitle, { color: colors.text }]}>{ticket.title}</Text>
           )}
 
           {ticket.venue && (
@@ -89,13 +91,13 @@ function LegacyTicketCard({ ticket }: { ticket: Ticket }) {
             {ticket.seat && (
               <View>
                 <Text style={styles.detailLabel}>SEAT</Text>
-                <Text style={styles.detailValue}>{ticket.seat}</Text>
+                <Text style={[styles.detailValue, { color: colors.text }]}>{ticket.seat}</Text>
               </View>
             )}
             {ticket.pnr && (
               <View>
                 <Text style={styles.detailLabel}>PNR</Text>
-                <Text style={styles.detailValue}>
+                <Text style={[styles.detailValue, { color: colors.text }]}>
                   {revealed ? ticket.pnr : "••••••••"}
                 </Text>
               </View>
@@ -105,8 +107,8 @@ function LegacyTicketCard({ ticket }: { ticket: Ticket }) {
                 <Text style={styles.tapText}>Tap to reveal</Text>
               ) : (
                 <View style={styles.verifiedRow}>
-                  <Feather name="check-circle" size={12} color="#22C55E" />
-                  <Text style={styles.verifiedText}>Verified</Text>
+                  <Feather name="check-circle" size={12} color={colors.success} />
+                  <Text style={[styles.verifiedText, { color: colors.success }]}>Verified</Text>
                 </View>
               )}
             </View>
@@ -130,42 +132,53 @@ export default function TicketsScreen() {
       contentContainerStyle={[styles.content, { paddingTop: topPad + 16, paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 40 }]}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Feather name="arrow-left" size={22} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>My Tickets</Text>
-        <View style={{ width: 22 }} />
-      </View>
+      <RnAnimated.View entering={FadeInDown.duration(500).delay(0)}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Feather name="arrow-left" size={22} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.title, { color: colors.text }]}>My Tickets</Text>
+          <View style={{ width: 22 }} />
+        </View>
+      </RnAnimated.View>
 
-      {/* Add Ticket Button */}
-      <TouchableOpacity
-        style={[styles.addButton, { backgroundColor: colors.primary }]}
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          router.push("/add-ticket" as never);
-        }}
-        activeOpacity={0.85}
-      >
-        <Feather name="plus" size={18} color="#fff" />
-        <Text style={styles.addButtonText}>Add Ticket</Text>
-      </TouchableOpacity>
+      <RnAnimated.View entering={FadeInDown.duration(500).delay(100)}>
+        <TouchableOpacity
+          style={[styles.addButton, { backgroundColor: colors.primary }]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            router.push("/add-ticket" as never);
+          }}
+          activeOpacity={0.85}
+        >
+          <Feather name="plus" size={18} color="#fff" />
+          <Text style={[styles.addButtonText, { color: colors.text }]}>Add Ticket</Text>
+        </TouchableOpacity>
+      </RnAnimated.View>
 
       {tickets.length === 0 ? (
-        <View style={[styles.empty, { backgroundColor: colors.surface }]}>
-          <Feather name="tag" size={40} color={colors.mutedForeground} />
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>No tickets yet</Text>
-          <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
-            Your travel and event tickets will appear here
-          </Text>
-        </View>
+        <RnAnimated.View entering={FadeInDown.duration(500).delay(200)}>
+          <View style={[styles.empty, { backgroundColor: colors.surface }]}>
+            <Feather name="tag" size={40} color={colors.mutedForeground} />
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No tickets yet</Text>
+            <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
+              Your travel and event tickets will appear here
+            </Text>
+          </View>
+        </RnAnimated.View>
       ) : (
         <View style={styles.ticketList}>
-          {tickets.map((ticket) => {
-            if (ticket.isSmartTicket) {
-              return <TicketCard key={ticket.id} ticket={ticket} />;
-            }
-            return <LegacyTicketCard key={ticket.id} ticket={ticket} />;
+          {tickets.map((ticket, index) => {
+            const card = ticket.isSmartTicket ? (
+              <TicketCard key={ticket.id} ticket={ticket} />
+            ) : (
+              <LegacyTicketCard key={ticket.id} ticket={ticket} />
+            );
+            return (
+              <RnAnimated.View key={ticket.id} entering={FadeInDown.duration(500).delay(200 + index * 100)}>
+                {card}
+              </RnAnimated.View>
+            );
           })}
         </View>
       )}
@@ -208,14 +221,14 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1.5,
   },
-  ticketDate: { color: "#fff", fontSize: 14, fontWeight: "600", marginTop: 2 },
-  ticketTime: { marginLeft: "auto", color: "#fff", fontSize: 16, fontWeight: "800" },
+  ticketDate: { color: "#FFFDF9", fontSize: 14, fontWeight: "600", marginTop: 2 },
+  ticketTime: { marginLeft: "auto", color: "#FFFDF9", fontSize: 16, fontWeight: "800" },
   routeRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 },
-  station: { color: "#fff", fontSize: 22, fontWeight: "900" },
+  station: { color: "#FFFDF9", fontSize: 22, fontWeight: "900" },
   routeLine: { flex: 1, flexDirection: "row", alignItems: "center", gap: 4 },
   routeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.4)" },
   routeLineLine: { flex: 1, height: 1 },
-  ticketTitle: { color: "#fff", fontSize: 22, fontWeight: "800", marginBottom: 6 },
+  ticketTitle: { color: "#FFFDF9", fontSize: 22, fontWeight: "800", marginBottom: 6 },
   venueRow: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 8 },
   venueText: { color: "rgba(255,255,255,0.5)", fontSize: 12 },
   dashed: {
@@ -251,11 +264,11 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     marginBottom: 2,
   },
-  detailValue: { color: "#fff", fontSize: 14, fontWeight: "800", letterSpacing: 1 },
+  detailValue: { color: "#FFFDF9", fontSize: 14, fontWeight: "800", letterSpacing: 1 },
   tapHint: { marginLeft: "auto" },
   tapText: { color: "rgba(255,255,255,0.4)", fontSize: 12 },
   verifiedRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  verifiedText: { color: "#22C55E", fontSize: 12, fontWeight: "600" },
+  verifiedText: { color: "#2E7D32", fontSize: 12, fontWeight: "600" },
   addButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -266,7 +279,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   addButtonText: {
-    color: "#fff",
+    color: "#FFFDF9",
     fontSize: 16,
     fontWeight: "700",
   },

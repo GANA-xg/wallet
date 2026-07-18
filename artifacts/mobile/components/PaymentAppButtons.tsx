@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 18,
   },
-  buttonText: { color: "#fff", fontSize: 17, fontWeight: "800" },
+  buttonText: { color: "#FFFDF9", fontSize: 17, fontWeight: "800" },
   platformHint: { fontSize: 12, lineHeight: 17, marginBottom: 4 },
   webHint: { fontSize: 12, textAlign: "center", marginTop: 4 },
 });

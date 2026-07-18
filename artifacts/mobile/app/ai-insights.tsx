@@ -1,4 +1,5 @@
 import { Feather } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React from "react";
@@ -12,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
@@ -25,23 +27,25 @@ function HealthScore({ score, label }: { score: number; label: string }) {
   const circumference = 2 * Math.PI * radius;
   const fill = (score / 100) * circumference;
 
-  const scoreColor = score >= 80 ? "#22C55E" : score >= 60 ? "#F59E0B" : "#EF4444";
+  const scoreColor = score >= 80 ? colors.success : score >= 60 ? colors.sunset : colors.error;
 
   return (
-    <View style={styles.healthContainer}>
-      <View style={styles.healthRing}>
-        <View
-          style={[
-            styles.healthCircleBg,
-            { width: size, height: size, borderRadius: size / 2 },
-          ]}
-        />
-        <View style={styles.healthInner}>
-          <Text style={[styles.healthScoreNum, { color: scoreColor }]}>{score}</Text>
-          <Text style={[styles.healthScoreLabel, { color: scoreColor }]}>{label}</Text>
+    <Animated.View entering={FadeInDown.duration(500).delay(100)}>
+      <View style={styles.healthContainer}>
+        <View style={styles.healthRing}>
+          <View
+            style={[
+              styles.healthCircleBg,
+              { width: size, height: size, borderRadius: size / 2 },
+            ]}
+          />
+          <View style={styles.healthInner}>
+            <Text style={[styles.healthScoreNum, { color: scoreColor }]}>{score}</Text>
+            <Text style={[styles.healthScoreLabel, { color: scoreColor }]}>{label}</Text>
+          </View>
         </View>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -84,15 +88,21 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
   const colors = useColors();
   return (
     <View style={styles.errorContainer}>
-      <View style={[styles.errorIconBg, { backgroundColor: "#EF444415" }]}>
-        <Feather name="alert-circle" size={40} color="#EF4444" />
+      <View style={[styles.errorIconBg, { backgroundColor: colors.error + "15" }]}>
+        <Feather name="alert-circle" size={40} color={colors.error} />
       </View>
       <Text style={[styles.errorTitle, { color: colors.text }]}>Could not load insights</Text>
       <Text style={[styles.errorMessage, { color: colors.mutedForeground }]}>{message}</Text>
-      <TouchableOpacity style={styles.retryBtn} onPress={onRetry}>
+      <TouchableOpacity
+        style={styles.retryBtn}
+        onPress={() => {
+          if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          onRetry();
+        }}
+      >
         <LinearGradient colors={[colors.primary, colors.primaryLight]} style={styles.retryBtnGrad}>
           <Feather name="refresh-cw" size={16} color="#fff" />
-          <Text style={styles.retryBtnText}>Try Again</Text>
+          <Text style={[styles.retryBtnText, { color: colors.primaryForeground }]}>Try Again</Text>
         </LinearGradient>
       </TouchableOpacity>
     </View>
@@ -137,7 +147,7 @@ function BudgetBar({ label, spent, limit, percentage, status }: {
   status: string;
 }) {
   const colors = useColors();
-  const barColor = status === "exceeded" ? "#EF4444" : status === "warning" ? "#F59E0B" : status === "under_utilized" ? "#3B82F6" : "#22C55E";
+  const barColor = status === "exceeded" ? colors.error : status === "warning" ? colors.sunset : status === "under_utilized" ? colors.primary : colors.success;
 
   return (
     <View style={styles.budgetRow}>
@@ -233,7 +243,7 @@ function AnomalyRow({
   severity: string;
 }) {
   const colors = useColors();
-  const sevColor = severity === "high" ? "#EF4444" : severity === "medium" ? "#F59E0B" : "#3B82F6";
+  const sevColor = severity === "high" ? colors.error : severity === "medium" ? colors.sunset : colors.primary;
   return (
     <View style={[styles.anomalyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={styles.anomalyHeader}>
@@ -267,10 +277,10 @@ function TrendRow({ month, income, spending, savings, topCategory }: {
     <View style={[styles.trendRow, { borderBottomColor: colors.border }]}>
       <Text style={[styles.trendMonth, { color: colors.text }]}>{month}</Text>
       <View style={styles.trendNumbers}>
-        <Text style={[styles.trendPositive, { color: "#22C55E" }]}>
+        <Text style={[styles.trendPositive, { color: colors.success }]}>
           +₹{income.toLocaleString("en-IN")}
         </Text>
-        <Text style={[styles.trendNegative, { color: "#EF4444" }]}>
+        <Text style={[styles.trendNegative, { color: colors.error }]}>
           -₹{spending.toLocaleString("en-IN")}
         </Text>
       </View>
@@ -350,19 +360,33 @@ export default function AIInsightsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.headerRow, { paddingTop: topPad + 8 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="chevron-left" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>AI Insights</Text>
-        <TouchableOpacity onPress={() => refetch()} style={styles.refreshBtn}>
-          <Feather
-            name={isRefreshing ? "loader" : "refresh-cw"}
-            size={18}
-            color={colors.mutedForeground}
-          />
-        </TouchableOpacity>
-      </View>
+      <Animated.View entering={FadeInDown.duration(500).delay(0)}>
+        <View style={[styles.headerRow, { paddingTop: topPad + 8 }]}>
+          <TouchableOpacity
+            onPress={() => {
+              if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.back();
+            }}
+            style={styles.backBtn}
+          >
+            <Feather name="chevron-left" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>AI Insights</Text>
+          <TouchableOpacity
+            onPress={() => {
+              if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              refetch();
+            }}
+            style={styles.refreshBtn}
+          >
+            <Feather
+              name={isRefreshing ? "loader" : "refresh-cw"}
+              size={18}
+              color={colors.mutedForeground}
+            />
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
 
       <ScrollView
         style={styles.scroll}
@@ -374,43 +398,45 @@ export default function AIInsightsScreen() {
       >
         <HealthScore score={healthScore} label={healthLabel} />
 
-        <View style={styles.metricsGrid}>
-          <MetricCard
-            label="Total Spent"
-            value={`₹${spendingSummary.totalSpent.toLocaleString("en-IN")}`}
-            icon="arrow-down-left"
-            color="#EF4444"
-          />
-          <MetricCard
-            label="Total Income"
-            value={`₹${spendingSummary.totalIncome.toLocaleString("en-IN")}`}
-            icon="arrow-up-right"
-            color="#22C55E"
-          />
-          <MetricCard
-            label="Avg/Day"
-            value={`₹${Math.round(spendingSummary.averageDailySpend).toLocaleString("en-IN")}`}
-            icon="clock"
-            color="#3B82F6"
-          />
-          <MetricCard
-            label="Savings Rate"
-            value={
-              spendingSummary.totalIncome > 0
-                ? `${Math.round(
-                    ((spendingSummary.totalIncome - spendingSummary.totalSpent) /
-                      spendingSummary.totalIncome) *
-                      100,
-                  )}%`
-                : "0%"
-            }
-            icon="trending-up"
-            color="#8B5CF6"
-          />
-        </View>
+        <Animated.View entering={FadeInDown.duration(500).delay(200)}>
+          <View style={styles.metricsGrid}>
+            <MetricCard
+              label="Total Spent"
+              value={`₹${spendingSummary.totalSpent.toLocaleString("en-IN")}`}
+              icon="arrow-down-left"
+              color={colors.error}
+            />
+            <MetricCard
+              label="Total Income"
+              value={`₹${spendingSummary.totalIncome.toLocaleString("en-IN")}`}
+              icon="arrow-up-right"
+              color={colors.success}
+            />
+            <MetricCard
+              label="Avg/Day"
+              value={`₹${Math.round(spendingSummary.averageDailySpend).toLocaleString("en-IN")}`}
+              icon="clock"
+              color={colors.primary}
+            />
+            <MetricCard
+              label="Savings Rate"
+              value={
+                spendingSummary.totalIncome > 0
+                  ? `${Math.round(
+                      ((spendingSummary.totalIncome - spendingSummary.totalSpent) /
+                        spendingSummary.totalIncome) *
+                        100,
+                    )}%`
+                  : "0%"
+              }
+              icon="trending-up"
+              color="#AE431E"
+            />
+          </View>
+        </Animated.View>
 
         {(budgetRecommendations.length > 0) && (
-          <>
+          <Animated.View entering={FadeInDown.duration(500).delay(300)}>
             <SectionHeader title="Budget Tracker" count={budgetRecommendations.length} />
             <View style={styles.budgetSection}>
               {budgetRecommendations.map((b) => (
@@ -424,11 +450,11 @@ export default function AIInsightsScreen() {
                 />
               ))}
             </View>
-          </>
+          </Animated.View>
         )}
 
         {(subscriptions.length > 0) && (
-          <>
+          <Animated.View entering={FadeInDown.duration(500).delay(400)}>
             <SectionHeader title="Detected Subscriptions" />
             <View style={[styles.subSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               {subscriptions.map((sub) => (
@@ -437,7 +463,7 @@ export default function AIInsightsScreen() {
                   name={sub.name}
                   amount={sub.amount}
                   cycle={sub.cycle}
-                  color={sub.name === "Netflix" ? "#E50914" : sub.name === "Hotstar" ? "#00AAFF" : sub.name === "Spotify" ? "#1DB954" : "#3B82F6"}
+                  color={sub.name === "Netflix" ? "#E50914" : sub.name === "Hotstar" ? "#00AAFF" : sub.name === "Spotify" ? "#1DB954" : "#AE431E"}
                 />
               ))}
               <View style={styles.subTotal}>
@@ -449,48 +475,50 @@ export default function AIInsightsScreen() {
                 </Text>
               </View>
             </View>
-          </>
+          </Animated.View>
         )}
 
         {(monthlyTrends.length > 0) && (
-          <>
+          <Animated.View entering={FadeInDown.duration(500).delay(500)}>
             <SectionHeader title="Monthly Trends" />
             <View style={[styles.trendSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               {(Array.isArray(monthlyTrends) ? monthlyTrends : []).map((t) => (
                 <TrendRow key={t.month} {...t} />
               ))}
             </View>
-          </>
+          </Animated.View>
         )}
 
         {(recommendations.length > 0) && (
-          <>
+          <Animated.View entering={FadeInDown.duration(500).delay(600)}>
             <SectionHeader title="AI Recommendations" count={recommendations.length} />
             <View style={styles.recSection}>
               {recommendations.map((r, idx) => (
                 <RecommendationCard key={`${r.title}-${idx}`} {...r} />
               ))}
             </View>
-          </>
+          </Animated.View>
         )}
 
         {(unusualTransactions.length > 0) && (
-          <>
+          <Animated.View entering={FadeInDown.duration(500).delay(700)}>
             <SectionHeader title="Unusual Activity" count={unusualTransactions.length} />
             <View style={styles.anomalySection}>
               {unusualTransactions.slice(0, 3).map((u) => (
                 <AnomalyRow key={u.transactionId} {...u} />
               ))}
             </View>
-          </>
+          </Animated.View>
         )}
 
-        <View style={styles.footerNote}>
-          <Feather name={data.provider === "llm" ? "cpu" : "database"} size={14} color={colors.mutedForeground} />
-          <Text style={[styles.footerText, { color: colors.mutedForeground }]}>
-            Insights generated {data.provider === "llm" ? "by AI" : "from your data locally"}
-          </Text>
-        </View>
+        <Animated.View entering={FadeInDown.duration(500).delay(800)}>
+          <View style={styles.footerNote}>
+            <Feather name={data.provider === "llm" ? "cpu" : "database"} size={14} color={colors.mutedForeground} />
+            <Text style={[styles.footerText, { color: colors.mutedForeground }]}>
+              Insights generated {data.provider === "llm" ? "by AI" : "from your data locally"}
+            </Text>
+          </View>
+        </Animated.View>
       </ScrollView>
     </View>
   );
@@ -513,7 +541,7 @@ const styles = StyleSheet.create({
 
   healthContainer: { alignItems: "center", paddingVertical: 8 },
   healthRing: { position: "relative", width: 160, height: 160, justifyContent: "center", alignItems: "center" },
-  healthCircleBg: { position: "absolute", borderWidth: 10, borderColor: "#22C55E20" },
+  healthCircleBg: { position: "absolute", borderWidth: 10, borderColor: "#81C784" },
   healthInner: { alignItems: "center" },
   healthScoreNum: { fontSize: 44, fontWeight: "900" },
   healthScoreLabel: { fontSize: 13, fontWeight: "700", marginTop: -2 },
@@ -683,7 +711,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     paddingVertical: 14,
   },
-  retryBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  retryBtnText: { fontSize: 16, fontWeight: "700" },
 
   emptyContainer: {
     flex: 1,

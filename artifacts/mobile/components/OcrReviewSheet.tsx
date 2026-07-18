@@ -14,12 +14,12 @@ import type { CardNetwork, OcrReviewData } from "@/types";
 import { formatCardNumber, luhnCheck } from "@/services/cards/validation";
 
 const CARD_GRADIENTS: [string, string][] = [
-  ["#2a2a2a", "#222222"],
-  ["#252525", "#303030"],
-  ["#202020", "#2a2a2a"],
-  ["#2b2b2b", "#1f1f1f"],
-  ["#303030", "#252525"],
-  ["#1f1f1f", "#2f2f2f"],
+  ["#2A2520", "#1A1510"],
+  ["#1F1B16", "#2A2520"],
+  ["#1A1510", "#2A2520"],
+  ["#2A2520", "#1F1B16"],
+  ["#1F1B16", "#2A2520"],
+  ["#1A1510", "#2A2520"],
 ];
 
 interface OcrReviewSheetProps {
@@ -117,8 +117,8 @@ export default function OcrReviewSheet({ data, onConfirm, onCancel, submitting }
       </View>
 
       {needsReview && !showEditor && (
-        <View style={[styles.lowConfidenceBanner, { backgroundColor: "#F59E0B20" }]}>
-          <Feather name="alert-triangle" size={14} color="#F59E0B" />
+        <View style={[styles.lowConfidenceBanner, { backgroundColor: "#EAC89120" }]}>
+          <Feather name="alert-triangle" size={14} color="#EAC891" />
           <Text style={styles.lowConfidenceText}>
             Some fields have low confidence — tap to verify
           </Text>
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   previewNumber: { color: "rgba(255,255,255,0.8)", fontSize: 16, letterSpacing: 3, marginVertical: 8 },
   previewBottom: { flexDirection: "row", gap: 24 },
   previewLabel: { color: "rgba(255,255,255,0.5)", fontSize: 8, letterSpacing: 1 },
-  previewValue: { color: "#fff", fontSize: 13, fontWeight: "700", marginTop: 2 },
+  previewValue: { color: "#FFFDF9", fontSize: 13, fontWeight: "700", marginTop: 2 },
   previewNetworkDot: {
     position: "absolute",
     top: 12,
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 12,
   },
-  lowConfidenceText: { color: "#F59E0B", fontSize: 12, flex: 1 },
+  lowConfidenceText: { color: "#EAC891", fontSize: 12, flex: 1 },
   editLink: { fontSize: 13, fontWeight: "700" },
   editor: { gap: 8 },
   editorLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 0.5 },
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
   editorRow: { flexDirection: "row", gap: 12 },
   editError: { color: "#EF4444", fontSize: 12 },
   applyBtn: { paddingVertical: 10, borderRadius: 12, alignItems: "center", marginTop: 4 },
-  applyBtnText: { color: "#fff", fontSize: 14, fontWeight: "700" },
+  applyBtnText: { color: "#FFFDF9", fontSize: 14, fontWeight: "700" },
   sectionLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 0.5, marginTop: 4 },
   nicknameInput: {
     borderRadius: 12,
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     minHeight: 48,
   },
-  confirmBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  confirmBtnText: { color: "#FFFDF9", fontSize: 16, fontWeight: "700" },
   cancelBtn: { paddingVertical: 8, alignItems: "center" },
   cancelBtnText: { fontSize: 14 },
 });

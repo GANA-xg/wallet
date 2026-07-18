@@ -1,4 +1,5 @@
 import { Feather } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
@@ -49,7 +50,7 @@ function OtpBox({ char, isActive, isFilled, index, colors }: { char: string; isA
       { duration: 200 },
     ),
     backgroundColor: withTiming(
-      isActive ? colors.surface : isFilled ? colors.surface : colors.surface,
+      isActive ? colors.surfaceElevated : isFilled ? colors.surface : colors.surface,
       { duration: 200 },
     ),
   }));
@@ -101,6 +102,9 @@ export default function OTP() {
   }, []);
 
   const handleVerify = async () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     if (otp.length !== OTP_LENGTH) {
       setError("Enter the 6-digit OTP");
       return;
@@ -119,6 +123,9 @@ export default function OTP() {
   };
 
   const handleResend = async () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     setResendTimer(30);
     try {
       await sendOtp(pendingPhone);
@@ -149,7 +156,15 @@ export default function OTP() {
             <View style={[styles.innerContent, { paddingTop: topPad, paddingBottom: bottomPad }]}>
               <View>
                 <Animated.View entering={FadeInDown.duration(400)}>
-                  <TouchableOpacity style={styles.back} onPress={() => router.back()}>
+                  <TouchableOpacity
+                    style={styles.back}
+                    onPress={() => {
+                      if (Platform.OS !== "web") {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }
+                      router.back();
+                    }}
+                  >
                     <Feather name="arrow-left" size={22} color={colors.text} />
                   </TouchableOpacity>
                 </Animated.View>
@@ -271,7 +286,6 @@ export default function OTP() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0F1115",
     paddingHorizontal: 24,
   },
   scrollContent: {
@@ -296,24 +310,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#262B36",
   },
   heading: {
     fontSize: 34,
     fontWeight: "800",
-    color: "#fff",
     lineHeight: 42,
     marginBottom: 8,
     letterSpacing: -0.5,
   },
   subheading: {
     fontSize: 15,
-    color: "#B0B7C3",
     marginBottom: 40,
     lineHeight: 22,
   },
   phone: {
-    color: "#F4F4F5",
     fontWeight: "600",
   },
   otpContainer: {
@@ -325,14 +335,11 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 58,
     borderRadius: 14,
-    backgroundColor: "#171A21",
     borderWidth: 1.5,
-    borderColor: "#262B36",
     justifyContent: "center",
     alignItems: "center",
   },
   otpChar: {
-    color: "#fff",
     fontSize: 24,
     fontWeight: "700",
   },
@@ -342,7 +349,6 @@ const styles = StyleSheet.create({
     height: 0,
   },
   errorText: {
-    color: "#EF4444",
     fontSize: 13,
     marginBottom: 12,
     fontWeight: "500",
@@ -351,15 +357,12 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   resendInfo: {
-    color: "#B0B7C3",
     fontSize: 14,
   },
   timer: {
-    color: "#F4F4F5",
     fontWeight: "700",
   },
   resendBtn: {
-    color: "#F4F4F5",
     fontSize: 14,
     fontWeight: "700",
   },
@@ -377,11 +380,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   btnText: {
-    color: "#fff",
     fontSize: 17,
     fontWeight: "700",
-  },
-  btnTextDisabled: {
-    color: "#6B7280",
   },
 });
