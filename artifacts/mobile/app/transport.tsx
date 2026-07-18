@@ -35,6 +35,7 @@ const TYPE_ICONS: Record<TransportPass["type"], keyof typeof Feather.glyphMap> =
 };
 
 function PassCard({ pass, onTopUp }: { pass: TransportPass; onTopUp: () => void }) {
+  const colors = useColors();
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const isLow = pass.balance < 100;
 
@@ -121,25 +122,25 @@ function PassCard({ pass, onTopUp }: { pass: TransportPass; onTopUp: () => void 
       </LinearGradient>
 
       {/* Pass actions */}
-      <View style={styles.passActions}>
+      <View style={[styles.passActions, { backgroundColor: colors.surface }]}>
         <TouchableOpacity
           style={styles.passActionBtn}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           }}
         >
-          <Feather name="maximize" size={16} color="#22C55E" />
-          <Text style={[styles.passActionText, { color: "#22C55E" }]}>Show QR</Text>
+          <Feather name="maximize" size={16} color="#2E7D32" />
+          <Text style={[styles.passActionText, { color: "#2E7D32" }]}>Show QR</Text>
         </TouchableOpacity>
-        <View style={[styles.passActionDivider, { backgroundColor: "#262B36" }]} />
+        <View style={[styles.passActionDivider, { backgroundColor: "#2A2520" }]} />
         <TouchableOpacity style={styles.passActionBtn} onPress={onTopUp}>
-          <Feather name="zap" size={16} color="#F4F4F5" />
-          <Text style={[styles.passActionText, { color: "#F4F4F5" }]}>Top Up</Text>
+          <Feather name="zap" size={16} color="#FFFDF9" />
+          <Text style={[styles.passActionText, { color: "#FFFDF9" }]}>Top Up</Text>
         </TouchableOpacity>
-        <View style={[styles.passActionDivider, { backgroundColor: "#262B36" }]} />
+        <View style={[styles.passActionDivider, { backgroundColor: "#2A2520" }]} />
         <TouchableOpacity style={styles.passActionBtn}>
-          <Feather name="activity" size={16} color="#3B82F6" />
-          <Text style={[styles.passActionText, { color: "#3B82F6" }]}>History</Text>
+          <Feather name="activity" size={16} color="#D06224" />
+          <Text style={[styles.passActionText, { color: "#D06224" }]}>History</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -205,7 +206,7 @@ function TopUpSheet({
         }}
         disabled={!amount}
       >
-        <LinearGradient colors={["#F4F4F5", "#D4D4D8"]} style={styles.topUpBtnGrad}>
+        <LinearGradient colors={[colors.sunset, colors.sunsetDark]} style={styles.topUpBtnGrad}>
           <Text style={styles.topUpBtnText}>Add ₹{amount || "0"}</Text>
         </LinearGradient>
       </TouchableOpacity>
@@ -245,10 +246,10 @@ export default function TransportScreen() {
       </View>
 
       {/* Summary card */}
-      <LinearGradient colors={["#0a1a10", "#0d3318"]} style={styles.summaryCard}>
+      <LinearGradient colors={[colors.successLight, "#1A2A18"]} style={styles.summaryCard}>
         <View style={styles.summaryTop}>
           <View style={[styles.summaryIcon, { backgroundColor: "rgba(34,197,94,0.2)" }]}>
-            <Feather name="map" size={24} color="#22C55E" />
+            <Feather name="map" size={24} color="#2E7D32" />
           </View>
           <View>
             <Text style={styles.summaryLabel}>Total Transit Balance</Text>
@@ -262,7 +263,7 @@ export default function TransportScreen() {
           </View>
           <View style={[styles.statDivider]} />
           <View style={styles.statItem}>
-            <Text style={[styles.statValue, { color: "#22C55E" }]}>
+            <Text style={[styles.statValue, { color: "#2E7D32" }]}>
               {transportPasses.filter((tp) => tp.balance > 100).length}
             </Text>
             <Text style={styles.statLabel}>Sufficient</Text>
@@ -282,7 +283,7 @@ export default function TransportScreen() {
         style={[styles.nfcTeaser, { backgroundColor: colors.surface, borderColor: colors.border }]}
         onPress={() => router.push("/nfc-pay")}
       >
-        <Feather name="wifi" size={18} color="#F4F4F5" />
+        <Feather name="wifi" size={18} color="#FFFDF9" />
         <Text style={[styles.nfcTeaserText, { color: colors.text }]}>
           Tap phone to Metro gate — NFC enabled
         </Text>
@@ -328,10 +329,10 @@ const styles = StyleSheet.create({
   summaryTop: { flexDirection: "row", alignItems: "center", gap: 16, marginBottom: 20 },
   summaryIcon: { width: 52, height: 52, borderRadius: 16, justifyContent: "center", alignItems: "center" },
   summaryLabel: { color: "rgba(255,255,255,0.6)", fontSize: 12, marginBottom: 2 },
-  summaryAmount: { color: "#fff", fontSize: 32, fontWeight: "900" },
+  summaryAmount: { color: "#FFFDF9", fontSize: 32, fontWeight: "900" },
   summaryStats: { flexDirection: "row", alignItems: "center" },
   statItem: { flex: 1, alignItems: "center" },
-  statValue: { color: "#fff", fontSize: 22, fontWeight: "800" },
+  statValue: { color: "#FFFDF9", fontSize: 22, fontWeight: "800" },
   statLabel: { color: "rgba(255,255,255,0.5)", fontSize: 11, marginTop: 2 },
   statDivider: { width: 1, height: 32, backgroundColor: "rgba(255,255,255,0.15)" },
   nfcTeaser: {
@@ -344,7 +345,7 @@ const styles = StyleSheet.create({
   passCard: { padding: 20, position: "relative", overflow: "hidden" },
   passTop: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 },
   passTypeIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: "center", alignItems: "center" },
-  passType: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  passType: { color: "#FFFDF9", fontSize: 16, fontWeight: "700" },
   passCity: { color: "rgba(255,255,255,0.6)", fontSize: 12, marginTop: 1 },
   lowBadge: {
     marginLeft: "auto",
@@ -353,23 +354,23 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 8,
   },
-  lowBadgeText: { color: "#fff", fontSize: 10, fontWeight: "800", letterSpacing: 1 },
+  lowBadgeText: { color: "#FFFDF9", fontSize: 10, fontWeight: "800", letterSpacing: 1 },
   passNum: { color: "rgba(255,255,255,0.5)", fontSize: 12, letterSpacing: 2, marginBottom: 16 },
   passBalRow: { flexDirection: "row", gap: 40 },
   passBalLabel: { color: "rgba(255,255,255,0.5)", fontSize: 9, fontWeight: "700", letterSpacing: 1.5, marginBottom: 2 },
-  passBalValue: { color: "#fff", fontSize: 18, fontWeight: "800" },
+  passBalValue: { color: "#FFFDF9", fontSize: 18, fontWeight: "800" },
   waveDecor: { position: "absolute", right: 0, bottom: 0, width: 120, height: 120 },
   waveLine: { borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" },
   passActions: {
     flexDirection: "row",
-    backgroundColor: "#171A21",
+    backgroundColor: "#1A1510",
     borderTopWidth: 0,
   },
   passActionBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12 },
   passActionText: { fontSize: 13, fontWeight: "600" },
   passActionDivider: { width: 1, height: "100%" },
   sheet: { borderRadius: 24, padding: 24, borderWidth: 1, marginTop: 20, gap: 12 },
-  sheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: "#262B36", alignSelf: "center", marginBottom: 4 },
+  sheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: "#2A2520", alignSelf: "center", marginBottom: 4 },
   sheetTitle: { fontSize: 18, fontWeight: "800", textAlign: "center" },
   sheetSub: { textAlign: "center", fontSize: 14 },
   quickAmounts: { flexDirection: "row", gap: 8 },
@@ -380,7 +381,7 @@ const styles = StyleSheet.create({
   amountInputText: { flex: 1, fontSize: 22, fontWeight: "700" },
   topUpBtn: { borderRadius: 14, overflow: "hidden" },
   topUpBtnGrad: { paddingVertical: 14, alignItems: "center" },
-  topUpBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  topUpBtnText: { color: "#FFFDF9", fontSize: 16, fontWeight: "700" },
   cancelLink: { alignItems: "center", paddingVertical: 8 },
   cancelText: { fontSize: 15 },
 });

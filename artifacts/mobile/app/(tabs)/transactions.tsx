@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   Platform,
@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { SkeletonTransaction } from "@/components/Skeleton";
 import { TransactionItem } from "@/components/TransactionItem";
 import { useWallet } from "@/context/WalletContext";
 import { useColors } from "@/hooks/useColors";
@@ -40,8 +41,14 @@ export default function TransactionsScreen() {
   const { transactions } = useWallet();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [loading, setLoading] = useState(true);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
+
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 600);
+    return () => clearTimeout(timer);
+  }, []);
 
   const filtered = useMemo(() => {
     let result = transactions;
@@ -72,20 +79,20 @@ export default function TransactionsScreen() {
 
         {/* Summary */}
         <View style={styles.summaryRow}>
-          <View style={[styles.summaryCard, { backgroundColor: "#0a1a10" }]}>
-            <Feather name="arrow-down-left" size={14} color="#22C55E" />
+          <View style={[styles.summaryCard, { backgroundColor: colors.successLight }]}>
+            <Feather name="arrow-down-left" size={14} color={colors.success} />
             <View>
-              <Text style={styles.summaryLabel}>Credit</Text>
-              <Text style={[styles.summaryAmount, { color: "#22C55E" }]}>
+              <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>Credit</Text>
+              <Text style={[styles.summaryAmount, { color: colors.success }]}>
                 ₹{credit.toLocaleString("en-IN")}
               </Text>
             </View>
           </View>
-          <View style={[styles.summaryCard, { backgroundColor: "#1a0808" }]}>
-            <Feather name="arrow-up-right" size={14} color="#EF4444" />
+          <View style={[styles.summaryCard, { backgroundColor: colors.error + "14" }]}>
+            <Feather name="arrow-up-right" size={14} color={colors.error} />
             <View>
-              <Text style={styles.summaryLabel}>Debit</Text>
-              <Text style={[styles.summaryAmount, { color: "#EF4444" }]}>
+              <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>Debit</Text>
+              <Text style={[styles.summaryAmount, { color: colors.error }]}>
                 ₹{debit.toLocaleString("en-IN")}
               </Text>
             </View>
@@ -139,29 +146,39 @@ export default function TransactionsScreen() {
       </Animated.View>
 
       {/* Transaction List */}
-      <FlatList
-        data={filtered}
-        keyExtractor={(item) => item.id}
-        keyboardDismissMode="on-drag"
-        renderItem={({ item }) => (
-          <TransactionItem transaction={item} />
-        )}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Feather name="inbox" size={40} color={colors.border} />
-            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              No transactions found
-            </Text>
-          </View>
-        }
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 100 },
-        ]}
-        ItemSeparatorComponent={null}
-        style={styles.list}
-        showsVerticalScrollIndicator={false}
-      />
+      {loading ? (
+        <View style={styles.listContent}>
+          <SkeletonTransaction />
+          <SkeletonTransaction />
+          <SkeletonTransaction />
+          <SkeletonTransaction />
+          <SkeletonTransaction />
+        </View>
+      ) : (
+        <FlatList
+          data={filtered}
+          keyExtractor={(item) => item.id}
+          keyboardDismissMode="on-drag"
+          renderItem={({ item }) => (
+            <TransactionItem transaction={item} />
+          )}
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Feather name="inbox" size={40} color={colors.border} />
+              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                No transactions found
+              </Text>
+            </View>
+          }
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 100 },
+          ]}
+          ItemSeparatorComponent={null}
+          style={styles.list}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </View>
   );
 }
@@ -179,7 +196,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 14,
   },
-  summaryLabel: { color: "#B0B7C3", fontSize: 11, fontWeight: "500" },
+  summaryLabel: { fontSize: 11, fontWeight: "500" },
   summaryAmount: { fontSize: 16, fontWeight: "800", marginTop: 2 },
   searchWrap: {
     flexDirection: "row",

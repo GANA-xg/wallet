@@ -12,9 +12,9 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { FadeInDown } from "react-native-reanimated";
 
 import { useColors } from "@/hooks/useColors";
-import Animated, { FadeInDown } from "react-native-reanimated";
 
 const SECTIONS = [
   {
@@ -66,20 +66,31 @@ export default function SettingsScreen() {
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={[styles.content, { paddingTop: topPad + 16, paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 40 }]}
+      contentContainerStyle={[styles.content, { paddingTop: topPad + 12, paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 40 }]}
       showsVerticalScrollIndicator={false}
     >
-      <Animated.View entering={FadeInDown.duration(500).delay(100)}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Feather name="arrow-left" size={22} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
-        <View style={{ width: 22 }} />
-      </View>
+      {/* Header */}
+      <Animated.View entering={FadeInDown.duration(400).delay(50)}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.back();
+            }}
+          >
+            <Feather name="arrow-left" size={22} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
+          <View style={{ width: 22 }} />
+        </View>
+      </Animated.View>
 
-      {SECTIONS.map((section) => (
-        <View key={section.title} style={styles.section}>
+      {SECTIONS.map((section, sIdx) => (
+        <Animated.View
+          key={section.title}
+          entering={FadeInDown.duration(400).delay(100 + sIdx * 50)}
+          style={styles.section}
+        >
           <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>
             {section.title.toUpperCase()}
           </Text>
@@ -99,8 +110,8 @@ export default function SettingsScreen() {
                   }
                 }}
               >
-                <View style={[styles.rowIcon, { backgroundColor: colors.muted }]}>
-                  <Feather name={item.icon} size={16} color={colors.mutedForeground} />
+                <View style={[styles.rowIcon, { backgroundColor: colors.surfaceElevated }]}>
+                  <Feather name={item.icon} size={15} color={colors.textSecondary} />
                 </View>
                 <Text style={[styles.rowLabel, { color: colors.text }]}>{item.label}</Text>
                 {item.toggle ? (
@@ -113,18 +124,17 @@ export default function SettingsScreen() {
                 ) : item.value ? (
                   <Text style={[styles.rowValue, { color: colors.mutedForeground }]}>{item.value}</Text>
                 ) : (
-                  <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
+                  <Feather name="chevron-right" size={14} color={colors.mutedForeground} />
                 )}
               </TouchableOpacity>
             ))}
           </View>
-        </View>
+        </Animated.View>
       ))}
 
       <Text style={[styles.footer, { color: colors.textTertiary }]}>
         Vault · Version 1.0.0{"\n"}Made with ❤️ in India
       </Text>
-      </Animated.View>
     </ScrollView>
   );
 }
@@ -155,13 +165,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   rowIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
   },
-  rowLabel: { flex: 1, fontSize: 15, fontWeight: "500" },
-  rowValue: { fontSize: 14 },
-  footer: { textAlign: "center", fontSize: 13, lineHeight: 22 },
+  rowLabel: { flex: 1, fontSize: 14, fontWeight: "500" },
+  rowValue: { fontSize: 13 },
+  footer: { textAlign: "center", fontSize: 12, lineHeight: 20 },
 });

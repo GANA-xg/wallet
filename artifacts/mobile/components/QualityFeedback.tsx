@@ -20,8 +20,8 @@ export default function QualityFeedback({ error, onRetake, onCancel }: QualityFe
   return (
     <View style={[styles.container, { backgroundColor: colors.surface }]}>
       <View style={styles.content}>
-        <View style={[styles.iconWrap, { backgroundColor: "#F59E0B20" }]}>
-          <Feather name={icon} size={28} color="#F59E0B" />
+        <View style={[styles.iconWrap, { backgroundColor: "#EAC89120" }]}>
+          <Feather name={icon} size={28} color="#EAC891" />
         </View>
         <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
         <Text style={[styles.message, { color: colors.mutedForeground }]}>
@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 14,
   },
-  retakeBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  retakeBtnText: { color: "#FFFDF9", fontSize: 15, fontWeight: "700" },
   cancelBtn: { paddingVertical: 8, alignItems: "center" },
   cancelBtnText: { fontSize: 14 },
 });

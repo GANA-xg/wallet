@@ -1,4 +1,5 @@
 import { Feather } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
@@ -12,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { GradientCard } from "@/components/GradientCard";
@@ -31,6 +33,12 @@ export default function CardDetailScreen() {
   const { cards, transactions, toggleFreeze, removeCard } = useWallet();
   const { verifyBiometric } = useAuth();
   const [biometricAction, setBiometricAction] = useState<"freeze" | "remove" | null>(null);
+
+  const triggerHaptic = () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+  };
 
   const card = cards.find((c) => c.id === id);
   const cardTransactions = transactions.filter(() => true).slice(0, 10);
@@ -62,33 +70,34 @@ export default function CardDetailScreen() {
   }
 
   const handleFreeze = () => {
+    triggerHaptic();
     setBiometricAction("freeze");
   };
 
   const handleRemove = () => {
+    triggerHaptic();
     setBiometricAction("remove");
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: topPad + 12 }]}>
+      <Animated.View entering={FadeInDown.duration(500).delay(0)} style={[styles.header, { paddingTop: topPad + 12 }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Feather name="arrow-left" size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Card Details</Text>
         <View style={{ width: 32 }} />
-      </View>
+      </Animated.View>
 
       <ScrollView
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.cardSection}>
+        <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.cardSection}>
           <GradientCard card={card} />
-        </View>
+        </Animated.View>
 
-        {/* Info */}
-        <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Animated.View entering={FadeInDown.duration(500).delay(200)} style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={styles.infoRow}>
             <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>Network</Text>
             <Text style={[styles.infoValue, { color: colors.text }]}>{card.cardNetwork.toUpperCase()}</Text>
@@ -109,37 +118,35 @@ export default function CardDetailScreen() {
           <View style={styles.infoRow}>
             <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>Status</Text>
             <View style={styles.statusRow}>
-              <View style={[styles.statusDot, { backgroundColor: card.frozen ? "#EF4444" : "#22C55E" }]} />
+              <View style={[styles.statusDot, { backgroundColor: card.frozen ? colors.error : colors.success }]} />
               <Text style={[styles.infoValue, { color: colors.text }]}>
                 {card.frozen ? "Frozen" : "Active"}
               </Text>
             </View>
           </View>
-        </View>
+        </Animated.View>
 
-        {/* Actions */}
-        <View style={styles.actions}>
+        <Animated.View entering={FadeInDown.duration(500).delay(300)} style={styles.actions}>
           <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: card.frozen ? "#0a1a10" : "#1a0808" }]}
+            style={[styles.actionBtn, { backgroundColor: card.frozen ? colors.successLight : colors.error + "14" }]}
             onPress={handleFreeze}
           >
-            <Feather name={card.frozen ? "unlock" : "lock"} size={18} color={card.frozen ? "#22C55E" : "#EF4444"} />
-            <Text style={[styles.actionBtnText, { color: card.frozen ? "#22C55E" : "#EF4444" }]}>
+            <Feather name={card.frozen ? "unlock" : "lock"} size={18} color={card.frozen ? colors.success : colors.error} />
+            <Text style={[styles.actionBtnText, { color: card.frozen ? colors.success : colors.error }]}>
               {card.frozen ? "Unfreeze Card" : "Freeze Card"}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: "#1a0808" }]}
+            style={[styles.actionBtn, { backgroundColor: colors.error + "14" }]}
             onPress={handleRemove}
           >
-            <Feather name="trash-2" size={18} color="#EF4444" />
-            <Text style={[styles.actionBtnText, { color: "#EF4444" }]}>Remove Card</Text>
+            <Feather name="trash-2" size={18} color={colors.error} />
+            <Text style={[styles.actionBtnText, { color: colors.error }]}>Remove Card</Text>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
 
-        {/* Transactions */}
-        <View style={styles.txSection}>
+        <Animated.View entering={FadeInDown.duration(500).delay(400)} style={styles.txSection}>
           <SectionHeader title="Recent Activity" actionLabel="See All" onAction={() => router.push("/(tabs)/transactions")} />
           <View style={[styles.txCard, { backgroundColor: colors.surface, borderRadius: 20 }]}>
             {cardTransactions.length > 0 ? (
@@ -154,7 +161,7 @@ export default function CardDetailScreen() {
               </View>
             )}
           </View>
-        </View>
+        </Animated.View>
       </ScrollView>
 
       <BiometricPrompt

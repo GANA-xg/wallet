@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { buildLaunchRequest, PaymentAppButtons } from "@/components/PaymentAppButtons";
@@ -175,7 +176,7 @@ export default function PayScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: topPad + 16 }]}>
+      <Animated.View entering={FadeInDown.duration(500).delay(0)} style={[styles.header, { paddingTop: topPad + 16 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
           <Feather name="x" size={22} color={colors.text} />
         </TouchableOpacity>
@@ -183,15 +184,18 @@ export default function PayScreen() {
           {step === "scan" ? "Scan & Pay" : "Pay Merchant"}
         </Text>
         <View style={{ width: 38 }} />
-      </View>
+      </Animated.View>
 
       {step === "scan" && (
         <View style={[styles.scanContent, { paddingBottom: bottomPad + 24 }]}>
+          <Animated.View entering={FadeInDown.duration(500).delay(100)}>
           <Text style={[styles.scanTitle, { color: colors.text }]}>Scan any UPI QR code</Text>
           <Text style={[styles.scanSub, { color: colors.mutedForeground }]}>
             Vault reads merchant details and launches Google Pay, PhonePe, or Paytm. We never process payments.
           </Text>
+          </Animated.View>
 
+          <Animated.View entering={FadeInDown.duration(500).delay(200)}>
           {Platform.OS !== "web" && permission?.granted ? (
             <View style={styles.cameraWrap}>
               <CameraView
@@ -201,10 +205,10 @@ export default function PayScreen() {
                 onBarcodeScanned={({ data }) => handleScan(data)}
               />
               <View style={styles.scanOverlay}>
-                <View style={styles.scanCornerTL} />
-                <View style={styles.scanCornerTR} />
-                <View style={styles.scanCornerBL} />
-                <View style={styles.scanCornerBR} />
+                <View style={[styles.scanCornerTL, { borderColor: colors.text }]} />
+                <View style={[styles.scanCornerTR, { borderColor: colors.text }]} />
+                <View style={[styles.scanCornerBL, { borderColor: colors.text }]} />
+                <View style={[styles.scanCornerBR, { borderColor: colors.text }]} />
               </View>
             </View>
           ) : (
@@ -218,24 +222,26 @@ export default function PayScreen() {
                   : "Allow camera access to scan UPI QR codes."}
               </Text>
               {Platform.OS !== "web" && !permission?.granted && (
-                <TouchableOpacity style={styles.permissionBtn} onPress={requestPermission}>
-                  <Text style={styles.permissionBtnText}>Allow Camera</Text>
+                <TouchableOpacity style={[styles.permissionBtn, { backgroundColor: colors.sunset }]} onPress={requestPermission}>
+                  <Text style={[styles.permissionBtnText, { color: colors.text }]}>Allow Camera</Text>
                 </TouchableOpacity>
               )}
             </View>
           )}
+          </Animated.View>
 
           {!!errorMsg && (
             <View style={styles.errorRow}>
-              <Feather name="alert-circle" size={14} color="#EF4444" />
-              <Text style={styles.errorText}>{errorMsg}</Text>
+              <Feather name="alert-circle" size={14} color={colors.error} />
+              <Text style={[styles.errorText, { color: colors.error }]}>{errorMsg}</Text>
             </View>
           )}
 
+          <Animated.View entering={FadeInDown.duration(500).delay(300)}>
           <TouchableOpacity style={styles.demoBtn} onPress={handleSimulateScan}>
-            <LinearGradient colors={["#F4F4F5", "#D4D4D8"]} style={styles.demoBtnGrad}>
-              <Feather name="maximize" size={18} color="#fff" />
-              <Text style={styles.demoBtnText}>Simulate UPI QR Scan (Demo)</Text>
+            <LinearGradient colors={[colors.sunset, colors.sunsetDark]} style={styles.demoBtnGrad}>
+              <Feather name="maximize" size={18} color={colors.text} />
+              <Text style={[styles.demoBtnText, { color: colors.text }]}>Simulate UPI QR Scan (Demo)</Text>
             </LinearGradient>
           </TouchableOpacity>
 
@@ -246,6 +252,7 @@ export default function PayScreen() {
             <Feather name="edit-3" size={16} color={colors.primary} />
             <Text style={[styles.manualLinkText, { color: colors.primary }]}>Enter UPI ID manually</Text>
           </TouchableOpacity>
+          </Animated.View>
         </View>
       )}
 
@@ -256,9 +263,9 @@ export default function PayScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={[styles.merchantCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <View style={[styles.merchantIcon, { backgroundColor: "#F4F4F515" }]}> 
-              <Feather name="shopping-bag" size={22} color="#F4F4F5" />
+          <Animated.View entering={FadeInDown.duration(500).delay(100)} style={[styles.merchantCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.merchantIcon, { backgroundColor: colors.surfaceElevated }]}> 
+              <Feather name="shopping-bag" size={22} color={colors.text} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.merchantLabel, { color: colors.mutedForeground }]}>MERCHANT</Text>
@@ -272,10 +279,11 @@ export default function PayScreen() {
                 </Text>
               ) : null}
             </View>
-          </View>
+          </Animated.View>
 
           {step !== "launched" && (
             <>
+              <Animated.View entering={FadeInDown.duration(500).delay(200)}>
               <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>AMOUNT</Text>
               <View style={[styles.amountRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <Text style={[styles.rupeeText, { color: colors.text }]}>₹</Text>
@@ -295,8 +303,9 @@ export default function PayScreen() {
                   ? `Remaining after payment: ₹${paymentPreview.remainingSpendable.toLocaleString("en-IN")}`
                   : `Available to spend: ₹${spendableBalance.toLocaleString("en-IN")}`}
               </Text>
+              </Animated.View>
 
-              <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+              <Animated.View entering={FadeInDown.duration(500).delay(300)} style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
                 <View style={styles.summaryRow}>
                   <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>Merchant</Text>
                   <Text style={[styles.summaryValue, { color: colors.text }]}>{parsedQr.payeeName ?? parsedQr.payeeAddress}</Text>
@@ -312,8 +321,9 @@ export default function PayScreen() {
                   </Text>
                 </View>
                 <Text style={[styles.summaryNote, { color: colors.mutedForeground }]}>Funds are reserved before launch. If launch fails, the hold is released.</Text>
-              </View>
+              </Animated.View>
 
+              <Animated.View entering={FadeInDown.duration(500).delay(400)}>
               <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>NOTES</Text>
               <View style={[styles.inputRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <Feather name="edit-3" size={18} color={colors.mutedForeground} />
@@ -327,37 +337,42 @@ export default function PayScreen() {
                   selectionColor={colors.primary}
                 />
               </View>
+              </Animated.View>
 
               {!!errorMsg && (
                 <View style={styles.errorRow}>
-                  <Feather name="alert-circle" size={14} color="#EF4444" />
-                  <Text style={styles.errorText}>{errorMsg}</Text>
+                  <Feather name="alert-circle" size={14} color={colors.error} />
+                  <Text style={[styles.errorText, { color: colors.error }]}>{errorMsg}</Text>
                 </View>
               )}
             </>
           )}
 
           {step === "details" && (
+            <Animated.View entering={FadeInDown.duration(500).delay(500)}>
             <TouchableOpacity
               style={[styles.continueBtn, { opacity: hasAmount && canAffordPayment(amountValue) ? 1 : 0.5 }]}
               onPress={handleContinueToLaunch}
               disabled={!hasAmount || !canAffordPayment(amountValue)}
             >
               <LinearGradient colors={[colors.primary, colors.primaryLight]} style={styles.continueBtnGrad}>
-                <Feather name="shield" size={18} color="#fff" />
-                <Text style={styles.continueBtnText}>Verify & Choose UPI App</Text>
+                <Feather name="shield" size={18} color={colors.text} />
+                <Text style={[styles.continueBtnText, { color: colors.text }]}>Verify & Choose UPI App</Text>
               </LinearGradient>
             </TouchableOpacity>
+            </Animated.View>
           )}
 
           {step === "launch" && launchRequest && (
+              <Animated.View entering={FadeInDown.duration(500).delay(200)}>
               <PaymentAppButtons request={launchRequest} onLaunched={handleLaunched} onLaunchFailed={handleLaunchFailed} />
+              </Animated.View>
           )}
 
           {step === "launched" && launchedApp && (
-            <View style={styles.launchedCard}>
-              <View style={[styles.launchedIcon, { backgroundColor: "#22C55E20" }]}>
-                <Feather name="external-link" size={28} color="#22C55E" />
+            <Animated.View entering={FadeInDown.duration(500).delay(0)} style={styles.launchedCard}>
+              <View style={[styles.launchedIcon, { backgroundColor: colors.successLight }]}>
+                <Feather name="external-link" size={28} color={colors.success} />
               </View>
               <Text style={[styles.launchedTitle, { color: colors.text }]}>Payment Launched</Text>
               <Text style={[styles.launchedSub, { color: colors.mutedForeground }]}>
@@ -366,11 +381,11 @@ export default function PayScreen() {
                 Vault recorded this launch in your history.
               </Text>
               <TouchableOpacity style={styles.doneBtn} onPress={() => router.back()}>
-                <LinearGradient colors={["#F4F4F5", "#D4D4D8"]} style={styles.doneBtnGrad}>
-                  <Text style={styles.doneBtnText}>Done</Text>
+                <LinearGradient colors={[colors.sunset, colors.sunsetDark]} style={styles.doneBtnGrad}>
+                  <Text style={[styles.doneBtnText, { color: colors.text }]}>Done</Text>
                 </LinearGradient>
               </TouchableOpacity>
-            </View>
+            </Animated.View>
           )}
         </ScrollView>
       )}
@@ -413,7 +428,6 @@ const styles = StyleSheet.create({
     height: 36,
     borderTopWidth: 4,
     borderLeftWidth: 4,
-    borderColor: "#F4F4F5",
     borderRadius: 6,
   },
   scanCornerTR: {
@@ -424,7 +438,6 @@ const styles = StyleSheet.create({
     height: 36,
     borderTopWidth: 4,
     borderRightWidth: 4,
-    borderColor: "#F4F4F5",
     borderRadius: 6,
   },
   scanCornerBL: {
@@ -435,7 +448,6 @@ const styles = StyleSheet.create({
     height: 36,
     borderBottomWidth: 4,
     borderLeftWidth: 4,
-    borderColor: "#F4F4F5",
     borderRadius: 6,
   },
   scanCornerBR: {
@@ -446,7 +458,6 @@ const styles = StyleSheet.create({
     height: 36,
     borderBottomWidth: 4,
     borderRightWidth: 4,
-    borderColor: "#F4F4F5",
     borderRadius: 6,
   },
   cameraPlaceholder: {
@@ -462,12 +473,11 @@ const styles = StyleSheet.create({
   placeholderText: { fontSize: 14, textAlign: "center", lineHeight: 20 },
   permissionBtn: {
     marginTop: 8,
-    backgroundColor: "#F4F4F5",
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
   },
-  permissionBtnText: { color: "#fff", fontWeight: "700" },
+  permissionBtnText: { fontWeight: "700" },
   demoBtn: { borderRadius: 16, overflow: "hidden" },
   demoBtnGrad: {
     flexDirection: "row",
@@ -476,7 +486,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 16,
   },
-  demoBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  demoBtnText: { fontSize: 16, fontWeight: "700" },
   manualLink: {
     flexDirection: "row",
     justifyContent: "center",
@@ -530,7 +540,7 @@ const styles = StyleSheet.create({
   },
   input: { flex: 1, fontSize: 15 },
   errorRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8 },
-  errorText: { color: "#EF4444", fontSize: 13 },
+  errorText: { fontSize: 13 },
   remainingText: { fontSize: 13, textAlign: "center", marginBottom: 4 },
   summaryCard: {
     width: "100%",
@@ -552,7 +562,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 16,
   },
-  continueBtnText: { color: "#fff", fontSize: 17, fontWeight: "700" },
+  continueBtnText: { fontSize: 17, fontWeight: "700" },
   launchedCard: { alignItems: "center", gap: 12, marginTop: 24 },
   launchedIcon: {
     width: 72,
@@ -565,5 +575,5 @@ const styles = StyleSheet.create({
   launchedSub: { fontSize: 14, textAlign: "center", lineHeight: 20 },
   doneBtn: { width: "100%", borderRadius: 16, overflow: "hidden", marginTop: 8 },
   doneBtnGrad: { paddingVertical: 16, alignItems: "center" },
-  doneBtnText: { color: "#fff", fontSize: 17, fontWeight: "700" },
+  doneBtnText: { fontSize: 17, fontWeight: "700" },
 });

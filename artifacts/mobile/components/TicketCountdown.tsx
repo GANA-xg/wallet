@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     minWidth: 60,
   },
   timeValue: {
-    color: "#fff",
+    color: "#FFFDF9",
     fontSize: 22,
     fontWeight: "800",
     fontVariant: ["tabular-nums"],

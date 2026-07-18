@@ -51,7 +51,7 @@ export default function RewardsScreen() {
 
       {/* Points Banner */}
       {pointsReward && (
-        <LinearGradient colors={["#F4F4F5", "#D4D4D8"]} style={styles.pointsBanner}>
+        <LinearGradient colors={[colors.sunset, colors.sunsetDark]} style={styles.pointsBanner}>
           <View>
             <Text style={styles.pointsLabel}>Vault Points</Text>
             <Text style={styles.pointsValue}>
@@ -160,9 +160,9 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     overflow: "hidden",
   },
-  pointsLabel: { color: "rgba(255,255,255,0.7)", fontSize: 12, fontWeight: "600", letterSpacing: 1 },
-  pointsValue: { color: "#fff", fontSize: 40, fontWeight: "900", marginVertical: 4 },
-  pointsSub: { color: "rgba(255,255,255,0.7)", fontSize: 13 },
+  pointsLabel: { color: "#FFFDF9", fontSize: 12, fontWeight: "600", letterSpacing: 1, opacity: 0.7 },
+  pointsValue: { color: "#FFFDF9", fontSize: 40, fontWeight: "900", marginVertical: 4 },
+  pointsSub: { color: "#FFFDF9", fontSize: 13, opacity: 0.7 },
   pointsRight: { opacity: 0.4 },
   sectionTitle: { fontSize: 18, fontWeight: "700", marginBottom: 14 },
   rewardGrid: { gap: 12, marginBottom: 24 },
@@ -207,6 +207,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  stepNum: { color: "#fff", fontSize: 12, fontWeight: "800" },
+  stepNum: { color: "#FFFDF9", fontSize: 12, fontWeight: "800" },
   stepText: { fontSize: 14 },
 });

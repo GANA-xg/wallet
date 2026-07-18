@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import RnAnimated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useWallet } from "@/context/WalletContext";
@@ -34,9 +35,9 @@ interface TransportOption {
 }
 
 const TRANSPORT_OPTIONS: TransportOption[] = [
-  { type: "train", icon: "truck", label: "Train", color: "#22C55E", gradient: ["#0f3320", "#1a5c35"] },
-  { type: "flight", icon: "navigation", label: "Flight", color: "#3B82F6", gradient: ["#0f2040", "#1e3a5f"] },
-  { type: "bus", icon: "map", label: "Bus", color: "#F59E0B", gradient: ["#3d2700", "#5f3e0f"] },
+  { type: "train", icon: "truck", label: "Train", color: "#2E7D32", gradient: ["#0f3320", "#1a5c35"] },
+  { type: "flight", icon: "navigation", label: "Flight", color: "#AE431E", gradient: ["#0f2040", "#1e3a5f"] },
+  { type: "bus", icon: "map", label: "Bus", color: "#EAC891", gradient: ["#3d2700", "#5f3e0f"] },
   { type: "metro", icon: "crosshair", label: "Metro", color: "#8B5CF6", gradient: ["#200f40", "#3b1f5f"] },
   { type: "ferry", icon: "anchor", label: "Ferry", color: "#06B6D4", gradient: ["#0f2f3f", "#1a4f5f"] },
 ];
@@ -288,44 +289,49 @@ export default function AddTicketScreen() {
       contentContainerStyle={[styles.content, { paddingTop: topPad + 16, paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 40 }]}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Feather name="arrow-left" size={22} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>Add Ticket</Text>
-        <View style={{ width: 22 }} />
-      </View>
+      <RnAnimated.View entering={FadeInDown.duration(500).delay(0)}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Feather name="arrow-left" size={22} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.title, { color: colors.text }]}>Add Ticket</Text>
+          <View style={{ width: 22 }} />
+        </View>
+      </RnAnimated.View>
 
       {step === "select" && (
-        <View style={styles.transportGrid}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Select Transport Type</Text>
-          {TRANSPORT_OPTIONS.map((option) => (
-            <TouchableOpacity
-              key={option.type}
-              onPress={() => handleSelectTransport(option)}
-              activeOpacity={0.85}
-            >
-              <LinearGradient colors={option.gradient} style={styles.transportCard}>
-                <View style={[styles.transportIconWrap, { backgroundColor: option.color + "30" }]}>
-                  <Feather name={option.icon} size={28} color={option.color} />
-                </View>
-                <Text style={styles.transportLabel}>{option.label}</Text>
-                <Feather name="chevron-right" size={18} color="rgba(255,255,255,0.3)" />
-              </LinearGradient>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <RnAnimated.View entering={FadeInDown.duration(500).delay(100)}>
+          <View style={styles.transportGrid}>
+            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Select Transport Type</Text>
+            {TRANSPORT_OPTIONS.map((option) => (
+              <TouchableOpacity
+                key={option.type}
+                onPress={() => handleSelectTransport(option)}
+                activeOpacity={0.85}
+              >
+                <LinearGradient colors={option.gradient} style={styles.transportCard}>
+                  <View style={[styles.transportIconWrap, { backgroundColor: option.color + "30" }]}>
+                    <Feather name={option.icon} size={28} color={option.color} />
+                  </View>
+                  <Text style={[styles.transportLabel, { color: colors.text }]}>{option.label}</Text>
+                  <Feather name="chevron-right" size={18} color="rgba(255,255,255,0.3)" />
+                </LinearGradient>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </RnAnimated.View>
       )}
 
       {step === "input" && selectedTransport && (
-        <View style={styles.inputSection}>
+        <RnAnimated.View entering={FadeInDown.duration(500).delay(100)}>
+          <View style={styles.inputSection}>
           <View style={styles.selectedTransportRow}>
             <Feather name={selectedTransport.icon} size={16} color={selectedTransport.color} />
             <Text style={[styles.selectedTransportText, { color: selectedTransport.color }]}>
               {selectedTransport.label}
             </Text>
             <TouchableOpacity onPress={() => { setStep("select"); setSelectedTransport(null); setStatus("idle"); }}>
-              <Text style={styles.changeLink}>Change</Text>
+              <Text style={[styles.changeLink, { color: colors.text }]}>Change</Text>
             </TouchableOpacity>
           </View>
 
@@ -541,10 +547,12 @@ export default function AddTicketScreen() {
             </View>
           )}
         </View>
+        </RnAnimated.View>
       )}
 
       {step === "result" && generatedTicket && status === "success" && (
-        <View style={styles.resultSection}>
+        <RnAnimated.View entering={FadeInDown.duration(500).delay(100)}>
+          <View style={styles.resultSection}>
           <View style={[styles.successBanner, { backgroundColor: colors.success + "20" }]}>
             <Feather name="check-circle" size={20} color={colors.success} />
             <Text style={[styles.successText, { color: colors.success }]}>Ticket Created Successfully</Text>
@@ -554,7 +562,7 @@ export default function AddTicketScreen() {
             colors={TRANSPORT_OPTIONS.find((t) => t.type === generatedTicket.transportType)?.gradient ?? ["#0f3320", "#1a5c35"]}
             style={styles.previewCard}
           >
-            <Text style={styles.previewTitle}>{generatedTicket.title}</Text>
+            <Text style={[styles.previewTitle, { color: colors.text }]}>{generatedTicket.title}</Text>
             {generatedTicket.passengerName && (
               <Text style={styles.previewPassenger}>{generatedTicket.passengerName}</Text>
             )}
@@ -563,30 +571,30 @@ export default function AddTicketScreen() {
             )}
             <View style={styles.previewRow}>
               <Text style={styles.previewLabel}>Date</Text>
-              <Text style={styles.previewValue}>{generatedTicket.date}</Text>
+              <Text style={[styles.previewValue, { color: colors.text }]}>{generatedTicket.date}</Text>
             </View>
             {generatedTicket.time && (
               <View style={styles.previewRow}>
                 <Text style={styles.previewLabel}>Time</Text>
-                <Text style={styles.previewValue}>{generatedTicket.time}</Text>
+                <Text style={[styles.previewValue, { color: colors.text }]}>{generatedTicket.time}</Text>
               </View>
             )}
             {generatedTicket.trainName && (
               <View style={styles.previewRow}>
                 <Text style={styles.previewLabel}>Train</Text>
-                <Text style={styles.previewValue}>{generatedTicket.trainName}</Text>
+                <Text style={[styles.previewValue, { color: colors.text }]}>{generatedTicket.trainName}</Text>
               </View>
             )}
             {generatedTicket.coach && (
               <View style={styles.previewRow}>
                 <Text style={styles.previewLabel}>Coach</Text>
-                <Text style={styles.previewValue}>{generatedTicket.coach}</Text>
+                <Text style={[styles.previewValue, { color: colors.text }]}>{generatedTicket.coach}</Text>
               </View>
             )}
             {generatedTicket.seat && (
               <View style={styles.previewRow}>
                 <Text style={styles.previewLabel}>Seat</Text>
-                <Text style={styles.previewValue}>{generatedTicket.seat}</Text>
+                <Text style={[styles.previewValue, { color: colors.text }]}>{generatedTicket.seat}</Text>
               </View>
             )}
           </LinearGradient>
@@ -599,7 +607,8 @@ export default function AddTicketScreen() {
             <Feather name="save" size={18} color="#fff" />
             <Text style={styles.primaryBtnText}>Save to Wallet</Text>
           </TouchableOpacity>
-        </View>
+          </View>
+        </RnAnimated.View>
       )}
     </ScrollView>
   );
@@ -635,7 +644,7 @@ const styles = StyleSheet.create({
   },
   transportLabel: {
     flex: 1,
-    color: "#fff",
+    color: "#FFFDF9",
     fontSize: 18,
     fontWeight: "700",
   },
@@ -653,7 +662,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   changeLink: {
-    color: "#F4F4F5",
+    color: "#FFFDF9",
     fontSize: 13,
     fontWeight: "600",
   },
@@ -722,7 +731,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   primaryBtnText: {
-    color: "#fff",
+    color: "#FFFDF9",
     fontSize: 16,
     fontWeight: "700",
   },
@@ -778,7 +787,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   previewTitle: {
-    color: "#fff",
+    color: "#FFFDF9",
     fontSize: 20,
     fontWeight: "900",
   },
@@ -803,7 +812,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   previewValue: {
-    color: "#fff",
+    color: "#FFFDF9",
     fontSize: 13,
     fontWeight: "600",
   },

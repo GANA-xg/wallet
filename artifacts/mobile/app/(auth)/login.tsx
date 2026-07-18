@@ -1,4 +1,5 @@
 import { Feather } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useRef, useState, useEffect } from "react";
@@ -56,6 +57,9 @@ export default function Login() {
   }, []);
 
   const handleSendOTP = async () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     if (phone.length !== 10 || !/^\d+$/.test(phone)) {
       setError("Enter a valid 10-digit phone number");
       return;
@@ -119,7 +123,15 @@ export default function Login() {
             <View style={[styles.innerContent, { paddingTop: topPad, paddingBottom: bottomPad }]}>
               <View>
                 <Animated.View entering={FadeInDown.duration(400)}>
-                  <TouchableOpacity style={styles.back} onPress={() => router.back()}>
+                  <TouchableOpacity
+                    style={styles.back}
+                    onPress={() => {
+                      if (Platform.OS !== "web") {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }
+                      router.back();
+                    }}
+                  >
                     <Feather name="arrow-left" size={22} color={colors.text} />
                   </TouchableOpacity>
                 </Animated.View>
@@ -233,7 +245,6 @@ export default function Login() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0F1115",
     paddingHorizontal: 24,
   },
   scrollContent: {
@@ -265,30 +276,25 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#fff",
     letterSpacing: -0.5,
   },
   heading: {
     fontSize: 34,
     fontWeight: "800",
-    color: "#fff",
     lineHeight: 42,
     marginBottom: 8,
     letterSpacing: -0.5,
   },
   subheading: {
     fontSize: 15,
-    color: "#B0B7C3",
     marginBottom: 40,
     lineHeight: 22,
   },
   inputWrap: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#171A21",
     borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: "#262B36",
     paddingHorizontal: 16,
     paddingVertical: 4,
     marginBottom: 12,
@@ -301,38 +307,32 @@ const styles = StyleSheet.create({
   },
   flag: { fontSize: 20 },
   code: {
-    color: "#fff",
     fontSize: 16,
     fontWeight: "600",
   },
   divider: {
     width: 1,
     height: 24,
-    backgroundColor: "#262B36",
     marginRight: 12,
   },
   input: {
     flex: 1,
-    color: "#fff",
     fontSize: 18,
     fontWeight: "600",
     paddingVertical: 14,
     letterSpacing: 1,
   },
   errorText: {
-    color: "#EF4444",
     fontSize: 13,
     marginBottom: 12,
     fontWeight: "500",
   },
   terms: {
-    color: "#6B7280",
     fontSize: 13,
     lineHeight: 20,
     marginTop: 8,
   },
   link: {
-    color: "#F4F4F5",
     fontWeight: "600",
   },
   btnWrap: {
@@ -349,11 +349,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   btnText: {
-    color: "#fff",
     fontSize: 17,
     fontWeight: "700",
-  },
-  btnTextDisabled: {
-    color: "#6B7280",
   },
 });

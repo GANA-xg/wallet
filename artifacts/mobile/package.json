@@ -64,6 +64,7 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
+    "@expo-google-fonts/geist": "^0.4.2",
     "@expo/ngrok-bin-darwin-arm64": "^2.3.42",
     "@react-native-ml-kit/text-recognition": "^2.0.0",
     "assert": "^2.1.0",

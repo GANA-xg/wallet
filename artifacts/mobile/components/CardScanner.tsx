@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderTopWidth: 3,
     borderLeftWidth: 3,
-    borderColor: "#F4F4F5",
+    borderColor: "#FFFDF9",
     borderRadius: 4,
   },
   scanCornerTR: {
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderTopWidth: 3,
     borderRightWidth: 3,
-    borderColor: "#F4F4F5",
+    borderColor: "#FFFDF9",
     borderRadius: 4,
   },
   scanCornerBL: {
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderBottomWidth: 3,
     borderLeftWidth: 3,
-    borderColor: "#F4F4F5",
+    borderColor: "#FFFDF9",
     borderRadius: 4,
   },
   scanCornerBR: {
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderBottomWidth: 3,
     borderRightWidth: 3,
-    borderColor: "#F4F4F5",
+    borderColor: "#FFFDF9",
     borderRadius: 4,
   },
   scanPrompt: { color: "rgba(255,255,255,0.5)", fontSize: 12, textAlign: "center" },
@@ -320,6 +320,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  errorTitle: { color: "#fff", fontSize: 15, fontWeight: "700", marginTop: 8 },
+  errorTitle: { color: "#FFFDF9", fontSize: 15, fontWeight: "700", marginTop: 8 },
   errorSub: { color: "rgba(255,255,255,0.5)", fontSize: 12, textAlign: "center", marginTop: 4, paddingHorizontal: 40 },
 });

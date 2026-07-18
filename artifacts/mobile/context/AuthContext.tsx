@@ -36,10 +36,9 @@ const API_PORT = 3001;
 
 function apiBaseUrl(): string {
   const envUrl = process.env.EXPO_PUBLIC_API_URL;
-  if (envUrl) {
-    console.log(`[env-check] EXPO_PUBLIC_API_URL = ${envUrl}`);
-    return envUrl;
-  }
+  if (envUrl) return envUrl;
+  // Web: browser and API run on the same machine
+  if (typeof window !== "undefined") return `http://localhost:${API_PORT}`;
   const hostUri = Constants.expoConfig?.hostUri;
   if (hostUri) {
     const host = hostUri.split(":")[0];

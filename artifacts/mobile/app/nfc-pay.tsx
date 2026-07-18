@@ -16,6 +16,7 @@ import {
   Keyboard,
   AppState,
 } from "react-native";
+import RnAnimated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { buildLaunchRequest, PaymentAppButtons } from "@/components/PaymentAppButtons";
@@ -44,7 +45,7 @@ const NFC_MERCHANT = {
   merchantCode: "4111",
 };
 
-function PulseRing({ anim, size }: { anim: Animated.Value; size: number }) {
+function PulseRing({ anim, size, color }: { anim: Animated.Value; size: number; color: string }) {
   return (
     <Animated.View
       style={{
@@ -53,7 +54,7 @@ function PulseRing({ anim, size }: { anim: Animated.Value; size: number }) {
         height: size,
         borderRadius: size / 2,
         borderWidth: 2,
-        borderColor: "#F4F4F5",
+        borderColor: color,
         opacity: anim.interpolate({ inputRange: [0, 1], outputRange: [0.6, 0] }),
         transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1.2] }) }],
       }}
@@ -304,24 +305,24 @@ export default function NFCPayScreen() {
     }
 
     const circleBg = isDetected
-      ? "#22C55E20"
+      ? colors.successLight
       : isScanning
-        ? "#F4F4F510"
-        : "#171A21";
+        ? colors.primary + "10"
+        : colors.surface;
 
     const circleBorder = isDetected
-      ? "#22C55E"
+      ? colors.success
       : isScanning
-        ? "#F4F4F540"
-        : "#F4F4F5";
+        ? colors.primary + "40"
+        : colors.text;
 
     return (
       <Animated.View style={{ transform: [{ scale: tapScale }] }}>
         {showPulse && !isDetected && (
           <>
-            <PulseRing anim={pulse1} size={260} />
-            <PulseRing anim={pulse2} size={210} />
-            <PulseRing anim={pulse3} size={160} />
+            <PulseRing anim={pulse1} size={260} color={colors.text} />
+            <PulseRing anim={pulse2} size={210} color={colors.text} />
+            <PulseRing anim={pulse3} size={160} color={colors.text} />
           </>
         )}
         <TouchableOpacity
@@ -342,7 +343,7 @@ export default function NFCPayScreen() {
             <Feather
               name={iconName}
               size={52}
-              color={isDetected ? "#22C55E" : iconColor}
+              color={isDetected ? colors.success : iconColor}
             />
           )}
         </TouchableOpacity>
@@ -398,16 +399,16 @@ export default function NFCPayScreen() {
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={{ flex: 1 }}>
-          <View style={[styles.header, { paddingTop: topPad + 16 }]}>
+          <RnAnimated.View entering={FadeInDown.duration(500).delay(0)} style={[styles.header, { paddingTop: topPad + 16 }]}>
             <TouchableOpacity onPress={() => { nfc.cleanupScan(); nfc.cleanup(); router.back(); }} style={styles.closeBtn}>
               <Feather name="x" size={22} color={colors.text} />
             </TouchableOpacity>
             <Text style={[styles.headerTitle, { color: colors.text }]}>NFC Pay</Text>
             <View style={{ width: 38 }} />
-          </View>
+          </RnAnimated.View>
 
           {(step === "idle" || step === "unsupported" || step === "disabled" || step === "scanning" || step === "tag_detected") && (
-            <View style={styles.content}>
+            <RnAnimated.View entering={FadeInDown.duration(500).delay(100)} style={styles.content}>
               <Text style={[styles.merchantLabel, { color: colors.mutedForeground }]}>PAYING TO</Text>
               <Text style={[styles.merchantName, { color: colors.text }]}>{NFC_MERCHANT.name}</Text>
 
@@ -432,7 +433,7 @@ export default function NFCPayScreen() {
                   onPress={() => { setStep("idle"); setErrorMessage(null); void checkNfcStatus(); }}
                 >
                   <LinearGradient colors={[colors.primary, colors.primaryLight]} style={styles.retryBtnGrad}>
-                    <Text style={styles.retryBtnText}>Check Again</Text>
+                    <Text style={[styles.retryBtnText, { color: colors.text }]}>Check Again</Text>
                   </LinearGradient>
                 </TouchableOpacity>
               )}
@@ -451,31 +452,31 @@ export default function NFCPayScreen() {
               )}
 
               {status.error && (
-                <View style={[styles.errorBadge, { backgroundColor: "#EF444415" }]}>
-                  <Feather name="alert-circle" size={14} color="#EF4444" />
-                  <Text style={[styles.errorText, { color: "#EF4444" }]}>{status.error}</Text>
+                <View style={[styles.errorBadge, { backgroundColor: colors.error + "15" }]}>
+                  <Feather name="alert-circle" size={14} color={colors.error} />
+                  <Text style={[styles.errorText, { color: colors.error }]}>{status.error}</Text>
                 </View>
               )}
-            </View>
+            </RnAnimated.View>
           )}
 
           {step === "biometric" && (
-            <View style={styles.content}>
-              <View style={[styles.bioCircle, { backgroundColor: "#F4F4F515", borderColor: "#F4F4F5" }]}>
-                <Feather name="cpu" size={52} color="#F4F4F5" />
+            <RnAnimated.View entering={FadeInDown.duration(500).delay(0)} style={styles.content}>
+              <View style={[styles.bioCircle, { backgroundColor: colors.primary + "15", borderColor: colors.primary }]}>
+                <Feather name="cpu" size={52} color={colors.text} />
               </View>
               <Text style={[styles.bioTitle, { color: colors.text }]}>Biometric Verification</Text>
               <Text style={[styles.bioSub, { color: colors.mutedForeground }]}>
                 Confirm before launching payment in your UPI app
               </Text>
-            </View>
+            </RnAnimated.View>
           )}
 
           {step === "amount" && (
-            <View style={styles.content}>
-              <View style={[styles.detectedBadge, { backgroundColor: "#22C55E15" }]}>
-                <Feather name="check-circle" size={14} color="#22C55E" />
-                <Text style={[styles.detectedText, { color: "#22C55E" }]}>NFC Connected · {NFC_MERCHANT.name}</Text>
+            <RnAnimated.View entering={FadeInDown.duration(500).delay(0)} style={styles.content}>
+              <View style={[styles.detectedBadge, { backgroundColor: colors.successLight }]}>
+                <Feather name="check-circle" size={14} color={colors.success} />
+                <Text style={[styles.detectedText, { color: colors.success }]}>NFC Connected · {NFC_MERCHANT.name}</Text>
               </View>
 
               <Text style={[styles.amountLabel, { color: colors.mutedForeground }]}>ENTER AMOUNT</Text>
@@ -520,7 +521,7 @@ export default function NFCPayScreen() {
                     style={[styles.quickAmtChip, { backgroundColor: amount === a ? colors.primary : colors.surface }]}
                     onPress={() => setAmount(a)}
                   >
-                    <Text style={[styles.quickAmtText, { color: amount === a ? "#fff" : colors.mutedForeground }]}>
+                    <Text style={[styles.quickAmtText, { color: amount === a ? colors.text : colors.mutedForeground }]}>
                       ₹{a}
                     </Text>
                   </TouchableOpacity>
@@ -533,37 +534,37 @@ export default function NFCPayScreen() {
                 disabled={!hasAmount || !canAffordPayment(amountValue)}
               >
                 <LinearGradient colors={[colors.primary, colors.primaryLight]} style={styles.confirmBtnGrad}>
-                  <Text style={styles.confirmBtnText}>Choose UPI App</Text>
-                  <Feather name="arrow-right" size={18} color="#fff" />
+                  <Text style={[styles.confirmBtnText, { color: colors.text }]}>Choose UPI App</Text>
+                  <Feather name="arrow-right" size={18} color={colors.text} />
                 </LinearGradient>
               </TouchableOpacity>
-            </View>
+            </RnAnimated.View>
           )}
 
           {step === "launch" && launchRequest && (
-            <View style={[styles.launchContent, { paddingBottom: bottomPad + 24 }]}>
+            <RnAnimated.View entering={FadeInDown.duration(500).delay(0)} style={[styles.launchContent, { paddingBottom: bottomPad + 24 }]}>
               <PaymentAppButtons request={launchRequest} onLaunched={handleLaunched} onLaunchFailed={handleLaunchFailed} />
-            </View>
+            </RnAnimated.View>
           )}
 
           {step === "launched" && launchedApp && (
-            <View style={styles.content}>
-              <View style={[styles.launchedIcon, { backgroundColor: "#22C55E20" }]}>
-                <Feather name="external-link" size={40} color="#22C55E" />
+            <RnAnimated.View entering={FadeInDown.duration(500).delay(0)} style={styles.content}>
+              <View style={[styles.launchedIcon, { backgroundColor: colors.successLight }]}>
+                <Feather name="external-link" size={40} color={colors.success} />
               </View>
               <Text style={[styles.successTitle, { color: colors.text }]}>Payment Launched</Text>
-              <Text style={[styles.successAmount, { color: "#22C55E" }]}>
+              <Text style={[styles.successAmount, { color: colors.success }]}>
                 ₹{Number.parseFloat(amount).toLocaleString("en-IN")}
               </Text>
               <Text style={[styles.successMerchant, { color: colors.mutedForeground }]}>
                 Complete in {launchedApp === "google_pay" ? "Google Pay" : launchedApp === "phonepe" ? "PhonePe" : "Paytm"}
               </Text>
               <TouchableOpacity style={styles.doneBtn} onPress={() => { nfc.cleanup(); router.back(); }}>
-                <LinearGradient colors={["#F4F4F5", "#D4D4D8"]} style={styles.doneBtnGrad}>
-                  <Text style={styles.doneBtnText}>Done</Text>
+                <LinearGradient colors={[colors.sunset, colors.sunsetDark]} style={styles.doneBtnGrad}>
+                  <Text style={[styles.doneBtnText, { color: colors.text }]}>Done</Text>
                 </LinearGradient>
               </TouchableOpacity>
-            </View>
+            </RnAnimated.View>
           )}
 
           <View style={{ paddingBottom: bottomPad + 16 }} />
@@ -596,7 +597,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "#F4F4F5",
   },
   tapInstr: { fontSize: 20, fontWeight: "700", textAlign: "center" },
   tapSub: { fontSize: 14, textAlign: "center", marginTop: -4 },
@@ -615,7 +615,7 @@ const styles = StyleSheet.create({
   cancelScanText: { fontSize: 13, textDecorationLine: "underline" },
   retryBtn: { borderRadius: 16, overflow: "hidden", marginTop: 4 },
   retryBtnGrad: { paddingHorizontal: 32, paddingVertical: 14, alignItems: "center" },
-  retryBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  retryBtnText: { fontSize: 16, fontWeight: "700" },
   bioCircle: {
     width: 120,
     height: 120,
@@ -665,7 +665,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 16,
   },
-  confirmBtnText: { color: "#fff", fontSize: 17, fontWeight: "700" },
+  confirmBtnText: { fontSize: 17, fontWeight: "700" },
   launchedIcon: {
     width: 88,
     height: 88,
@@ -679,5 +679,5 @@ const styles = StyleSheet.create({
   successMerchant: { fontSize: 15 },
   doneBtn: { width: "100%", borderRadius: 16, overflow: "hidden", marginTop: 16 },
   doneBtnGrad: { paddingVertical: 16, alignItems: "center" },
-  doneBtnText: { color: "#fff", fontSize: 17, fontWeight: "700" },
+  doneBtnText: { fontSize: 17, fontWeight: "700" },
 });

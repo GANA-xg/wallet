@@ -12,10 +12,10 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { FadeInDown } from "react-native-reanimated";
 
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
-import Animated, { FadeInDown } from "react-native-reanimated";
 
 export default function ProfileScreen() {
   const colors = useColors();
@@ -27,94 +27,106 @@ export default function ProfileScreen() {
   const [saving, setSaving] = useState(false);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
-
   const initials = name.split(" ").map((n) => n[0]).join("").slice(0, 2);
 
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={[styles.content, { paddingTop: topPad + 16, paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 40 }]}
+      contentContainerStyle={[styles.content, { paddingTop: topPad + 12, paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 40 }]}
       showsVerticalScrollIndicator={false}
     >
-      <Animated.View entering={FadeInDown.duration(500).delay(100)}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Feather name="arrow-left" size={22} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>Profile</Text>
-        <TouchableOpacity
-          onPress={async () => {
-            if (editing && !saving) {
-              setSaving(true);
-              try {
-                await updateUser({ name });
-              } catch (err) {
-                // Revert on failure
-                setName(user?.name ?? "Aryan Sharma");
-              } finally {
-                setSaving(false);
+      {/* Header */}
+      <Animated.View entering={FadeInDown.duration(400).delay(50)}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => {
+              router.back();
+            }}
+          >
+            <Feather name="arrow-left" size={22} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.title, { color: colors.text }]}>Profile</Text>
+          <TouchableOpacity
+            onPress={async () => {
+              if (editing && !saving) {
+                setSaving(true);
+                try {
+                  await updateUser({ name });
+                } catch (err) {
+                  setName(user?.name ?? "Aryan Sharma");
+                } finally {
+                  setSaving(false);
+                }
               }
-            }
-            setEditing(!editing);
-          }}
-          disabled={saving}
-        >
-          <Feather name={saving ? "loader" : editing ? "check" : "edit-2"} size={20} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
+              setEditing(!editing);
+            }}
+            disabled={saving}
+          >
+            <Feather name={saving ? "loader" : editing ? "check" : "edit-2"} size={20} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
 
       {/* Avatar */}
-      <View style={styles.avatarSection}>
-        <LinearGradient colors={["#F4F4F5", "#D4D4D8"]} style={styles.avatar}>
+      <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.avatarSection}>
+        <LinearGradient colors={[colors.primary, colors.secondary]} style={styles.avatar}>
           <Text style={styles.avatarText}>{initials}</Text>
         </LinearGradient>
         {editing && (
-          <TouchableOpacity style={[styles.changePhotoBtn, { backgroundColor: colors.surface }]}>
+          <TouchableOpacity style={[styles.changePhotoBtn, { backgroundColor: colors.surfaceElevated }]}>
             <Feather name="camera" size={14} color={colors.primary} />
             <Text style={[styles.changePhotoText, { color: colors.primary }]}>Change Photo</Text>
           </TouchableOpacity>
         )}
-      </View>
+      </Animated.View>
 
       {/* Info */}
-      <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
-        {[
-          { label: "Full Name", value: name, key: "name" },
-          { label: "Phone", value: `+91 ${user?.phone ?? "98765 43210"}`, key: "phone" },
-          { label: "Email", value: email, key: "email" },
-          { label: "Date of Birth", value: "15 Aug 1998", key: "dob" },
-          { label: "PAN", value: "ABCDE1234F", key: "pan" },
-        ].map((item, i) => (
-          <View
-            key={item.key}
-            style={[styles.infoRow, { borderBottomColor: colors.border }, i === 4 && { borderBottomWidth: 0 }]}
-          >
-            <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>{item.label}</Text>
-            {editing && (item.key === "name" || item.key === "email") ? (
-              <TextInput
-                style={[styles.infoInput, { color: colors.text, borderColor: colors.border }]}
-                value={item.key === "name" ? name : email}
-                onChangeText={item.key === "name" ? setName : setEmail}
-                selectionColor={colors.primary}
-              />
-            ) : (
-              <Text style={[styles.infoValue, { color: colors.text }]}>{item.value}</Text>
-            )}
-          </View>
-        ))}
-      </View>
+      <Animated.View entering={FadeInDown.duration(500).delay(150)}>
+        <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
+          {[
+            { label: "Full Name", value: name, key: "name" },
+            { label: "Phone", value: `+91 ${user?.phone ?? "98765 43210"}`, key: "phone" },
+            { label: "Email", value: email, key: "email" },
+            { label: "Date of Birth", value: "15 Aug 1998", key: "dob" },
+            { label: "PAN", value: "ABCDE1234F", key: "pan" },
+          ].map((item, i) => (
+            <View
+              key={item.key}
+              style={[styles.infoRow, { borderBottomColor: colors.border }, i === 4 && { borderBottomWidth: 0 }]}
+            >
+              <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>{item.label}</Text>
+              {editing && (item.key === "name" || item.key === "email") ? (
+                <TextInput
+                  style={[styles.infoInput, { color: colors.text, borderColor: colors.border }]}
+                  value={item.key === "name" ? name : email}
+                  onChangeText={item.key === "name" ? setName : setEmail}
+                  selectionColor={colors.primary}
+                />
+              ) : (
+                <Text style={[styles.infoValue, { color: colors.text }]}>{item.value}</Text>
+              )}
+            </View>
+          ))}
+        </View>
+      </Animated.View>
 
       {/* KYC Status */}
-      <View style={[styles.kycCard, { backgroundColor: "#0a1a0a" }]}>
-        <Feather name="check-circle" size={20} color="#22C55E" />
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.kycTitle, { color: colors.text }]}>KYC Verified</Text>
-          <Text style={styles.kycSub}>Your account is fully verified</Text>
-        </View>
-        <View style={[styles.kycBadge]}>
-          <Text style={styles.kycBadgeText}>FULL KYC</Text>
-        </View>
-      </View>
+      <Animated.View entering={FadeInDown.duration(500).delay(200)}>
+        <LinearGradient
+          colors={[colors.successLight + "15", colors.successLight + "05"]}
+          style={[styles.kycCard, { borderColor: colors.successLight + "30" }]}
+        >
+          <View style={[styles.kycIcon, { backgroundColor: colors.successLight + "25" }]}>
+            <Feather name="shield" size={20} color={colors.success} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.kycTitle, { color: colors.text }]}>KYC Verified</Text>
+            <Text style={[styles.kycSub, { color: colors.success }]}>Your account is fully verified</Text>
+          </View>
+          <View style={[styles.kycBadge, { backgroundColor: colors.successLight + "30" }]}>
+            <Text style={[styles.kycBadgeText, { color: colors.success }]}>FULL KYC</Text>
+          </View>
+        </LinearGradient>
       </Animated.View>
     </ScrollView>
   );
@@ -127,38 +139,38 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 32,
+    marginBottom: 28,
   },
   title: { fontSize: 20, fontWeight: "800" },
-  avatarSection: { alignItems: "center", gap: 12, marginBottom: 32 },
+  avatarSection: { alignItems: "center", gap: 12, marginBottom: 28 },
   avatar: {
-    width: 90,
-    height: 90,
-    borderRadius: 28,
+    width: 84,
+    height: 84,
+    borderRadius: 26,
     justifyContent: "center",
     alignItems: "center",
   },
-  avatarText: { color: "#fff", fontSize: 32, fontWeight: "800" },
+  avatarText: { color: "#FFFDF9", fontSize: 30, fontWeight: "800" },
   changePhotoBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
   },
-  changePhotoText: { fontSize: 13, fontWeight: "600" },
+  changePhotoText: { fontSize: 12, fontWeight: "600" },
   infoCard: { borderRadius: 16, overflow: "hidden", marginBottom: 16 },
   infoRow: {
-    paddingVertical: 14,
+    paddingVertical: 13,
     paddingHorizontal: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
     gap: 4,
   },
   infoLabel: { fontSize: 11, fontWeight: "600", letterSpacing: 0.5 },
-  infoValue: { fontSize: 16, fontWeight: "600" },
+  infoValue: { fontSize: 15, fontWeight: "600" },
   infoInput: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
     borderBottomWidth: 1,
     paddingVertical: 2,
@@ -169,14 +181,15 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 16,
     borderRadius: 16,
+    borderWidth: 1,
   },
+  kycIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: "center", alignItems: "center" },
   kycTitle: { fontSize: 14, fontWeight: "700" },
-  kycSub: { color: "#22C55E", fontSize: 12, marginTop: 2 },
+  kycSub: { fontSize: 12, marginTop: 2 },
   kycBadge: {
-    backgroundColor: "#22C55E20",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
   },
-  kycBadgeText: { color: "#22C55E", fontSize: 10, fontWeight: "800", letterSpacing: 1 },
+  kycBadgeText: { fontSize: 10, fontWeight: "800", letterSpacing: 1 },
 });

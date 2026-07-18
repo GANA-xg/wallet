@@ -38,7 +38,7 @@ function CardTypeLogo({ network }: { network: CardNetwork }) {
   return <Text style={styles.networkText}>CARD</Text>;
 }
 
-const DEFAULT_GRADIENT: [string, string] = ["#1a1a2e", "#16213e"];
+const DEFAULT_GRADIENT: [string, string] = ["#2A2520", "#1A1510"];
 
 export function GradientCard({ card, style }: Props) {
   const gradientColors: [string, string] = card.theme?.gradientColors?.length >= 2
@@ -117,13 +117,13 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     gap: 4,
   },
-  frozenText: { color: "#fff", fontSize: 10, fontWeight: "700", letterSpacing: 1 },
+  frozenText: { color: "#FFFDF9", fontSize: 10, fontWeight: "700", letterSpacing: 1 },
   topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   bankName: { color: "rgba(255,255,255,0.8)", fontSize: 13, fontWeight: "600", letterSpacing: 0.5 },
-  cardTypeLogo: { color: "#fff", fontSize: 18, fontWeight: "900", fontStyle: "italic", letterSpacing: 1 },
+  cardTypeLogo: { color: "#FFFDF9", fontSize: 18, fontWeight: "900", fontStyle: "italic", letterSpacing: 1 },
   mastercardWrapper: { flexDirection: "row", alignItems: "center" },
   mcCircle: { width: 22, height: 22, borderRadius: 11 },
-  networkText: { color: "#fff", fontSize: 13, fontWeight: "800" },
+  networkText: { color: "#FFFDF9", fontSize: 13, fontWeight: "800" },
   chipRow: { marginTop: 14, marginBottom: 10 },
   chip: {
     width: 36,
@@ -133,8 +133,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,215,100,0.6)",
   },
-  cardNumber: { color: "#fff", fontSize: 15, fontWeight: "500", letterSpacing: 3, marginBottom: 14 },
+  cardNumber: { color: "#FFFDF9", fontSize: 15, fontWeight: "500", letterSpacing: 3, marginBottom: 14 },
   bottomRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
   label: { color: "rgba(255,255,255,0.5)", fontSize: 9, fontWeight: "600", letterSpacing: 1, marginBottom: 2 },
-  value: { color: "#fff", fontSize: 12, fontWeight: "600" },
+  value: { color: "#FFFDF9", fontSize: 12, fontWeight: "600" },
 });

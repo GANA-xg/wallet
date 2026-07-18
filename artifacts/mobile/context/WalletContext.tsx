@@ -150,7 +150,7 @@ const SEED_TICKETS: Ticket[] = [
 
 const SEED_REWARDS: Reward[] = [
   { id: "r1", name: "2X Rewards Weekend", type: "offer", brand: "HDFC", color: "#003087", discount: "2X Points", expiry: "2025-06-30" },
-  { id: "r2", name: "Vault Points", type: "points", brand: "Vault", color: "#FF6B00", points: 4820 },
+  { id: "r2", name: "Vault Points", type: "points", brand: "Vault", color: "#D06224", points: 4820 },
   { id: "r3", name: "Zomato Gold", type: "coupon", brand: "Zomato", color: "#E23744", discount: "20% off", code: "VAULT20", expiry: "2025-07-15" },
   { id: "r4", name: "Amazon Cashback", type: "cashback", brand: "Amazon", color: "#FF9900", discount: "₹500 back", expiry: "2025-06-25" },
   { id: "r5", name: "Uber Discount", type: "coupon", brand: "Uber", color: "#000000", discount: "₹100 off", code: "VAULT100", expiry: "2025-06-22" },
@@ -167,15 +167,15 @@ const SEED_NOTIFICATIONS: VaultNotification[] = [
 const SEED_BUDGETS: Budget[] = [
   { id: "b1", category: "Food", limit: 8000, spent: 5648, month: "2025-06", color: "#EF4444" },
   { id: "b2", category: "Shopping", limit: 10000, spent: 6839, month: "2025-06", color: "#8B5CF6" },
-  { id: "b3", category: "Transport", limit: 3000, spent: 1250, month: "2025-06", color: "#3B82F6" },
-  { id: "b4", category: "Entertainment", limit: 2000, spent: 1748, month: "2025-06", color: "#F59E0B" },
-  { id: "b5", category: "Health", limit: 5000, spent: 1500, month: "2025-06", color: "#22C55E" },
+  { id: "b3", category: "Transport", limit: 3000, spent: 1250, month: "2025-06", color: "#AE431E" },
+  { id: "b4", category: "Entertainment", limit: 2000, spent: 1748, month: "2025-06", color: "#EAC891" },
+  { id: "b5", category: "Health", limit: 5000, spent: 1500, month: "2025-06", color: "#2E7D32" },
 ];
 
 const SEED_RESERVED: ReservedAmount[] = [
   { id: "res1", label: "Hostel Fee", amount: 6000, category: "housing", dueDate: "2025-07-01", recurring: true, interval: "monthly", color: "#8B5CF6" },
-  { id: "res2", label: "Car EMI", amount: 5500, category: "transport", dueDate: "2025-06-25", recurring: true, interval: "monthly", color: "#3B82F6" },
-  { id: "res3", label: "Insurance", amount: 2500, category: "health", dueDate: "2025-06-30", recurring: false, color: "#22C55E" },
+  { id: "res2", label: "Car EMI", amount: 5500, category: "transport", dueDate: "2025-06-25", recurring: true, interval: "monthly", color: "#AE431E" },
+  { id: "res3", label: "Insurance", amount: 2500, category: "health", dueDate: "2025-06-30", recurring: false, color: "#2E7D32" },
 ];
 
 const SEED_TRANSPORT: TransportPass[] = [

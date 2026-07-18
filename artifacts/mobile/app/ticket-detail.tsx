@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import RnAnimated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import QRSection from "@/components/QRSection";
@@ -77,18 +78,21 @@ export default function TicketDetailScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Feather name="arrow-left" size={22} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>Ticket Details</Text>
-        <TouchableOpacity onPress={handleRemove}>
-          <Feather name="trash-2" size={20} color={colors.error} />
-        </TouchableOpacity>
-      </View>
+      <RnAnimated.View entering={FadeInDown.duration(500).delay(0)}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Feather name="arrow-left" size={22} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.title, { color: colors.text }]}>Ticket Details</Text>
+          <TouchableOpacity onPress={handleRemove}>
+            <Feather name="trash-2" size={20} color={colors.error} />
+          </TouchableOpacity>
+        </View>
+      </RnAnimated.View>
 
       {/* Premium Pass Card */}
-      <LinearGradient colors={style.gradient} style={styles.passCard}>
+      <RnAnimated.View entering={FadeInDown.duration(500).delay(100)}>
+        <LinearGradient colors={style.gradient} style={styles.passCard}>
         <View style={styles.passCardGlow} />
 
         {/* Header */}
@@ -100,7 +104,7 @@ export default function TicketDetailScreen() {
             <View>
               <Text style={styles.passType}>{ticket.transportType?.toUpperCase() ?? ticket.type.toUpperCase()}</Text>
               {(ticket.trainNumber || ticket.trainName) && (
-                <Text style={styles.passTrain}>
+                <Text style={[styles.passTrain, { color: colors.text }]}>
                   {ticket.trainNumber ?? ""}{ticket.trainNumber && ticket.trainName ? " • " : ""}{ticket.trainName ?? ""}
                 </Text>
               )}
@@ -113,7 +117,7 @@ export default function TicketDetailScreen() {
 
         {/* Route */}
         <View style={styles.passRouteRow}>
-          <Text style={styles.passStation}>{ticket.from}</Text>
+          <Text style={[styles.passStation, { color: colors.text }]}>{ticket.from}</Text>
           <View style={styles.passRouteLine}>
             <View style={[styles.passRouteDot, { backgroundColor: style.color }]} />
             <View style={styles.passRouteDash} />
@@ -121,7 +125,7 @@ export default function TicketDetailScreen() {
             <View style={styles.passRouteDash} />
             <View style={[styles.passRouteDot, { backgroundColor: style.color }]} />
           </View>
-          <Text style={styles.passStation}>{ticket.to}</Text>
+          <Text style={[styles.passStation, { color: colors.text }]}>{ticket.to}</Text>
         </View>
 
         {/* Passenger */}
@@ -131,9 +135,9 @@ export default function TicketDetailScreen() {
 
         {/* Divider */}
         <View style={styles.passDivider}>
-          <View style={styles.passCircle} />
+          <View style={[styles.passCircle, { backgroundColor: colors.background }]} />
           <View style={styles.passDividerLine} />
-          <View style={styles.passCircle} />
+          <View style={[styles.passCircle, { backgroundColor: colors.background }]} />
         </View>
 
         {/* Countdown */}
@@ -141,9 +145,9 @@ export default function TicketDetailScreen() {
 
         {/* Divider */}
         <View style={styles.passDivider}>
-          <View style={styles.passCircle} />
+          <View style={[styles.passCircle, { backgroundColor: colors.background }]} />
           <View style={styles.passDividerLine} />
-          <View style={styles.passCircle} />
+          <View style={[styles.passCircle, { backgroundColor: colors.background }]} />
         </View>
 
         {/* Details Grid */}
@@ -151,29 +155,29 @@ export default function TicketDetailScreen() {
           {ticket.pnr && (
             <View style={styles.passGridItem}>
               <Text style={styles.passGridLabel}>PNR</Text>
-              <Text style={styles.passGridValue}>{ticket.pnr}</Text>
+              <Text style={[styles.passGridValue, { color: colors.text }]}>{ticket.pnr}</Text>
             </View>
           )}
           {ticket.coach && (
             <View style={styles.passGridItem}>
               <Text style={styles.passGridLabel}>COACH</Text>
-              <Text style={styles.passGridValue}>{ticket.coach}</Text>
+              <Text style={[styles.passGridValue, { color: colors.text }]}>{ticket.coach}</Text>
             </View>
           )}
           {ticket.seat && (
             <View style={styles.passGridItem}>
               <Text style={styles.passGridLabel}>SEAT</Text>
-              <Text style={styles.passGridValue}>{ticket.seat}</Text>
+              <Text style={[styles.passGridValue, { color: colors.text }]}>{ticket.seat}</Text>
             </View>
           )}
           <View style={styles.passGridItem}>
             <Text style={styles.passGridLabel}>DATE</Text>
-            <Text style={styles.passGridValue}>{ticket.date}</Text>
+            <Text style={[styles.passGridValue, { color: colors.text }]}>{ticket.date}</Text>
           </View>
           {ticket.time && (
             <View style={styles.passGridItem}>
               <Text style={styles.passGridLabel}>TIME</Text>
-              <Text style={styles.passGridValue}>{ticket.time}</Text>
+              <Text style={[styles.passGridValue, { color: colors.text }]}>{ticket.time}</Text>
             </View>
           )}
         </View>
@@ -183,32 +187,37 @@ export default function TicketDetailScreen() {
           <QRSection value={ticket.qrCode ?? ticket.pnr ?? ticket.id} />
         </View>
       </LinearGradient>
+      </RnAnimated.View>
 
       {/* Timeline */}
       {(ticket.stations || (ticket.from && ticket.to)) && (
-        <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <TicketTimeline
-            from={ticket.from}
-            to={ticket.to}
-            stations={ticket.stations}
-          />
-        </View>
+        <RnAnimated.View entering={FadeInDown.duration(500).delay(200)}>
+          <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <TicketTimeline
+              from={ticket.from}
+              to={ticket.to}
+              stations={ticket.stations}
+            />
+          </View>
+        </RnAnimated.View>
       )}
 
       {/* Actions */}
-      <View style={styles.actions}>
-        <TouchableOpacity
-          style={[styles.actionBtn, { backgroundColor: colors.primary }]}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.back();
-          }}
-          activeOpacity={0.8}
-        >
-          <Feather name="arrow-left" size={16} color="#fff" />
-          <Text style={styles.actionBtnText}>Back to Tickets</Text>
-        </TouchableOpacity>
-      </View>
+      <RnAnimated.View entering={FadeInDown.duration(500).delay(300)}>
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: colors.primary }]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.back();
+            }}
+            activeOpacity={0.8}
+          >
+            <Feather name="arrow-left" size={16} color="#fff" />
+            <Text style={[styles.actionBtnText, { color: colors.text }]}>Back to Tickets</Text>
+          </TouchableOpacity>
+        </View>
+      </RnAnimated.View>
     </ScrollView>
   );
 }
@@ -262,7 +271,7 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   passTrain: {
-    color: "#fff",
+    color: "#FFFDF9",
     fontSize: 13,
     fontWeight: "600",
     marginTop: 2,
@@ -285,7 +294,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   passStation: {
-    color: "#fff",
+    color: "#FFFDF9",
     fontSize: 24,
     fontWeight: "900",
   },
@@ -349,7 +358,7 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   passGridValue: {
-    color: "#fff",
+    color: "#FFFDF9",
     fontSize: 15,
     fontWeight: "700",
   },
@@ -379,7 +388,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   actionBtnText: {
-    color: "#fff",
+    color: "#FFFDF9",
     fontSize: 16,
     fontWeight: "700",
   },

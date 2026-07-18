@@ -217,7 +217,7 @@ export function WalletStack({ cards, onToggleFreeze, onRemove }: Props) {
 
           <View style={styles.actionBtns}>
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: selectedCard.frozen ? "#0a1a10" : "#1a0808" }]}
+              style={[styles.actionBtn, { backgroundColor: selectedCard.frozen ? "#0F0D0A" : "#2A1A10" }]}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 onToggleFreeze(selectedCard.id);
@@ -226,9 +226,9 @@ export function WalletStack({ cards, onToggleFreeze, onRemove }: Props) {
               <Feather
                 name={selectedCard.frozen ? "unlock" : "lock"}
                 size={16}
-                color={selectedCard.frozen ? "#22C55E" : "#EF4444"}
+                color={selectedCard.frozen ? "#2E7D32" : "#EF4444"}
               />
-              <Text style={[styles.actionBtnText, { color: selectedCard.frozen ? "#22C55E" : "#EF4444" }]}>
+              <Text style={[styles.actionBtnText, { color: selectedCard.frozen ? "#2E7D32" : "#EF4444" }]}>
                 {selectedCard.frozen ? "Unfreeze" : "Freeze"}
               </Text>
             </TouchableOpacity>
@@ -244,7 +244,7 @@ export function WalletStack({ cards, onToggleFreeze, onRemove }: Props) {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: "#1a0808" }]}
+              style={[styles.actionBtn, { backgroundColor: "#2A1A10" }]}
               onPress={() => onRemove(selectedCard.id)}
             >
               <Feather name="trash-2" size={16} color="#EF4444" />
@@ -253,7 +253,7 @@ export function WalletStack({ cards, onToggleFreeze, onRemove }: Props) {
           </View>
 
           <View style={styles.statusRow}>
-            <View style={[styles.statusDot, { backgroundColor: selectedCard.frozen ? "#EF4444" : "#22C55E" }]} />
+            <View style={[styles.statusDot, { backgroundColor: selectedCard.frozen ? "#EF4444" : "#2E7D32" }]} />
             <Text style={[styles.statusText, { color: colors.mutedForeground }]}>
               {selectedCard.frozen ? "Card frozen — no transactions allowed" : "Card active · NFC enabled"}
             </Text>
@@ -305,8 +305,8 @@ const styles = StyleSheet.create({
   frozenText: { fontSize: 10, fontWeight: "700", letterSpacing: 1 },
   cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
   bankName: { fontSize: 12, fontWeight: "700" },
-  visaText: { color: "#F5F5F5", fontSize: 18, fontWeight: "900", fontStyle: "italic" },
-  networkText: { color: "#F5F5F5", fontSize: 12, fontWeight: "800" },
+  visaText: { color: "#FFFDF9", fontSize: 18, fontWeight: "900", fontStyle: "italic" },
+  networkText: { color: "#FFFDF9", fontSize: 12, fontWeight: "800" },
   mcCircle: { width: 22, height: 22, borderRadius: 11 },
   chip: { width: 34, height: 24, borderRadius: 6, borderWidth: 1, marginBottom: 10 },
   cardNum: { fontSize: 14, fontWeight: "700", letterSpacing: 3, marginBottom: 14 },

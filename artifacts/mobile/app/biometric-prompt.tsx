@@ -4,7 +4,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Animated,
   Modal,
   Platform,
   StyleSheet,
@@ -13,8 +12,15 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSequence,
+} from "react-native-reanimated";
 
 import { useAuth } from "@/context/AuthContext";
+import { useColors } from "@/hooks/useColors";
 
 type PromptStatus = "idle" | "verifying" | "failed" | "expired";
 
@@ -36,9 +42,10 @@ export default function BiometricPrompt({
   onExpired,
 }: BiometricPromptProps) {
   const insets = useSafeAreaInsets();
+  const colors = useColors();
   const { verifyBiometric, biometricAvailable, logout } = useAuth();
   const [status, setStatus] = useState<PromptStatus>("idle");
-  const shakeAnim = useRef(new Animated.Value(0)).current;
+  const shakeOffset = useSharedValue(0);
 
   useEffect(() => {
     if (visible) {
@@ -56,13 +63,13 @@ export default function BiometricPrompt({
   }, [visible, status]);
 
   const shake = () => {
-    Animated.sequence([
-      Animated.timing(shakeAnim, { toValue: 12, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -12, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 8, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -8, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
-    ]).start();
+    shakeOffset.value = withSequence(
+      withTiming(12, { duration: 50 }),
+      withTiming(-12, { duration: 50 }),
+      withTiming(8, { duration: 50 }),
+      withTiming(-8, { duration: 50 }),
+      withTiming(0, { duration: 50 }),
+    );
   };
 
   const handlePrompt = useCallback(async () => {
@@ -88,6 +95,99 @@ export default function BiometricPrompt({
     router.replace("/(auth)/login");
   };
 
+  const biometricBtnStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: shakeOffset.value }],
+  }));
+
+  const styles = StyleSheet.create({
+    overlay: {
+      flex: 1,
+    },
+    container: {
+      flex: 1,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      paddingHorizontal: 28,
+      paddingTop: 8,
+    },
+    logoGrad: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    logoText: { color: colors.text, fontSize: 20, fontWeight: "800" },
+    content: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 28,
+    },
+    iconSection: {
+      marginBottom: 24,
+    },
+    title: {
+      color: colors.text,
+      fontSize: 24,
+      fontWeight: "800",
+      marginBottom: 8,
+      textAlign: "center",
+    },
+    subtitle: {
+      color: colors.mutedForeground,
+      fontSize: 15,
+      textAlign: "center",
+      marginBottom: 48,
+      lineHeight: 22,
+    },
+    biometricBtn: {
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      overflow: "hidden",
+      marginBottom: 24,
+    },
+    biometricInner: {
+      flex: 1,
+      borderRadius: 50,
+      justifyContent: "center",
+      alignItems: "center",
+      borderWidth: 2,
+      borderColor: colors.border,
+    },
+    instruction: {
+      color: colors.mutedForeground,
+      fontSize: 16,
+      fontWeight: "500",
+      textAlign: "center",
+    },
+    retryBtn: { marginTop: 20, paddingVertical: 12, paddingHorizontal: 28 },
+    retryText: { color: colors.primary, fontSize: 16, fontWeight: "700" },
+    footer: {
+      paddingHorizontal: 28,
+      alignItems: "center",
+      gap: 12,
+      paddingBottom: 16,
+    },
+    cancelBtn: {
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+    },
+    cancelText: {
+      color: colors.mutedForeground,
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    logoutBtn: {
+      padding: 8,
+    },
+    logoutText: { color: colors.textTertiary, fontSize: 14 },
+  });
+
   return (
     <Modal
       visible={visible}
@@ -97,14 +197,14 @@ export default function BiometricPrompt({
     >
       <View style={styles.overlay}>
         <LinearGradient
-          colors={["rgba(15,17,21,0.98)", "rgba(22,26,37,0.98)"]}
+          colors={[colors.background, colors.surface]}
           style={StyleSheet.absoluteFill}
         />
 
         <View style={[styles.container, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 }]}>
           <View style={styles.header}>
-            <LinearGradient colors={["#F4F4F5", "#D4D4D8"]} style={styles.logoGrad}>
-              <Feather name="layers" size={20} color="#fff" />
+            <LinearGradient colors={[colors.primary, "#AE431E"]} style={styles.logoGrad}>
+              <Feather name="layers" size={20} color={colors.text} />
             </LinearGradient>
             <Text style={styles.logoText}>Vault</Text>
           </View>
@@ -114,20 +214,20 @@ export default function BiometricPrompt({
               <Feather
                 name={status === "failed" ? "x-circle" : "shield"}
                 size={48}
-                color={status === "failed" ? "#EF4444" : "#F4F4F5"}
+                color={status === "failed" ? colors.error : colors.primary}
               />
             </View>
 
             <Text style={styles.title}>{title}</Text>
             <Text style={styles.subtitle}>{subtitle}</Text>
 
-            <Animated.View style={[styles.biometricBtn, { transform: [{ translateX: shakeAnim }] }]}>
+            <Animated.View style={[styles.biometricBtn, biometricBtnStyle]}>
               <TouchableOpacity
                 style={[
                   styles.biometricInner,
                   {
                     backgroundColor:
-                      status === "verifying" ? "#F4F4F5" : status === "failed" ? "#EF4444" : "#171A21",
+                      status === "verifying" ? colors.primary : status === "failed" ? colors.error : colors.surface,
                   },
                 ]}
                 onPress={handlePrompt}
@@ -137,7 +237,7 @@ export default function BiometricPrompt({
                 <Feather
                   name={status === "failed" ? "x" : biometricAvailable ? "cpu" : "lock"}
                   size={36}
-                  color={status === "verifying" || status === "failed" ? "#fff" : "#F4F4F5"}
+                  color={status === "verifying" || status === "failed" ? colors.text : colors.primary}
                 />
               </TouchableOpacity>
             </Animated.View>
@@ -172,92 +272,3 @@ export default function BiometricPrompt({
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 28,
-    paddingTop: 8,
-  },
-  logoGrad: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  logoText: { color: "#fff", fontSize: 20, fontWeight: "800" },
-  content: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 28,
-  },
-  iconSection: {
-    marginBottom: 24,
-  },
-  title: {
-    color: "#fff",
-    fontSize: 24,
-    fontWeight: "800",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  subtitle: {
-    color: "#B0B7C3",
-    fontSize: 15,
-    textAlign: "center",
-    marginBottom: 48,
-    lineHeight: 22,
-  },
-  biometricBtn: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    overflow: "hidden",
-    marginBottom: 24,
-  },
-  biometricInner: {
-    flex: 1,
-    borderRadius: 50,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#262B36",
-  },
-  instruction: {
-    color: "#B0B7C3",
-    fontSize: 16,
-    fontWeight: "500",
-    textAlign: "center",
-  },
-  retryBtn: { marginTop: 20, paddingVertical: 12, paddingHorizontal: 28 },
-  retryText: { color: "#F4F4F5", fontSize: 16, fontWeight: "700" },
-  footer: {
-    paddingHorizontal: 28,
-    alignItems: "center",
-    gap: 12,
-    paddingBottom: 16,
-  },
-  cancelBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-  },
-  cancelText: {
-    color: "#B0B7C3",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  logoutBtn: {
-    padding: 8,
-  },
-  logoutText: { color: "#6B7280", fontSize: 14 },
-});

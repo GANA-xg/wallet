@@ -141,7 +141,7 @@ export default function TicketCard({ ticket }: TicketCardProps) {
                 </TouchableOpacity>
               ) : ticket.pnr ? (
                 <View style={styles.verifiedRow}>
-                  <Feather name="check-circle" size={12} color="#22C55E" />
+                  <Feather name="check-circle" size={12} color="#2E7D32" />
                   <Text style={styles.verifiedText}>Verified</Text>
                 </View>
               ) : null}
@@ -216,7 +216,7 @@ export default function TicketCard({ ticket }: TicketCardProps) {
                 <Text style={styles.tapText}>Tap to reveal</Text>
               ) : (
                 <View style={styles.verifiedRow}>
-                  <Feather name="check-circle" size={12} color="#22C55E" />
+                  <Feather name="check-circle" size={12} color="#2E7D32" />
                   <Text style={styles.verifiedText}>Verified</Text>
                 </View>
               )}
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   trainInfo: {
-    color: "#fff",
+    color: "#FFFDF9",
     fontSize: 11,
     fontWeight: "600",
     marginTop: 1,
@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   smartStation: {
-    color: "#fff",
+    color: "#FFFDF9",
     fontSize: 20,
     fontWeight: "900",
   },
@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   detailSmartValue: {
-    color: "#fff",
+    color: "#FFFDF9",
     fontSize: 13,
     fontWeight: "700",
   },
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   verifiedText: {
-    color: "#22C55E",
+    color: "#2E7D32",
     fontSize: 12,
     fontWeight: "600",
   },
@@ -387,14 +387,14 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1.5,
   },
-  ticketDate: { color: "#fff", fontSize: 14, fontWeight: "600", marginTop: 2 },
-  ticketTime: { marginLeft: "auto", color: "#fff", fontSize: 16, fontWeight: "800" },
+  ticketDate: { color: "#FFFDF9", fontSize: 14, fontWeight: "600", marginTop: 2 },
+  ticketTime: { marginLeft: "auto", color: "#FFFDF9", fontSize: 16, fontWeight: "800" },
   routeRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 },
-  station: { color: "#fff", fontSize: 22, fontWeight: "900" },
+  station: { color: "#FFFDF9", fontSize: 22, fontWeight: "900" },
   routeLine: { flex: 1, flexDirection: "row", alignItems: "center", gap: 4 },
   routeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.4)" },
   routeLineLine: { flex: 1, height: 1 },
-  ticketTitle: { color: "#fff", fontSize: 22, fontWeight: "800", marginBottom: 6 },
+  ticketTitle: { color: "#FFFDF9", fontSize: 22, fontWeight: "800", marginBottom: 6 },
   venueRow: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 8 },
   venueText: { color: "rgba(255,255,255,0.5)", fontSize: 12 },
   dashed: {
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: "#0F1115",
+    backgroundColor: "#0F0D0A",
     top: -7,
   },
   dashedLine: {
@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     marginBottom: 2,
   },
-  detailValue: { color: "#fff", fontSize: 14, fontWeight: "800", letterSpacing: 1 },
+  detailValue: { color: "#FFFDF9", fontSize: 14, fontWeight: "800", letterSpacing: 1 },
   tapHint: { marginLeft: "auto" },
   tapText: { color: "rgba(255,255,255,0.4)", fontSize: 12 },
 });
