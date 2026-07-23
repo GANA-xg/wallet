@@ -24,9 +24,10 @@ async function runMigrations() {
   }
   try {
     const { Pool } = await import("pg");
+    const sslEnabled = url.includes("render.com") || url.includes("dpg-");
     const pool = new Pool({
-      connectionString: url,
-      ssl: url.includes("render.com") || url.includes("dpg-") ? { rejectUnauthorized: false } : undefined,
+      connectionString: sslEnabled ? `${url}?sslmode=require` : url,
+      ...(sslEnabled ? { ssl: { rejectUnauthorized: false } } : {}),
     });
     const client = await pool.connect();
     try {
