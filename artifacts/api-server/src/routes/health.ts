@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { getDb } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -11,17 +12,9 @@ router.get("/healthz", async (_req, res) => {
   let dbError = null;
   if (hasDbUrl) {
     try {
-      const { Pool } = await import("pg");
-      const url = process.env.DATABASE_URL!;
-      const sslEnabled = url.includes("render.com") || url.includes("dpg-");
-      const pool = new Pool({
-        connectionString: sslEnabled ? `${url}?sslmode=require` : url,
-        connectionTimeoutMillis: 10000,
-        ...(sslEnabled ? { ssl: { rejectUnauthorized: false } } : {}),
-      });
-      const result = await pool.query("SELECT 1 as ok");
-      dbOk = result.rows[0]?.ok === 1;
-      await pool.end();
+      const db = getDb();
+      await db.execute({ sql: "SELECT 1 as ok" } as any);
+      dbOk = true;
     } catch (e: any) {
       dbOk = false;
       dbError = e.message || String(e);
