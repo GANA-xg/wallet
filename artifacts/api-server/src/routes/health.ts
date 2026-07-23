@@ -8,6 +8,7 @@ router.get("/healthz", async (_req, res) => {
   const hasJwtSecret = !!process.env.JWT_SECRET;
 
   let dbOk = false;
+  let dbError = null;
   if (hasDbUrl) {
     try {
       const { Pool } = await import("pg");
@@ -15,7 +16,7 @@ router.get("/healthz", async (_req, res) => {
       const sslEnabled = url.includes("render.com") || url.includes("dpg-");
       const pool = new Pool({
         connectionString: sslEnabled ? `${url}?sslmode=require` : url,
-        connectionTimeoutMillis: 5000,
+        connectionTimeoutMillis: 10000,
         ...(sslEnabled ? { ssl: { rejectUnauthorized: false } } : {}),
       });
       const result = await pool.query("SELECT 1 as ok");
@@ -23,6 +24,7 @@ router.get("/healthz", async (_req, res) => {
       await pool.end();
     } catch (e: any) {
       dbOk = false;
+      dbError = e.message || String(e);
     }
   }
 
@@ -30,6 +32,7 @@ router.get("/healthz", async (_req, res) => {
     status: "ok",
     env: { DATABASE_URL: hasDbUrl, IRCTC_API_KEY: hasApiKey, JWT_SECRET: hasJwtSecret },
     db: dbOk ? "connected" : "not connected",
+    dbError,
   });
 });
 
