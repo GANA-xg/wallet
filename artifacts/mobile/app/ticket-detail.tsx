@@ -22,6 +22,66 @@ import { useWallet } from "@/context/WalletContext";
 import { useColors } from "@/hooks/useColors";
 import { getStatusColor, getTransportStyle } from "@/services/ticket/ticketService";
 
+const NA = "Not Available";
+
+function DetailRow({ icon, label, value }: { icon: string; label: string; value?: string }) {
+  return (
+    <View style={detailStyles.row}>
+      <Feather name={icon as any} size={14} color="rgba(255,255,255,0.35)" />
+      <Text style={detailStyles.label}>{label}</Text>
+      <Text style={detailStyles.value}>{value ?? NA}</Text>
+    </View>
+  );
+}
+
+function SectionHeader({ icon, title }: { icon: string; title: string }) {
+  return (
+    <View style={detailStyles.sectionHeader}>
+      <Feather name={icon as any} size={14} color="rgba(255,255,255,0.5)" />
+      <Text style={detailStyles.sectionTitle}>{title}</Text>
+    </View>
+  );
+}
+
+const detailStyles = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 7,
+  },
+  label: {
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 12,
+    fontWeight: "600",
+    width: 90,
+  },
+  value: {
+    color: "#FFFDF9",
+    fontSize: 13,
+    fontWeight: "700",
+    flex: 1,
+    textAlign: "right",
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 16,
+    marginBottom: 8,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.08)",
+  },
+  sectionTitle: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+  },
+});
+
 export default function TicketDetailScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -47,8 +107,8 @@ export default function TicketDetailScreen() {
   const style = getTransportStyle(ticket.transportType ?? ticket.type);
   const statusColor = getStatusColor(ticket.ticketStatus);
   const statusLabel = ticket.ticketStatus
-    ? ticket.ticketStatus.charAt(0).toUpperCase() + ticket.ticketStatus.slice(1)
-    : "Confirmed";
+    ? ticket.ticketStatus.toUpperCase()
+    : "CONFIRMED";
 
   const handleRemove = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
@@ -71,6 +131,12 @@ export default function TicketDetailScreen() {
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
+  const passengerDetails = [
+    ticket.passengerName,
+    ticket.passengerAge ? `${ticket.passengerAge} yrs` : null,
+    ticket.passengerGender,
+  ].filter(Boolean).join("  ·  ");
+
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -90,120 +156,189 @@ export default function TicketDetailScreen() {
         </View>
       </RnAnimated.View>
 
-      {/* Premium Pass Card */}
+      {/* Main Pass Card */}
       <RnAnimated.View entering={FadeInDown.duration(500).delay(100)}>
         <LinearGradient colors={style.gradient} style={styles.passCard}>
-        <View style={styles.passCardGlow} />
+          <View style={styles.passCardGlow} />
 
-        {/* Header */}
-        <View style={styles.passHeader}>
-          <View style={styles.passTransportRow}>
-            <View style={[styles.passIconWrap, { backgroundColor: style.color + "30" }]}>
-              <Feather name={style.icon as any} size={22} color={style.color} />
+          {/* Card Header */}
+          <View style={styles.passHeader}>
+            <View style={styles.passTransportRow}>
+              <View style={[styles.passIconWrap, { backgroundColor: style.color + "30" }]}>
+                <Feather name={style.icon as any} size={22} color={style.color} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.passType}>{ticket.transportType?.toUpperCase() ?? "TRAIN"}</Text>
+                {ticket.trainName && (
+                  <Text style={styles.passTrainName}>{ticket.trainName}</Text>
+                )}
+                {ticket.trainNumber && (
+                  <Text style={styles.passTrainNumber}>#{ticket.trainNumber}</Text>
+                )}
+              </View>
             </View>
-            <View>
-              <Text style={styles.passType}>{ticket.transportType?.toUpperCase() ?? ticket.type.toUpperCase()}</Text>
-              {(ticket.trainNumber || ticket.trainName) && (
-                <Text style={[styles.passTrain, { color: colors.text }]}>
-                  {ticket.trainNumber ?? ""}{ticket.trainNumber && ticket.trainName ? " • " : ""}{ticket.trainName ?? ""}
-                </Text>
+            <View style={[styles.passStatusBadge, { backgroundColor: statusColor + "25", borderColor: statusColor + "50" }]}>
+              <Text style={[styles.passStatusText, { color: statusColor }]}>{statusLabel}</Text>
+            </View>
+          </View>
+
+          {/* PNR */}
+          {ticket.pnr && (
+            <View style={styles.pnrRow}>
+              <Text style={styles.pnrLabel}>PNR</Text>
+              <Text style={styles.pnrValue}>{ticket.pnr}</Text>
+            </View>
+          )}
+
+          {/* Route */}
+          <View style={styles.passRouteRow}>
+            <View style={styles.passStationBlock}>
+              <Text style={styles.passStationCode}>{ticket.from ?? NA}</Text>
+              {ticket.time && <Text style={styles.passTimeLabel}>{ticket.time}</Text>}
+            </View>
+            <View style={styles.passRouteLine}>
+              <View style={[styles.passRouteDot, { backgroundColor: style.color }]} />
+              <View style={styles.passRouteDash} />
+              <Feather name="chevrons-right" size={14} color={style.color} />
+              <View style={styles.passRouteDash} />
+              <View style={[styles.passRouteDot, { backgroundColor: style.color }]} />
+            </View>
+            <View style={styles.passStationBlock}>
+              <Text style={styles.passStationCode}>{ticket.to ?? NA}</Text>
+              {ticket.arrivalTime && <Text style={styles.passTimeLabel}>{ticket.arrivalTime}</Text>}
+            </View>
+          </View>
+
+          {/* Duration */}
+          {ticket.duration && (
+            <View style={styles.durationRow}>
+              <Feather name="clock" size={12} color="rgba(255,255,255,0.5)" />
+              <Text style={styles.durationText}>{ticket.duration}</Text>
+              {ticket.distance && (
+                <>
+                  <Text style={styles.durationSep}>·</Text>
+                  <Text style={styles.durationText}>{ticket.distance}</Text>
+                </>
+              )}
+              {ticket.delay && ticket.delay !== "0 min" && (
+                <>
+                  <Text style={styles.durationSep}>·</Text>
+                  <Text style={[styles.durationText, { color: "#EF4444" }]}>+{ticket.delay}</Text>
+                </>
               )}
             </View>
-          </View>
-          <View style={[styles.passStatusBadge, { backgroundColor: statusColor + "25", borderColor: statusColor + "50" }]}>
-            <Text style={[styles.passStatusText, { color: statusColor }]}>{statusLabel}</Text>
-          </View>
-        </View>
-
-        {/* Route */}
-        <View style={styles.passRouteRow}>
-          <Text style={[styles.passStation, { color: colors.text }]}>{ticket.from}</Text>
-          <View style={styles.passRouteLine}>
-            <View style={[styles.passRouteDot, { backgroundColor: style.color }]} />
-            <View style={styles.passRouteDash} />
-            <Feather name="arrow-right" size={14} color={style.color} />
-            <View style={styles.passRouteDash} />
-            <View style={[styles.passRouteDot, { backgroundColor: style.color }]} />
-          </View>
-          <Text style={[styles.passStation, { color: colors.text }]}>{ticket.to}</Text>
-        </View>
-
-        {/* Passenger */}
-        {ticket.passengerName && (
-          <Text style={styles.passPassenger}>{ticket.passengerName}</Text>
-        )}
-
-        {/* Divider */}
-        <View style={styles.passDivider}>
-          <View style={[styles.passCircle, { backgroundColor: colors.background }]} />
-          <View style={styles.passDividerLine} />
-          <View style={[styles.passCircle, { backgroundColor: colors.background }]} />
-        </View>
-
-        {/* Countdown */}
-        {ticket.date && <TicketCountdown date={ticket.date} time={ticket.time} />}
-
-        {/* Divider */}
-        <View style={styles.passDivider}>
-          <View style={[styles.passCircle, { backgroundColor: colors.background }]} />
-          <View style={styles.passDividerLine} />
-          <View style={[styles.passCircle, { backgroundColor: colors.background }]} />
-        </View>
-
-        {/* Details Grid */}
-        <View style={styles.passGrid}>
-          {ticket.pnr && (
-            <View style={styles.passGridItem}>
-              <Text style={styles.passGridLabel}>PNR</Text>
-              <Text style={[styles.passGridValue, { color: colors.text }]}>{ticket.pnr}</Text>
-            </View>
           )}
-          {ticket.coach && (
-            <View style={styles.passGridItem}>
-              <Text style={styles.passGridLabel}>COACH</Text>
-              <Text style={[styles.passGridValue, { color: colors.text }]}>{ticket.coach}</Text>
-            </View>
-          )}
-          {ticket.seat && (
-            <View style={styles.passGridItem}>
-              <Text style={styles.passGridLabel}>SEAT</Text>
-              <Text style={[styles.passGridValue, { color: colors.text }]}>{ticket.seat}</Text>
-            </View>
-          )}
-          <View style={styles.passGridItem}>
-            <Text style={styles.passGridLabel}>DATE</Text>
-            <Text style={[styles.passGridValue, { color: colors.text }]}>{ticket.date}</Text>
-          </View>
-          {ticket.time && (
-            <View style={styles.passGridItem}>
-              <Text style={styles.passGridLabel}>TIME</Text>
-              <Text style={[styles.passGridValue, { color: colors.text }]}>{ticket.time}</Text>
-            </View>
-          )}
-        </View>
 
-        {/* QR Code */}
-        <View style={styles.passQRWrap}>
-          <QRSection value={ticket.qrCode ?? ticket.pnr ?? ticket.id} />
-        </View>
-      </LinearGradient>
+          {/* Passenger */}
+          {passengerDetails ? (
+            <View style={styles.passPassengerRow}>
+              <Feather name="user" size={12} color="rgba(255,255,255,0.6)" />
+              <Text style={styles.passPassenger}>{passengerDetails}</Text>
+            </View>
+          ) : null}
+
+          {/* Divider */}
+          <View style={styles.passDivider}>
+            <View style={[styles.passCircle, { backgroundColor: colors.background }]} />
+            <View style={styles.passDividerLine} />
+            <View style={[styles.passCircle, { backgroundColor: colors.background }]} />
+          </View>
+
+          {/* Countdown */}
+          {ticket.date && <TicketCountdown date={ticket.date} time={ticket.time} />}
+
+          {/* Divider */}
+          <View style={styles.passDivider}>
+            <View style={[styles.passCircle, { backgroundColor: colors.background }]} />
+            <View style={styles.passDividerLine} />
+            <View style={[styles.passCircle, { backgroundColor: colors.background }]} />
+          </View>
+
+          {/* Details Grid */}
+          <View style={styles.passGrid}>
+            {[
+              { label: "DATE", value: ticket.date },
+              { label: "CLASS", value: ticket.ticketClass },
+              { label: "COACH", value: ticket.coach },
+              { label: "SEAT", value: ticket.seat },
+              { label: "BERTH", value: ticket.berthType },
+              { label: "PLATFORM", value: ticket.platform },
+            ].filter((item) => item.value).map((item) => (
+              <View key={item.label} style={styles.passGridItem}>
+                <Text style={styles.passGridLabel}>{item.label}</Text>
+                <Text style={[styles.passGridValue, { color: colors.text }]}>{item.value}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* QR Code */}
+          <View style={styles.passQRWrap}>
+            <QRSection value={ticket.pnr ?? ticket.qrCode ?? ticket.id} label="SCAN AT PLATFORM" />
+          </View>
+        </LinearGradient>
       </RnAnimated.View>
 
-      {/* Timeline */}
+      {/* Journey Details Section */}
+      <RnAnimated.View entering={FadeInDown.duration(500).delay(200)}>
+        <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <SectionHeader icon="map" title="Journey Details" />
+          <DetailRow icon="calendar" label="Date" value={ticket.date} />
+          <DetailRow icon="map-pin" label="Boarding" value={ticket.from} />
+          <DetailRow icon="map-pin" label="Destination" value={ticket.to} />
+          <DetailRow icon="clock" label="Departure" value={ticket.time} />
+          <DetailRow icon="clock" label="Arrival" value={ticket.arrivalTime} />
+          <DetailRow icon="clock" label="Duration" value={ticket.duration} />
+          <DetailRow icon="navigation" label="Distance" value={ticket.distance} />
+          <DetailRow icon="hash" label="Train No." value={ticket.trainNumber} />
+          <DetailRow icon="type" label="Train" value={ticket.trainName} />
+        </View>
+      </RnAnimated.View>
+
+      {/* Passenger Details Section */}
+      <RnAnimated.View entering={FadeInDown.duration(500).delay(250)}>
+        <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <SectionHeader icon="user" title="Passenger Details" />
+          <DetailRow icon="user" label="Name" value={ticket.passengerName} />
+          <DetailRow icon="hash" label="Age" value={ticket.passengerAge ? `${ticket.passengerAge}` : undefined} />
+          <DetailRow icon="users" label="Gender" value={ticket.passengerGender} />
+          <DetailRow icon="layers" label="Coach" value={ticket.coach} />
+          <DetailRow icon="hash" label="Seat" value={ticket.seat} />
+          <DetailRow icon="arrow-up" label="Berth" value={ticket.berthType} />
+          <DetailRow icon="tag" label="Class" value={ticket.ticketClass} />
+        </View>
+      </RnAnimated.View>
+
+      {/* Booking Status Section */}
+      <RnAnimated.View entering={FadeInDown.duration(500).delay(300)}>
+        <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <SectionHeader icon="check-circle" title="Booking Status" />
+          <DetailRow icon="check-circle" label="Booking" value={ticket.bookingStatus} />
+          <DetailRow icon="info" label="Current" value={ticket.currentStatus} />
+          <DetailRow icon="activity" label="Train" value={ticket.trainStatus} />
+          <DetailRow icon="wifi" label="Running" value={ticket.runningStatus} />
+          <DetailRow icon="alert-triangle" label="Delay" value={ticket.delay} />
+          <DetailRow icon="hash" label="Platform" value={ticket.platform} />
+          <DetailRow icon="arrow-up-right" label="Exp. Arrival" value={ticket.expectedArrival} />
+          <DetailRow icon="arrow-down-right" label="Exp. Depart" value={ticket.expectedDeparture} />
+        </View>
+      </RnAnimated.View>
+
+      {/* Route Timeline */}
       {(ticket.stations || (ticket.from && ticket.to)) && (
-        <RnAnimated.View entering={FadeInDown.duration(500).delay(200)}>
+        <RnAnimated.View entering={FadeInDown.duration(500).delay(350)}>
           <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <TicketTimeline
               from={ticket.from}
               to={ticket.to}
               stations={ticket.stations}
+              stationTimes={ticket.stationTimes}
             />
           </View>
         </RnAnimated.View>
       )}
 
       {/* Actions */}
-      <RnAnimated.View entering={FadeInDown.duration(500).delay(300)}>
+      <RnAnimated.View entering={FadeInDown.duration(500).delay(400)}>
         <View style={styles.actions}>
           <TouchableOpacity
             style={[styles.actionBtn, { backgroundColor: colors.primary }]}
@@ -214,7 +349,7 @@ export default function TicketDetailScreen() {
             activeOpacity={0.8}
           >
             <Feather name="arrow-left" size={16} color="#fff" />
-            <Text style={[styles.actionBtnText, { color: colors.text }]}>Back to Tickets</Text>
+            <Text style={styles.actionBtnText}>Back to Tickets</Text>
           </TouchableOpacity>
         </View>
       </RnAnimated.View>
@@ -235,6 +370,7 @@ const styles = StyleSheet.create({
   notFound: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12 },
   notFoundText: { fontSize: 16, fontWeight: "600" },
   backLink: { fontSize: 15, fontWeight: "700" },
+
   passCard: {
     borderRadius: 28,
     padding: 24,
@@ -250,12 +386,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    marginBottom: 16,
+    marginBottom: 14,
   },
   passTransportRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    flex: 1,
   },
   passIconWrap: {
     width: 44,
@@ -265,16 +402,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   passType: {
-    color: "rgba(255,255,255,0.6)",
-    fontSize: 11,
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 10,
     fontWeight: "700",
     letterSpacing: 2,
   },
-  passTrain: {
+  passTrainName: {
     color: "#FFFDF9",
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: 15,
+    fontWeight: "800",
     marginTop: 2,
+  },
+  passTrainNumber: {
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 11,
+    fontWeight: "600",
+    marginTop: 1,
   },
   passStatusBadge: {
     paddingHorizontal: 12,
@@ -287,16 +430,49 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 0.5,
   },
+  pnrRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 14,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  pnrLabel: {
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+  },
+  pnrValue: {
+    color: "#FFFDF9",
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 2,
+  },
   passRouteRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
     marginBottom: 8,
   },
-  passStation: {
+  passStationBlock: {
+    alignItems: "center",
+    minWidth: 80,
+  },
+  passStationCode: {
     color: "#FFFDF9",
-    fontSize: 24,
-    fontWeight: "900",
+    fontSize: 14,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  passTimeLabel: {
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 11,
+    fontWeight: "600",
+    marginTop: 2,
   },
   passRouteLine: {
     flex: 1,
@@ -316,16 +492,37 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
     borderColor: "rgba(255,255,255,0.2)",
   },
+  durationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+  durationText: {
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  durationSep: {
+    color: "rgba(255,255,255,0.3)",
+    fontSize: 12,
+  },
+  passPassengerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
   passPassenger: {
     color: "rgba(255,255,255,0.8)",
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "600",
-    marginBottom: 4,
   },
   passDivider: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 14,
+    marginVertical: 12,
     overflow: "visible",
   },
   passCircle: {
@@ -369,6 +566,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "rgba(255,255,255,0.1)",
   },
+
   section: {
     padding: 16,
     borderRadius: 20,

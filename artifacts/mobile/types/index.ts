@@ -95,6 +95,22 @@ export interface Ticket {
   dropPoint?: string;
   isSmartTicket?: boolean;
   source?: string;
+  arrivalTime?: string;
+  duration?: string;
+  distance?: string;
+  platform?: string;
+  passengerAge?: number;
+  passengerGender?: string;
+  berthType?: string;
+  ticketClass?: string;
+  bookingStatus?: string;
+  currentStatus?: string;
+  trainStatus?: string;
+  runningStatus?: string;
+  delay?: string;
+  expectedArrival?: string;
+  expectedDeparture?: string;
+  stationTimes?: Record<string, { arrival?: string; departure?: string }>;
 }
 
 export interface SmartTicketInput {
@@ -115,6 +131,22 @@ export interface SmartTicketInput {
   qrCode?: string;
   stations?: string[];
   source?: string;
+  arrivalTime?: string;
+  duration?: string;
+  distance?: string;
+  platform?: string;
+  passengerAge?: number;
+  passengerGender?: string;
+  berthType?: string;
+  ticketClass?: string;
+  bookingStatus?: string;
+  currentStatus?: string;
+  trainStatus?: string;
+  runningStatus?: string;
+  delay?: string;
+  expectedArrival?: string;
+  expectedDeparture?: string;
+  stationTimes?: Record<string, { arrival?: string; departure?: string }>;
 }
 
 export interface Reward {
