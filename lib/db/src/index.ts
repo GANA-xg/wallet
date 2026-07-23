@@ -17,8 +17,9 @@ export function getDb() {
       );
     }
     const sslEnabled = url.includes("render.com") || url.includes("dpg-");
+    const connStr = sslEnabled ? `${url}?sslmode=no-verify` : url;
     _pool = new Pool({
-      connectionString: sslEnabled ? `${url}?sslmode=require` : url,
+      connectionString: connStr,
       ...(sslEnabled ? { ssl: { rejectUnauthorized: false } } : {}),
     });
     _db = drizzle(_pool, { schema });
