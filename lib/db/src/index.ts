@@ -17,10 +17,10 @@ export function getDb() {
       );
     }
     const sslEnabled = url.includes("render.com") || url.includes("dpg-");
-    const connStr = sslEnabled ? `${url}?sslmode=no-verify` : url;
+    const cleanUrl = url.includes("?") ? url.split("?")[0] : url;
     _pool = new Pool({
-      connectionString: connStr,
-      ...(sslEnabled ? { ssl: { rejectUnauthorized: false } } : {}),
+      connectionString: cleanUrl,
+      ssl: sslEnabled ? { rejectUnauthorized: false } : undefined,
     });
     _db = drizzle(_pool, { schema });
   }
