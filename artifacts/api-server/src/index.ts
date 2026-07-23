@@ -1,6 +1,7 @@
 import "dotenv/config";
 import app from "./app";
 import { logger } from "./lib/logger";
+import { getPool } from "@workspace/db";
 
 const port = (() => {
   const raw = process.env.PORT;
@@ -23,12 +24,7 @@ async function runMigrations() {
     return;
   }
   try {
-    const { Pool } = await import("pg");
-    const sslEnabled = url.includes("render.com") || url.includes("dpg-");
-    const pool = new Pool({
-      connectionString: sslEnabled ? `${url}?sslmode=require` : url,
-      ...(sslEnabled ? { ssl: { rejectUnauthorized: false } } : {}),
-    });
+    const pool = getPool();
     const client = await pool.connect();
     try {
       const statements = [
@@ -108,7 +104,6 @@ async function runMigrations() {
       logger.info("Database migrations completed");
     } finally {
       client.release();
-      await pool.end();
     }
   } catch (error) {
     logger.error({ err: error }, "Database migration failed — server will start but auth may not work");
