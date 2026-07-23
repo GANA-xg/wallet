@@ -11,7 +11,12 @@ router.get("/healthz", async (_req, res) => {
   if (hasDbUrl) {
     try {
       const { Pool } = await import("pg");
-      const pool = new Pool({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 5000 });
+      const url = process.env.DATABASE_URL!;
+      const pool = new Pool({
+        connectionString: url,
+        connectionTimeoutMillis: 5000,
+        ssl: url.includes("render.com") || url.includes("dpg-") ? { rejectUnauthorized: false } : undefined,
+      });
       const result = await pool.query("SELECT 1 as ok");
       dbOk = result.rows[0]?.ok === 1;
       await pool.end();
