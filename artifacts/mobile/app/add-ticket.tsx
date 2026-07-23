@@ -166,11 +166,48 @@ export default function AddTicketScreen() {
     const result = await lookupPNR(pnrInput.trim());
 
     if (result.success && result.data) {
+      const d = result.data;
+      const ticketTitle =
+        d.title ??
+        (d.trainName && d.trainNumber
+          ? `${d.trainName} (${d.trainNumber})`
+          : d.pnr
+            ? `PNR ${d.pnr}`
+            : undefined);
+
       const fullInput: SmartTicketInput = {
         transportType: selectedTransport!.type,
         type: selectedTransport!.type as SmartTicketInput["type"],
-        ...result.data,
-      } as SmartTicketInput;
+        pnr: d.pnr,
+        trainNumber: d.trainNumber,
+        trainName: d.trainName,
+        from: d.from,
+        to: d.to,
+        date: d.date ?? new Date().toISOString().split("T")[0],
+        time: d.time,
+        coach: d.coach,
+        seat: d.seat,
+        passengerName: d.passengerName,
+        ticketStatus: d.ticketStatus,
+        stations: d.stations,
+        title: ticketTitle,
+        arrivalTime: d.arrivalTime,
+        duration: d.duration,
+        distance: d.distance,
+        platform: d.platform,
+        passengerAge: d.passengerAge,
+        passengerGender: d.passengerGender,
+        berthType: d.berthType,
+        ticketClass: d.ticketClass,
+        bookingStatus: d.bookingStatus,
+        currentStatus: d.currentStatus,
+        trainStatus: d.trainStatus,
+        runningStatus: d.runningStatus,
+        delay: d.delay,
+        expectedArrival: d.expectedArrival,
+        expectedDeparture: d.expectedDeparture,
+        stationTimes: d.stationTimes,
+      };
 
       const ticket = createSmartTicket(fullInput);
       setGeneratedTicket(ticket);

@@ -66,6 +66,22 @@ export function createSmartTicket(input: SmartTicketInput): Ticket {
     stations: input.stations,
     qrCode: input.qrCode ?? input.pnr ?? id,
     source: input.source,
+    arrivalTime: input.arrivalTime,
+    duration: input.duration,
+    distance: input.distance,
+    platform: input.platform,
+    passengerAge: input.passengerAge,
+    passengerGender: input.passengerGender,
+    berthType: input.berthType,
+    ticketClass: input.ticketClass,
+    bookingStatus: input.bookingStatus,
+    currentStatus: input.currentStatus,
+    trainStatus: input.trainStatus,
+    runningStatus: input.runningStatus,
+    delay: input.delay,
+    expectedArrival: input.expectedArrival,
+    expectedDeparture: input.expectedDeparture,
+    stationTimes: input.stationTimes,
   };
 
   return ticket;

@@ -141,6 +141,9 @@ importers:
       pino-http:
         specifier: ^10.5.0
         version: 10.5.0
+      railkit:
+        specifier: ^4.0.1
+        version: 4.0.1
       zod:
         specifier: 'catalog:'
         version: 3.25.76
@@ -3906,6 +3909,9 @@ packages:
   quick-lru@5.1.1:
     resolution: {integrity: sha512-WuyALRjWPDGtt/wzJiadO5AXY+8hZ80hVpe6MyivgraREW751X3SbhRvG3eLKOYN+8VEvqLcf3wdnt44Z4S4SA==}
     engines: {node: '>=10'}
+
+  railkit@4.0.1:
+    resolution: {integrity: sha512-m1bOVkO4uNt5WLbtn+FOp1WMyZSw172h/rb4kgDopJTvIKA7LrjWr7zwpU0MezlZWwZYUdOM1xAQZeb9FqJa6A==}
 
   range-parser@1.2.1:
     resolution: {integrity: sha512-Hrgsx+orqoygnmhFbKaHE6c296J+HTAQXoxEF6gNupROmmGJRoyzfG3ccAveqCBrwr/2yxQ5BVd/GTl5agOwSg==}
@@ -9065,6 +9071,8 @@ snapshots:
   quick-format-unescaped@4.0.4: {}
 
   quick-lru@5.1.1: {}
+
+  railkit@4.0.1: {}
 
   range-parser@1.2.1: {}
 
