@@ -16,7 +16,10 @@ export function getDb() {
         "Set it to a PostgreSQL connection string (e.g., postgresql://user:pass@localhost:5432/vault).",
       );
     }
-    _pool = new Pool({ connectionString: url });
+    _pool = new Pool({
+      connectionString: url,
+      ssl: url.includes("render.com") || url.includes("dpg-") ? { rejectUnauthorized: false } : undefined,
+    });
     _db = drizzle(_pool, { schema });
   }
   return _db;
