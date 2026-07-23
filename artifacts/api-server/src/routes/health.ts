@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { getDb } from "@workspace/db";
+import { getPool } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -12,9 +12,9 @@ router.get("/healthz", async (_req, res) => {
   let dbError = null;
   if (hasDbUrl) {
     try {
-      const db = getDb();
-      await db.execute({ sql: "SELECT 1 as ok" } as any);
-      dbOk = true;
+      const pool = getPool();
+      const result = await pool.query("SELECT 1 as ok");
+      dbOk = result.rows[0]?.ok === 1;
     } catch (e: any) {
       dbOk = false;
       dbError = e.message || String(e);
