@@ -47,105 +47,119 @@ export default function TicketCard({ ticket }: TicketCardProps) {
 
   const statusColor = getStatusColor(ticket.ticketStatus);
   const statusLabel = ticket.ticketStatus
-    ? ticket.ticketStatus.charAt(0).toUpperCase() + ticket.ticketStatus.slice(1)
-    : "Confirmed";
+    ? ticket.ticketStatus.toUpperCase()
+    : "CNF";
+
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  };
 
   if (isSmart) {
     return (
       <Animated.View style={{ transform: [{ translateX: shakeAnim }] }}>
         <TouchableOpacity onPress={handlePress} activeOpacity={0.95}>
           <LinearGradient colors={style.gradient} style={styles.smartCard}>
-            {/* Glass overlay */}
             <View style={styles.glassOverlay} />
 
-            {/* Header */}
+            {/* Header: Icon + Train Info + Status */}
             <View style={styles.smartHeader}>
-              <View style={styles.transportRow}>
-                <View style={[styles.smartIconWrap, { backgroundColor: style.color + "30" }]}>
-                  <Feather name={style.icon as any} size={18} color={style.color} />
+              <View style={styles.headerLeft}>
+                <View style={[styles.smartIconWrap, { backgroundColor: style.color + "25" }]}>
+                  <Feather name={style.icon as any} size={16} color={style.color} />
                 </View>
-                <View>
-                  <Text style={styles.transportLabel}>{ticket.transportType?.toUpperCase() ?? ticket.type.toUpperCase()}</Text>
-                  {(ticket.trainNumber || ticket.trainName) && (
-                    <Text style={styles.trainInfo}>
-                      {ticket.trainNumber ?? ""}{ticket.trainNumber && ticket.trainName ? " • " : ""}{ticket.trainName ?? ""}
+                <View style={styles.trainInfoBlock}>
+                  <Text style={styles.transportLabel}>
+                    {ticket.transportType?.toUpperCase() ?? ticket.type.toUpperCase()}
+                  </Text>
+                  {ticket.trainNumber && (
+                    <Text style={styles.trainNumber}>{ticket.trainNumber}</Text>
+                  )}
+                  {ticket.trainName && (
+                    <Text style={styles.trainName} numberOfLines={1}>
+                      {ticket.trainName}
                     </Text>
                   )}
                 </View>
               </View>
-              <View style={[styles.statusBadge, { backgroundColor: statusColor + "25", borderColor: statusColor + "50" }]}>
-                <Text style={[styles.statusText, { color: statusColor }]}>{statusLabel}</Text>
+              <View style={[styles.statusPill, { backgroundColor: statusColor + "20" }]}>
+                <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+                <Text style={[styles.statusPillText, { color: statusColor }]}>{statusLabel}</Text>
               </View>
             </View>
 
-            {/* Route */}
-            <View style={styles.smartRoute}>
-              <Text style={styles.smartStation}>{ticket.from}</Text>
-              <View style={styles.smartRouteLine}>
-                <View style={[styles.smartRouteDot, { backgroundColor: style.color }]} />
-                <View style={[styles.smartRouteDash, { borderColor: style.color + "60" }]} />
-                <Feather name="arrow-right" size={12} color={style.color} />
+            {/* Route Section */}
+            <View style={styles.routeSection}>
+              <View style={styles.routeStation}>
+                <Text style={styles.stationName} numberOfLines={1}>
+                  {ticket.from ?? "—"}
+                </Text>
               </View>
-              <Text style={styles.smartStation}>{ticket.to}</Text>
+              <View style={styles.routeCenter}>
+                <View style={[styles.routeLineLeft, { backgroundColor: style.color + "40" }]} />
+                <Feather name="arrow-right" size={14} color={style.color} style={{ marginHorizontal: 4 }} />
+                <View style={[styles.routeLineRight, { backgroundColor: style.color + "40" }]} />
+              </View>
+              <View style={styles.routeStation}>
+                <Text style={styles.stationName} numberOfLines={1}>
+                  {ticket.to ?? "—"}
+                </Text>
+              </View>
             </View>
-
-            {/* Passenger */}
-            {ticket.passengerName && (
-              <Text style={styles.passengerName}>{ticket.passengerName}</Text>
-            )}
 
             {/* Countdown */}
             {ticket.date && (
               <TicketCountdown date={ticket.date} time={ticket.time} />
             )}
 
-            {/* Details grid */}
+            {/* Details Grid: 2x2 */}
             <View style={styles.detailsGrid}>
               {ticket.pnr && (
-                <View style={styles.detailItem}>
-                  <Text style={styles.detailSmartLabel}>PNR</Text>
-                  <Text style={styles.detailSmartValue}>{revealed ? ticket.pnr : "••••••••"}</Text>
+                <View style={styles.detailCell}>
+                  <Text style={styles.detailLabel}>PNR</Text>
+                  <Text style={styles.detailValue} numberOfLines={1}>
+                    {revealed ? ticket.pnr : "••••••••"}
+                  </Text>
                 </View>
               )}
               {ticket.coach && (
-                <View style={styles.detailItem}>
-                  <Text style={styles.detailSmartLabel}>COACH</Text>
-                  <Text style={styles.detailSmartValue}>{ticket.coach}</Text>
-                </View>
-              )}
-              {ticket.seat && (
-                <View style={styles.detailItem}>
-                  <Text style={styles.detailSmartLabel}>SEAT</Text>
-                  <Text style={styles.detailSmartValue}>{ticket.seat}</Text>
+                <View style={styles.detailCell}>
+                  <Text style={styles.detailLabel}>COACH</Text>
+                  <Text style={styles.detailValue}>{ticket.coach}</Text>
                 </View>
               )}
               {ticket.date && (
-                <View style={styles.detailItem}>
-                  <Text style={styles.detailSmartLabel}>DATE</Text>
-                  <Text style={styles.detailSmartValue}>{ticket.date}</Text>
+                <View style={styles.detailCell}>
+                  <Text style={styles.detailLabel}>DATE</Text>
+                  <Text style={styles.detailValue}>{formatDate(ticket.date)}</Text>
                 </View>
               )}
-              {ticket.time && (
-                <View style={styles.detailItem}>
-                  <Text style={styles.detailSmartLabel}>TIME</Text>
-                  <Text style={styles.detailSmartValue}>{ticket.time}</Text>
+              {ticket.seat && (
+                <View style={styles.detailCell}>
+                  <Text style={styles.detailLabel}>SEAT</Text>
+                  <Text style={styles.detailValue}>{ticket.seat}</Text>
                 </View>
               )}
             </View>
 
+            {/* Footer */}
             <View style={styles.cardFooter}>
               {!revealed && ticket.pnr ? (
                 <TouchableOpacity onPress={handleReveal} style={styles.revealBtn}>
-                  <Feather name="eye" size={12} color={style.color} />
+                  <Feather name="eye" size={11} color={style.color} />
                   <Text style={[styles.revealText, { color: style.color }]}>Tap to reveal PNR</Text>
                 </TouchableOpacity>
               ) : ticket.pnr ? (
                 <View style={styles.verifiedRow}>
-                  <Feather name="check-circle" size={12} color="#2E7D32" />
+                  <Feather name="check-circle" size={11} color="#22C55E" />
                   <Text style={styles.verifiedText}>Verified</Text>
                 </View>
-              ) : null}
-              <Feather name="chevron-right" size={16} color="rgba(255,255,255,0.3)" />
+              ) : (
+                <View />
+              )}
+              <Feather name="chevron-right" size={16} color="rgba(255,255,255,0.25)" />
             </View>
           </LinearGradient>
         </TouchableOpacity>
@@ -157,7 +171,6 @@ export default function TicketCard({ ticket }: TicketCardProps) {
     <Animated.View style={{ transform: [{ translateX: shakeAnim }] }}>
       <TouchableOpacity onPress={handlePress} activeOpacity={0.95}>
         <LinearGradient colors={style.gradient} style={styles.ticketCard}>
-          {/* Header */}
           <View style={styles.ticketHeader}>
             <View style={[styles.ticketIconWrap, { backgroundColor: style.color + "30" }]}>
               <Feather name={style.icon as any} size={20} color={style.color} />
@@ -199,14 +212,14 @@ export default function TicketCard({ ticket }: TicketCardProps) {
           <View style={styles.ticketBottom}>
             {ticket.seat && (
               <View>
-                <Text style={styles.detailLabel}>SEAT</Text>
-                <Text style={styles.detailValue}>{ticket.seat}</Text>
+                <Text style={styles.legacyDetailLabel}>SEAT</Text>
+                <Text style={styles.legacyDetailValue}>{ticket.seat}</Text>
               </View>
             )}
             {ticket.pnr && (
               <View>
-                <Text style={styles.detailLabel}>PNR</Text>
-                <Text style={styles.detailValue}>
+                <Text style={styles.legacyDetailLabel}>PNR</Text>
+                <Text style={styles.legacyDetailValue}>
                   {revealed ? ticket.pnr : "••••••••"}
                 </Text>
               </View>
@@ -229,6 +242,7 @@ export default function TicketCard({ ticket }: TicketCardProps) {
 }
 
 const styles = StyleSheet.create({
+  // ─── Smart Card ───
   smartCard: {
     borderRadius: 24,
     padding: 20,
@@ -237,120 +251,144 @@ const styles = StyleSheet.create({
   },
   glassOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(255,255,255,0.05)",
+    backgroundColor: "rgba(255,255,255,0.04)",
     borderRadius: 24,
   },
+
+  // ─── Header ───
   smartHeader: {
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    marginBottom: 14,
+    marginBottom: 16,
   },
-  transportRow: {
+  headerLeft: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+    flex: 1,
   },
   smartIconWrap: {
-    width: 36,
-    height: 36,
+    width: 34,
+    height: 34,
     borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
   },
+  trainInfoBlock: {
+    flex: 1,
+  },
   transportLabel: {
-    color: "rgba(255,255,255,0.6)",
-    fontSize: 10,
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 9,
     fontWeight: "700",
     letterSpacing: 1.5,
+    textTransform: "uppercase",
   },
-  trainInfo: {
+  trainNumber: {
     color: "#FFFDF9",
-    fontSize: 11,
-    fontWeight: "600",
+    fontSize: 15,
+    fontWeight: "800",
     marginTop: 1,
   },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-    borderWidth: 1,
+  trainName: {
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 11,
+    fontWeight: "500",
+    marginTop: 1,
   },
-  statusText: {
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  smartRoute: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 8,
-  },
-  smartStation: {
-    color: "#FFFDF9",
-    fontSize: 20,
-    fontWeight: "900",
-  },
-  smartRouteLine: {
-    flex: 1,
+  statusPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
   },
-  smartRouteDot: {
+  statusDot: {
     width: 5,
     height: 5,
     borderRadius: 2.5,
   },
-  smartRouteDash: {
+  statusPillText: {
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+
+  // ─── Route ───
+  routeSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  routeStation: {
     flex: 1,
-    borderWidth: 1,
-    borderStyle: "dashed",
   },
-  passengerName: {
-    color: "rgba(255,255,255,0.8)",
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 4,
+  stationName: {
+    color: "#FFFDF9",
+    fontSize: 18,
+    fontWeight: "800",
+    letterSpacing: -0.3,
   },
+  routeCenter: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+  },
+  routeLineLeft: {
+    width: 24,
+    height: 1,
+  },
+  routeLineRight: {
+    width: 24,
+    height: 1,
+  },
+
+  // ─── Details Grid ───
   detailsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
-    marginTop: 8,
+    marginTop: 4,
+    gap: 0,
   },
-  detailItem: {
-    minWidth: "40%",
+  detailCell: {
+    width: "50%",
+    paddingVertical: 8,
   },
-  detailSmartLabel: {
+  detailLabel: {
     color: "rgba(255,255,255,0.4)",
     fontSize: 9,
     fontWeight: "700",
     letterSpacing: 1.5,
+    textTransform: "uppercase",
     marginBottom: 2,
   },
-  detailSmartValue: {
+  detailValue: {
     color: "#FFFDF9",
     fontSize: 13,
     fontWeight: "700",
+    letterSpacing: 0.3,
   },
+
+  // ─── Footer ───
   cardFooter: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginTop: 14,
+    marginTop: 10,
     paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(255,255,255,0.1)",
+    borderTopColor: "rgba(255,255,255,0.08)",
   },
   revealBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 5,
   },
   revealText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
   },
   verifiedRow: {
@@ -359,10 +397,12 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   verifiedText: {
-    color: "#2E7D32",
-    fontSize: 12,
+    color: "#22C55E",
+    fontSize: 11,
     fontWeight: "600",
   },
+
+  // ─── Legacy Card ───
   ticketCard: {
     borderRadius: 20,
     padding: 20,
@@ -423,14 +463,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-end",
   },
-  detailLabel: {
+  legacyDetailLabel: {
     color: "rgba(255,255,255,0.4)",
     fontSize: 9,
     fontWeight: "700",
     letterSpacing: 1.5,
     marginBottom: 2,
   },
-  detailValue: { color: "#FFFDF9", fontSize: 14, fontWeight: "800", letterSpacing: 1 },
+  legacyDetailValue: { color: "#FFFDF9", fontSize: 14, fontWeight: "800", letterSpacing: 1 },
   tapHint: { marginLeft: "auto" },
   tapText: { color: "rgba(255,255,255,0.4)", fontSize: 12 },
 });

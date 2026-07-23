@@ -56,21 +56,21 @@ export default function TicketCountdown({ date, time }: TicketCountdownProps) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Journey starts in</Text>
-      <View style={styles.timerRow}>
-        <View style={styles.timeBlock}>
-          <Text style={styles.timeValue}>{totalDays}</Text>
-          <Text style={styles.timeUnit}>Days</Text>
+      <Text style={styles.label}>JOURNEY STARTS IN</Text>
+      <View style={styles.chipRow}>
+        <View style={styles.chip}>
+          <Text style={styles.chipValue}>{totalDays}</Text>
+          <Text style={styles.chipUnit}>d</Text>
         </View>
-        <Text style={styles.separator}>:</Text>
-        <View style={styles.timeBlock}>
-          <Text style={styles.timeValue}>{timeLeft.hours}</Text>
-          <Text style={styles.timeUnit}>Hours</Text>
+        <Text style={styles.chipSep}>:</Text>
+        <View style={styles.chip}>
+          <Text style={styles.chipValue}>{timeLeft.hours}</Text>
+          <Text style={styles.chipUnit}>h</Text>
         </View>
-        <Text style={styles.separator}>:</Text>
-        <View style={styles.timeBlock}>
-          <Text style={styles.timeValue}>{timeLeft.minutes}</Text>
-          <Text style={styles.timeUnit}>Min</Text>
+        <Text style={styles.chipSep}>:</Text>
+        <View style={styles.chip}>
+          <Text style={styles.chipValue}>{timeLeft.minutes}</Text>
+          <Text style={styles.chipUnit}>m</Text>
         </View>
       </View>
     </View>
@@ -79,46 +79,47 @@ export default function TicketCountdown({ date, time }: TicketCountdownProps) {
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: "center",
-    paddingVertical: 12,
-    gap: 8,
-  },
-  label: {
-    color: "rgba(255,255,255,0.5)",
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 1.5,
-    textTransform: "uppercase",
-  },
-  timerRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-  },
-  timeBlock: {
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.08)",
-    borderRadius: 12,
-    paddingHorizontal: 14,
+    justifyContent: "space-between",
     paddingVertical: 10,
-    minWidth: 60,
+    marginTop: 2,
+    marginBottom: 4,
   },
-  timeValue: {
+  label: {
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+  },
+  chipRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  chip: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    gap: 2,
+  },
+  chipValue: {
     color: "#FFFDF9",
-    fontSize: 22,
+    fontSize: 14,
     fontWeight: "800",
     fontVariant: ["tabular-nums"],
   },
-  timeUnit: {
+  chipUnit: {
     color: "rgba(255,255,255,0.4)",
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: "600",
-    marginTop: 2,
   },
-  separator: {
-    color: "rgba(255,255,255,0.3)",
-    fontSize: 18,
-    fontWeight: "800",
-    marginBottom: 16,
+  chipSep: {
+    color: "rgba(255,255,255,0.2)",
+    fontSize: 12,
+    fontWeight: "700",
   },
 });
