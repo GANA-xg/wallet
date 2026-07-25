@@ -20,7 +20,49 @@ import {
   revokeSessionSchema,
   deviceIdParamSchema,
 } from "@workspace/api-zod";
-import { setOtp, getOtp, incrementOtpAttempts, deleteOtp } from "../lib/redis";
+import { setOtp as redisSetOtp, getOtp as redisGetOtp, incrementOtpAttempts as redisIncrementAttempts, deleteOtp as redisDeleteOtp } from "../lib/redis";
+
+// In-memory OTP fallback when Redis is unavailable
+const memOtpStore = new Map<string, { otp: string; attempts: number; expiresAt: number }>();
+
+async function setOtp(phone: string, otp: string, ttl: number): Promise<void> {
+  try {
+    await redisSetOtp(phone, otp, ttl);
+    return;
+  } catch {}
+  memOtpStore.set(phone, { otp, attempts: 0, expiresAt: Date.now() + ttl * 1000 });
+}
+
+async function getOtp(phone: string): Promise<{ otp: string; attempts: number } | null> {
+  try {
+    const res = await redisGetOtp(phone);
+    if (res) return res;
+  } catch {}
+  const stored = memOtpStore.get(phone);
+  if (!stored) return null;
+  if (stored.expiresAt < Date.now()) {
+    memOtpStore.delete(phone);
+    return null;
+  }
+  return { otp: stored.otp, attempts: stored.attempts };
+}
+
+async function incrementOtpAttempts(phone: string): Promise<number> {
+  try {
+    return await redisIncrementAttempts(phone);
+  } catch {}
+  const stored = memOtpStore.get(phone);
+  if (!stored) return 0;
+  stored.attempts++;
+  return stored.attempts;
+}
+
+async function deleteOtp(phone: string): Promise<void> {
+  try {
+    await redisDeleteOtp(phone);
+  } catch {}
+  memOtpStore.delete(phone);
+}
 
 // Strict OTP rate limiter — max 3 requests per 10 minutes per IP
 const otpRateLimiter = rateLimit({
