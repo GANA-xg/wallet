@@ -26,20 +26,22 @@ import { setOtp as redisSetOtp, getOtp as redisGetOtp, incrementOtpAttempts as r
 const memOtpStore = new Map<string, { otp: string; attempts: number; expiresAt: number }>();
 
 async function setOtp(phone: string, otp: string, ttl: number): Promise<void> {
-  try {
-    await redisSetOtp(phone, otp, ttl);
-    return;
-  } catch {}
+  // Always write to in-memory store (authoritative source when Redis is absent)
   memOtpStore.set(phone, { otp, attempts: 0, expiresAt: Date.now() + ttl * 1000 });
+  // Best-effort Redis write
+  redisSetOtp(phone, otp, ttl).catch(() => {});
 }
 
 async function getOtp(phone: string): Promise<{ otp: string; attempts: number } | null> {
-  try {
-    const res = await redisGetOtp(phone);
-    if (res) return res;
-  } catch {}
+  // Check in-memory first (fast, always available)
   const stored = memOtpStore.get(phone);
-  if (!stored) return null;
+  if (!stored) {
+    // Fallback to Redis (survives restarts)
+    try {
+      return await redisGetOtp(phone);
+    } catch {}
+    return null;
+  }
   if (stored.expiresAt < Date.now()) {
     memOtpStore.delete(phone);
     return null;
@@ -48,20 +50,16 @@ async function getOtp(phone: string): Promise<{ otp: string; attempts: number } 
 }
 
 async function incrementOtpAttempts(phone: string): Promise<number> {
-  try {
-    return await redisIncrementAttempts(phone);
-  } catch {}
   const stored = memOtpStore.get(phone);
   if (!stored) return 0;
   stored.attempts++;
+  redisIncrementAttempts(phone).catch(() => {});
   return stored.attempts;
 }
 
 async function deleteOtp(phone: string): Promise<void> {
-  try {
-    await redisDeleteOtp(phone);
-  } catch {}
   memOtpStore.delete(phone);
+  redisDeleteOtp(phone).catch(() => {});
 }
 
 // Strict OTP rate limiter — max 3 requests per 10 minutes per IP
