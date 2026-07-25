@@ -250,11 +250,21 @@ export default function Register() {
     await AsyncStorage.setItem(`@vault_user_profile_${phone}`, JSON.stringify(newUser));
 
     // 2. Add KYC document
+    const docNumber = kycDocNum;
+    const lastFour = docNumber.replace(/\D/g, "").slice(-4) || "XXXX";
+    const now = new Date().toISOString();
     const newDoc: VaultDocument = {
       id: "doc_" + Date.now(),
+      userId: newUser.id,
       type: kycType,
       name: kycType === "aadhaar" ? "Aadhaar Card" : "PAN Card",
-      number: kycDocNum,
+      holderName: fullName,
+      documentNumber: docNumber,
+      maskedNumber: `XXXX XXXX ${lastFour}`,
+      verificationStatus: "verified",
+      metadata: { dateOfBirth: extractedDob },
+      createdAt: now,
+      updatedAt: now,
     };
     addDocument(newDoc);
 

@@ -1,40 +1,46 @@
 import { Router, type IRouter, type Request, type Response } from "express";
+import rateLimit from "express-rate-limit";
 import { eq, and, isNull, lt } from "drizzle-orm";
 import { getDb, schema } from "@workspace/db";
 import { requireAuth } from "../middleware/auth";
 import { logger } from "../lib/logger";
 import {
-  generateId,
   generateRefreshToken,
-  getRefreshTokenTtl,
-  getSessionTtl,
   hashToken,
   signJwt,
-  verifyJwt,
 } from "../lib/auth";
 import { validate } from "../middlewares/validate";
 import {
   sendOtpSchema,
   verifyOtpSchema,
+  registerSchema,
   refreshSchema,
   updateProfileSchema,
   registerDeviceSchema,
   revokeSessionSchema,
   deviceIdParamSchema,
 } from "@workspace/api-zod";
+import { setOtp, getOtp, incrementOtpAttempts, deleteOtp } from "../lib/redis";
 
-// In-memory OTP stores (ephemeral by nature — not persisted)
-const otpStore = new Map<string, { otp: string; expiresAt: number }>();
+// Strict OTP rate limiter — max 3 requests per 10 minutes per IP
+const otpRateLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: "too_many_otp_requests",
+    message: "Max 3 OTP requests per 10 minutes",
+  },
+});
 
-const otpRateLimitEnabled: boolean = (() => {
-  const raw = process.env.OTP_RATE_LIMIT_MAX ?? "";
-  if (raw === "0") return false;
-  if (raw) return true;
-  return process.env.NODE_ENV === "production";
-})();
-const otpRateLimitMax: number = parseInt(process.env.OTP_RATE_LIMIT_MAX || "5", 10);
-const otpRateLimitWindowMs: number = parseInt(process.env.OTP_RATE_LIMIT_WINDOW_MS || "60000", 10);
-const otpRequestLog = new Map<string, number[]>();
+function validateE164(phone: string): boolean {
+  return /^\+[1-9]\d{7,14}$/.test(phone);
+}
+
+function generateOtp(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
 function paramId(req: Request): string {
   const id = req.params["id"];
@@ -49,246 +55,153 @@ function toUserJson(user: typeof schema.users.$inferSelect) {
     phone: user.phone,
     name: user.name,
     email: user.email,
-    avatarUrl: user.avatarUrl,
-    kycStatus: user.kycStatus,
-    twoFactorEnabled: user.twoFactorEnabled,
-    biometricEnabled: user.biometricEnabled,
-    createdAt: user.createdAt instanceof Date ? user.createdAt.toISOString() : user.createdAt,
-    updatedAt: user.updatedAt instanceof Date ? user.updatedAt.toISOString() : user.updatedAt,
+    kyc_status: user.kycStatus,
+    created_at: user.createdAt instanceof Date ? user.createdAt.toISOString() : user.createdAt,
   };
 }
 
-function toSessionJson(session: typeof schema.sessions.$inferSelect) {
-  return {
-    id: session.id,
-    userId: session.userId,
-    deviceId: session.deviceId,
-    ipAddress: session.ipAddress,
-    userAgent: session.userAgent,
-    lastActiveAt: session.lastActiveAt instanceof Date ? session.lastActiveAt.toISOString() : session.lastActiveAt,
-    expiresAt: session.expiresAt instanceof Date ? session.expiresAt.toISOString() : session.expiresAt,
-    revokedAt: session.revokedAt instanceof Date ? session.revokedAt.toISOString() : session.revokedAt,
-    createdAt: session.createdAt instanceof Date ? session.createdAt.toISOString() : session.createdAt,
-  };
-}
-
-async function findOrCreateUser(phone: string): Promise<typeof schema.users.$inferSelect> {
+async function findOrCreateDevice(
+  userId: string,
+  deviceFingerprint: string,
+  pushToken: string | undefined,
+): Promise<string> {
   const db = getDb();
-  const existing = await db.query.users.findFirst({
-    where: eq(schema.users.phone, phone),
+  const existing = await db.query.devices.findFirst({
+    where: and(
+      eq(schema.devices.userId, userId),
+      eq(schema.devices.deviceFingerprint, deviceFingerprint),
+      isNull(schema.devices.deletedAt),
+    ),
   });
-  if (existing) return existing;
 
   const now = new Date();
-  const [newUser] = await db
-    .insert(schema.users)
+
+  if (existing) {
+    await db
+      .update(schema.devices)
+      .set({
+        lastSeenAt: now,
+        pushToken: pushToken ?? existing.pushToken,
+        updatedAt: now,
+      })
+      .where(eq(schema.devices.id, existing.id));
+    return existing.id;
+  }
+
+  const [device] = await db
+    .insert(schema.devices)
     .values({
-      id: generateId(),
-      tenantId: "00000000-0000-0000-0000-000000000000",
-      phone,
-      kycStatus: "pending",
-      twoFactorEnabled: false,
-      biometricEnabled: true,
+      userId,
+      deviceFingerprint,
+      pushToken: pushToken ?? null,
+      isTrusted: false,
+      lastSeenAt: now,
       createdAt: now,
       updatedAt: now,
     })
     .returning();
-  return newUser;
+
+  return device.id;
 }
 
-async function issueTokens(userId: string, deviceId: string | null, ipAddress: string | null, userAgent: string | null) {
+async function createSession(
+  userId: string,
+  deviceId: string,
+): Promise<{ accessToken: string; refreshToken: string }> {
   const db = getDb();
-  const sessionId = generateId();
+  const refreshToken = generateRefreshToken();
+  const refreshTokenHash = hashToken(refreshToken);
   const now = new Date();
-  const sessionExpiry = new Date(now.getTime() + getSessionTtl());
-
-  const refreshTokenValue = generateRefreshToken();
-  const refreshTokenHashed = hashToken(refreshTokenValue);
+  const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
 
   const [session] = await db
     .insert(schema.sessions)
     .values({
-      id: sessionId,
       userId,
       deviceId,
-      refreshTokenHash: refreshTokenHashed,
-      ipAddress,
-      userAgent,
-      lastActiveAt: now,
-      expiresAt: sessionExpiry,
+      refreshTokenHash,
+      expiresAt,
       createdAt: now,
+      updatedAt: now,
     })
     .returning();
 
-  await db.insert(schema.refreshTokens).values({
-    id: generateId(),
-    sessionId,
-    tokenHash: refreshTokenHashed,
-    expiresAt: sessionExpiry,
-    createdAt: now,
-  });
-
   const accessToken = signJwt({
     sub: userId,
-    sid: sessionId,
+    sid: session.id,
     did: deviceId,
   });
 
-  return { accessToken, refreshToken: refreshTokenValue, session };
+  return { accessToken, refreshToken };
 }
 
-async function validateRefreshToken(refreshToken: string): Promise<{ sessionId: string; userId: string } | null> {
-  const db = getDb();
-  const tokenHash = hashToken(refreshToken);
+// POST /auth/send-otp
+router.post(
+  "/auth/send-otp",
+  otpRateLimiter,
+  validate({ schema: sendOtpSchema, source: "body" }),
+  async (req: Request, res: Response) => {
+    const { phone } = req.body;
 
-  const refreshTokenRow = await db.query.refreshTokens.findFirst({
-    where: eq(schema.refreshTokens.tokenHash, tokenHash),
-  });
-  if (!refreshTokenRow) return null;
-
-  const session = await db.query.sessions.findFirst({
-    where: eq(schema.sessions.id, refreshTokenRow.sessionId),
-  });
-  if (!session || session.revokedAt) return null;
-
-  const expiresAt = session.expiresAt instanceof Date ? session.expiresAt.getTime() : new Date(session.expiresAt).getTime();
-  if (expiresAt < Date.now()) return null;
-
-  return { sessionId: session.id, userId: session.userId };
-}
-
-async function rotateRefreshToken(sessionId: string): Promise<string | null> {
-  const db = getDb();
-  const session = await db.query.sessions.findFirst({
-    where: eq(schema.sessions.id, sessionId),
-  });
-  if (!session || session.revokedAt) return null;
-
-  const newRefreshToken = generateRefreshToken();
-  const newHash = hashToken(newRefreshToken);
-  const now = new Date();
-
-  await db
-    .update(schema.sessions)
-    .set({ refreshTokenHash: newHash, lastActiveAt: now })
-    .where(eq(schema.sessions.id, sessionId));
-
-  await db
-    .update(schema.refreshTokens)
-    .set({ tokenHash: newHash })
-    .where(eq(schema.refreshTokens.sessionId, sessionId));
-
-  return newRefreshToken;
-}
-
-async function cleanExpired(): Promise<void> {
-  const db = getDb();
-  const now = new Date();
-  await db
-    .delete(schema.sessions)
-    .where(
-      and(
-        lt(schema.sessions.expiresAt, now),
-      ),
-    )
-    .catch(() => {});
-  // Prune expired OTPs from memory
-  for (const [phone, entry] of otpStore) {
-    if (entry.expiresAt < now.getTime()) {
-      otpStore.delete(phone);
-    }
-  }
-}
-
-// POST /auth/otp/send
-router.post("/auth/otp/send", validate({ schema: sendOtpSchema, source: "body" }), (req: Request, res: Response) => {
-  const { phone } = req.body;
-
-  if (otpRateLimitEnabled) {
-    const now = Date.now();
-    const timestamps = otpRequestLog.get(phone) || [];
-    const recent = timestamps.filter((t) => now - t < otpRateLimitWindowMs);
-    if (recent.length >= otpRateLimitMax) {
-      logger.warn({ phone }, "OTP rate limit exceeded");
-      res.status(429).json({ error: "Too many OTP requests. Please try again later." });
+    if (!validateE164(phone)) {
+      res.status(400).json({ error: "Invalid phone format. Use E.164 format (+XXXXXXXXXXX)" });
       return;
     }
-    recent.push(now);
-    otpRequestLog.set(phone, recent);
-    if (otpRequestLog.size > 1000) {
-      for (const [key, timestamps] of otpRequestLog) {
-        otpRequestLog.set(key, timestamps.filter((t) => now - t < otpRateLimitWindowMs));
-        if (otpRequestLog.get(key)!.length === 0) otpRequestLog.delete(key);
-      }
+
+    const otp = generateOtp();
+    await setOtp(phone, otp, 300);
+
+    // TODO: integrate SMS provider (Twilio, MSG91, etc.)
+    // For dev only, log the OTP
+    if (process.env.NODE_ENV !== "production") {
+      logger.info({ phone, otp }, "[DEV ONLY] OTP generated");
     }
-  }
 
-  const otp = process.env.DEV_OTP || "000000";
-  otpStore.set(phone, { otp, expiresAt: Date.now() + 5 * 60 * 1000 });
+    res.json({ message: "OTP sent" });
+  },
+);
 
-  if (process.env.NODE_ENV !== "production") {
-    logger.info({ phone }, "OTP sent (dev mode)");
-  }
-  res.json({ message: "OTP sent successfully", expiresIn: 300 });
-});
-
-// POST /auth/otp/verify
-router.post("/auth/otp/verify", validate({ schema: verifyOtpSchema, source: "body" }), async (req: Request, res: Response) => {
+// POST /auth/verify-otp
+router.post("/auth/verify-otp", validate({ schema: verifyOtpSchema, source: "body" }), async (req: Request, res: Response) => {
   try {
-    const { phone, otp, deviceName, deviceIdentifier } = req.body;
+    const { phone, otp, device_fingerprint, push_token } = req.body;
 
-    const stored = otpStore.get(phone);
+    const stored = await getOtp(phone);
     if (!stored || stored.otp !== otp) {
+      if (stored) {
+        const attempts = await incrementOtpAttempts(phone);
+        if (attempts >= 3) {
+          await deleteOtp(phone);
+          res.status(429).json({
+            error: "too_many_attempts",
+            message: "OTP invalidated after 3 failed attempts",
+          });
+          return;
+        }
+      }
       res.status(401).json({ error: "Invalid or expired OTP" });
       return;
     }
 
-    if (stored.expiresAt < Date.now()) {
-      otpStore.delete(phone);
-      res.status(401).json({ error: "OTP has expired" });
+    await deleteOtp(phone);
+
+    const db = getDb();
+    const user = await db.query.users.findFirst({
+      where: eq(schema.users.phone, phone),
+    });
+
+    if (!user) {
+      res.json({ requires_registration: true, phone });
       return;
     }
 
-    otpStore.delete(phone);
-
-    const user = await findOrCreateUser(phone);
-    const db = getDb();
-
-    let deviceId: string | null = null;
-    if (deviceIdentifier) {
-      const existingDevice = await db.query.devices.findFirst({
-        where: and(
-          eq(schema.devices.deviceIdentifier, deviceIdentifier),
-          eq(schema.devices.userId, user.id),
-        ),
-      });
-
-      if (existingDevice) {
-        deviceId = existingDevice.id;
-        await db
-          .update(schema.devices)
-          .set({ lastUsedAt: new Date() })
-          .where(eq(schema.devices.id, existingDevice.id));
-      } else {
-        deviceId = generateId();
-        const now = new Date();
-        await db.insert(schema.devices).values({
-          id: deviceId,
-          userId: user.id,
-          deviceName: deviceName ?? null,
-          deviceIdentifier,
-          lastUsedAt: now,
-          enrolledAt: now,
-        });
-      }
-    }
-
-    const tokens = await issueTokens(user.id, deviceId, req.ip ?? null, req.headers["user-agent"] ?? null);
+    const deviceId = await findOrCreateDevice(user.id, device_fingerprint, push_token);
+    const tokens = await createSession(user.id, deviceId);
 
     res.json({
+      access_token: tokens.accessToken,
+      refresh_token: tokens.refreshToken,
       user: toUserJson(user),
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
     });
   } catch (error) {
     logger.error({ err: error }, "OTP verify failed");
@@ -296,34 +209,171 @@ router.post("/auth/otp/verify", validate({ schema: verifyOtpSchema, source: "bod
   }
 });
 
-// POST /auth/refresh
-router.post("/auth/refresh", validate({ schema: refreshSchema, source: "body" }), async (req: Request, res: Response) => {
+// POST /auth/register
+router.post("/auth/register", validate({ schema: registerSchema, source: "body" }), async (req: Request, res: Response) => {
   try {
-    const { refreshToken } = req.body;
+    const { phone, otp, name, device_fingerprint, push_token } = req.body;
 
-    const result = await validateRefreshToken(refreshToken);
-    if (!result) {
-      res.status(401).json({ error: "Invalid or expired refresh token" });
+    const stored = await getOtp(phone);
+    if (!stored || stored.otp !== otp) {
+      if (stored) {
+        const attempts = await incrementOtpAttempts(phone);
+        if (attempts >= 3) {
+          await deleteOtp(phone);
+          res.status(429).json({
+            error: "too_many_attempts",
+            message: "OTP invalidated after 3 failed attempts",
+          });
+          return;
+        }
+      }
+      res.status(401).json({ error: "Invalid or expired OTP" });
       return;
     }
 
-    const newRefreshToken = await rotateRefreshToken(result.sessionId);
-    if (!newRefreshToken) {
-      res.status(401).json({ error: "Session has been revoked" });
+    await deleteOtp(phone);
+
+    if (!validateE164(phone)) {
+      res.status(400).json({ error: "Invalid phone format" });
+      return;
+    }
+
+    if (!name || name.trim().length === 0) {
+      res.status(400).json({ error: "Name is required" });
       return;
     }
 
     const db = getDb();
-    const session = await db.query.sessions.findFirst({
-      where: eq(schema.sessions.id, result.sessionId),
-    });
-    const accessToken = signJwt({
-      sub: result.userId,
-      sid: result.sessionId,
-      did: session?.deviceId ?? null,
+
+    const existing = await db.query.users.findFirst({
+      where: eq(schema.users.phone, phone),
     });
 
-    res.json({ accessToken, refreshToken: newRefreshToken });
+    if (existing) {
+      res.status(409).json({ error: "Phone already registered" });
+      return;
+    }
+
+    const now = new Date();
+
+    const result = await db.transaction(async (tx) => {
+      const [newUser] = await tx
+        .insert(schema.users)
+        .values({
+          phone,
+          name: name.trim(),
+          pinHash: "",
+          kycStatus: "pending",
+          themePref: "dark",
+          language: "en-IN",
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning();
+
+      await tx.insert(schema.wallets).values({
+        userId: newUser.id,
+        balancePaise: 0,
+        upiLitePaise: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const [device] = await tx
+        .insert(schema.devices)
+        .values({
+          userId: newUser.id,
+          deviceFingerprint: device_fingerprint,
+          pushToken: push_token ?? null,
+          isTrusted: false,
+          lastSeenAt: now,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning();
+
+      const refreshToken = generateRefreshToken();
+      const refreshTokenHash = hashToken(refreshToken);
+      const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+      await tx.insert(schema.sessions).values({
+        userId: newUser.id,
+        deviceId: device.id,
+        refreshTokenHash,
+        expiresAt,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const accessToken = signJwt({
+        sub: newUser.id,
+        sid: device.id,
+        did: device.id,
+      });
+
+      return { user: newUser, accessToken, refreshToken };
+    });
+
+    res.status(201).json({
+      access_token: result.accessToken,
+      refresh_token: result.refreshToken,
+      user: toUserJson(result.user),
+    });
+  } catch (error) {
+    logger.error({ err: error }, "Registration failed");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /auth/refresh
+router.post("/auth/refresh", validate({ schema: refreshSchema, source: "body" }), async (req: Request, res: Response) => {
+  try {
+    const { refresh_token } = req.body;
+
+    const db = getDb();
+    const tokenHash = hashToken(refresh_token);
+
+    const session = await db.query.sessions.findFirst({
+      where: eq(schema.sessions.refreshTokenHash, tokenHash),
+    });
+
+    if (!session) {
+      res.status(401).json({ error: "Invalid refresh token" });
+      return;
+    }
+
+    if (session.revokedAt) {
+      res.status(401).json({ error: "Session has been revoked" });
+      return;
+    }
+
+    const expiresAt = session.expiresAt instanceof Date ? session.expiresAt.getTime() : new Date(session.expiresAt).getTime();
+    if (expiresAt < Date.now()) {
+      res.status(401).json({ error: "Session has expired" });
+      return;
+    }
+
+    const newRefreshToken = generateRefreshToken();
+    const newRefreshTokenHash = hashToken(newRefreshToken);
+    const now = new Date();
+    const newExpiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    await db
+      .update(schema.sessions)
+      .set({
+        refreshTokenHash: newRefreshTokenHash,
+        expiresAt: newExpiresAt,
+        updatedAt: now,
+      })
+      .where(eq(schema.sessions.id, session.id));
+
+    const accessToken = signJwt({
+      sub: session.userId,
+      sid: session.id,
+      did: session.deviceId,
+    });
+
+    res.json({ access_token: accessToken, refresh_token: newRefreshToken });
   } catch (error) {
     logger.error({ err: error }, "Token refresh failed");
     res.status(500).json({ error: "Internal server error" });
@@ -334,12 +384,14 @@ router.post("/auth/refresh", validate({ schema: refreshSchema, source: "body" })
 router.post("/auth/logout", requireAuth, async (req: Request, res: Response) => {
   try {
     const db = getDb();
+    const sessionId = req.user!.sessionId;
+
     await db
       .update(schema.sessions)
       .set({ revokedAt: new Date() })
-      .where(eq(schema.sessions.id, req.user!.sessionId));
+      .where(eq(schema.sessions.id, sessionId));
 
-    res.json({ message: "Logged out successfully" });
+    res.json({ success: true });
   } catch (error) {
     logger.error({ err: error }, "Logout failed");
     res.status(500).json({ error: "Internal server error" });
@@ -353,23 +405,11 @@ router.get("/auth/me", requireAuth, async (req: Request, res: Response) => {
     const user = await db.query.users.findFirst({
       where: eq(schema.users.id, req.user!.userId),
     });
+
     if (!user) {
       res.status(404).json({ error: "User not found" });
       return;
     }
-
-    const session = await db.query.sessions.findFirst({
-      where: eq(schema.sessions.id, req.user!.sessionId),
-    });
-    if (!session || session.revokedAt) {
-      res.status(401).json({ error: "Session has been revoked" });
-      return;
-    }
-
-    await db
-      .update(schema.sessions)
-      .set({ lastActiveAt: new Date() })
-      .where(eq(schema.sessions.id, req.user!.sessionId));
 
     res.json({ user: toUserJson(user) });
   } catch (error) {
@@ -386,23 +426,9 @@ router.patch(
   async (req: Request, res: Response) => {
     try {
       const db = getDb();
-      const user = await db.query.users.findFirst({
-        where: eq(schema.users.id, req.user!.userId),
-      });
-      if (!user) {
-        res.status(404).json({ error: "User not found" });
-        return;
-      }
-
-      const session = await db.query.sessions.findFirst({
-        where: eq(schema.sessions.id, req.user!.sessionId),
-      });
-      if (!session || session.revokedAt) {
-        res.status(401).json({ error: "Session has been revoked" });
-        return;
-      }
-
+      const userId = req.user!.userId;
       const { name, email } = req.body;
+
       const updates: Record<string, unknown> = { updatedAt: new Date() };
       if (name !== undefined) updates.name = name;
       if (email !== undefined) updates.email = email;
@@ -410,13 +436,8 @@ router.patch(
       const [updated] = await db
         .update(schema.users)
         .set(updates)
-        .where(eq(schema.users.id, req.user!.userId))
+        .where(eq(schema.users.id, userId))
         .returning();
-
-      await db
-        .update(schema.sessions)
-        .set({ lastActiveAt: new Date() })
-        .where(eq(schema.sessions.id, req.user!.sessionId));
 
       res.json({ user: toUserJson(updated) });
     } catch (error) {
@@ -435,44 +456,14 @@ router.post(
     try {
       const db = getDb();
       const userId = req.user!.userId;
-      const { deviceName, deviceIdentifier, pushToken } = req.body;
+      const { device_fingerprint, push_token } = req.body;
 
-      const existing = await db.query.devices.findFirst({
-        where: and(
-          eq(schema.devices.deviceIdentifier, deviceIdentifier),
-          eq(schema.devices.userId, userId),
-        ),
+      const deviceId = await findOrCreateDevice(userId, device_fingerprint, push_token);
+      const device = await db.query.devices.findFirst({
+        where: eq(schema.devices.id, deviceId),
       });
 
-      if (existing && !existing.revokedAt) {
-        const [updated] = await db
-          .update(schema.devices)
-          .set({
-            deviceName: deviceName ?? existing.deviceName,
-            pushToken: pushToken ?? existing.pushToken,
-            lastUsedAt: new Date(),
-          })
-          .where(eq(schema.devices.id, existing.id))
-          .returning();
-        res.json({ device: updated });
-        return;
-      }
-
-      const now = new Date();
-      const [device] = await db
-        .insert(schema.devices)
-        .values({
-          id: generateId(),
-          userId,
-          deviceName: deviceName ?? null,
-          deviceIdentifier,
-          pushToken: pushToken ?? null,
-          lastUsedAt: now,
-          enrolledAt: now,
-        })
-        .returning();
-
-      res.status(201).json({ device });
+      res.json({ device });
     } catch (error) {
       logger.error({ err: error }, "Failed to register device");
       res.status(500).json({ error: "Internal server error" });
@@ -488,33 +479,28 @@ router.delete(
   async (req: Request, res: Response) => {
     try {
       const db = getDb();
+      const userId = req.user!.userId;
       const deviceId = paramId(req);
 
       const device = await db.query.devices.findFirst({
-        where: eq(schema.devices.id, deviceId),
+        where: and(
+          eq(schema.devices.id, deviceId),
+          eq(schema.devices.userId, userId),
+          isNull(schema.devices.deletedAt),
+        ),
       });
 
-      if (!device || device.userId !== req.user!.userId) {
+      if (!device) {
         res.status(404).json({ error: "Device not found" });
         return;
       }
 
       await db
         .update(schema.devices)
-        .set({ revokedAt: new Date() })
+        .set({ deletedAt: new Date() })
         .where(eq(schema.devices.id, deviceId));
 
-      await db
-        .update(schema.sessions)
-        .set({ revokedAt: new Date() })
-        .where(
-          and(
-            eq(schema.sessions.deviceId, deviceId),
-            isNull(schema.sessions.revokedAt),
-          ),
-        );
-
-      res.json({ message: "Device removed" });
+      res.json({ success: true });
     } catch (error) {
       logger.error({ err: error }, "Failed to remove device");
       res.status(500).json({ error: "Internal server error" });
@@ -526,12 +512,15 @@ router.delete(
 router.get("/auth/devices", requireAuth, async (req: Request, res: Response) => {
   try {
     const db = getDb();
+    const userId = req.user!.userId;
+
     const userDevices = await db.query.devices.findMany({
       where: and(
-        eq(schema.devices.userId, req.user!.userId),
-        isNull(schema.devices.revokedAt),
+        eq(schema.devices.userId, userId),
+        isNull(schema.devices.deletedAt),
       ),
     });
+
     res.json({ devices: userDevices });
   } catch (error) {
     logger.error({ err: error }, "Failed to list devices");
@@ -543,13 +532,16 @@ router.get("/auth/devices", requireAuth, async (req: Request, res: Response) => 
 router.get("/auth/sessions", requireAuth, async (req: Request, res: Response) => {
   try {
     const db = getDb();
+    const userId = req.user!.userId;
+
     const userSessions = await db.query.sessions.findMany({
       where: and(
-        eq(schema.sessions.userId, req.user!.userId),
+        eq(schema.sessions.userId, userId),
         isNull(schema.sessions.revokedAt),
       ),
     });
-    res.json({ sessions: userSessions.map(toSessionJson) });
+
+    res.json({ sessions: userSessions });
   } catch (error) {
     logger.error({ err: error }, "Failed to list sessions");
     res.status(500).json({ error: "Internal server error" });
@@ -564,12 +556,14 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       const db = getDb();
-      const { sessionId } = req.body;
+      const userId = req.user!.userId;
+      const { session_id } = req.body;
 
       const session = await db.query.sessions.findFirst({
-        where: eq(schema.sessions.id, sessionId),
+        where: eq(schema.sessions.id, session_id),
       });
-      if (!session || session.userId !== req.user!.userId) {
+
+      if (!session || session.userId !== userId) {
         res.status(404).json({ error: "Session not found" });
         return;
       }
@@ -577,9 +571,9 @@ router.post(
       await db
         .update(schema.sessions)
         .set({ revokedAt: new Date() })
-        .where(eq(schema.sessions.id, sessionId));
+        .where(eq(schema.sessions.id, session_id));
 
-      res.json({ message: "Session revoked" });
+      res.json({ success: true });
     } catch (error) {
       logger.error({ err: error }, "Failed to revoke session");
       res.status(500).json({ error: "Internal server error" });

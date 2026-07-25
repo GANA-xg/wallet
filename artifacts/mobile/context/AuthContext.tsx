@@ -146,6 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (token) {
         const valid = await validateSessionToken(token);
         if (!valid) {
+
           const refreshed = await refreshAuth();
           if (!refreshed) {
             await clearAuth();
@@ -189,15 +190,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
         if (!refreshToken) return false;
 
-        const data = await apiFetch<{ accessToken: string; refreshToken: string }>("/auth/refresh", {
+        const data = await apiFetch<{ access_token: string; refresh_token: string }>("/auth/refresh", {
           method: "POST",
-          body: JSON.stringify({ refreshToken }),
+          body: JSON.stringify({ refresh_token: refreshToken }),
         });
 
-        await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, data.accessToken);
-        await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, data.refreshToken);
+        await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, data.access_token);
+        await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, data.refresh_token);
 
-        const valid = await validateSessionToken(data.accessToken);
+        const valid = await validateSessionToken(data.access_token);
         return valid;
       } catch {
         return false;
@@ -218,7 +219,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const sendOtp = useCallback(async (phone: string) => {
-    await apiFetch<{ message: string; expiresIn: number }>("/auth/otp/send", {
+    await apiFetch<{ message: string; expiresIn: number }>("/auth/send-otp", {
       method: "POST",
       body: JSON.stringify({ phone }),
     });
@@ -226,21 +227,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const verifyOtp = useCallback(async (phone: string, otp: string) => {
     const data = await apiFetch<{
-      user: AuthUser;
-      accessToken: string;
-      refreshToken: string;
-    }>("/auth/otp/verify", {
+      user?: AuthUser;
+      access_token?: string;
+      refresh_token?: string;
+      requires_registration?: true;
+    }>("/auth/verify-otp", {
       method: "POST",
-      body: JSON.stringify({ phone, otp }),
+      body: JSON.stringify({ phone, otp, device_fingerprint: "default" }),
     });
 
+    if (data.requires_registration) {
+      setPendingPhone(phone);
+      return;
+    }
+
     await Promise.all([
-      SecureStore.setItemAsync(ACCESS_TOKEN_KEY, data.accessToken),
-      SecureStore.setItemAsync(REFRESH_TOKEN_KEY, data.refreshToken),
-      SecureStore.setItemAsync(USER_KEY, JSON.stringify(data.user)),
+      SecureStore.setItemAsync(ACCESS_TOKEN_KEY, data.access_token!),
+      SecureStore.setItemAsync(REFRESH_TOKEN_KEY, data.refresh_token!),
+      SecureStore.setItemAsync(USER_KEY, JSON.stringify(data.user!)),
     ]);
 
-    setAuthUser(data.user);
+    setAuthUser(data.user!);
   }, []);
 
   const logout = useCallback(async () => {

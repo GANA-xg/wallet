@@ -1,8 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   Alert,
   Platform,
@@ -15,246 +14,225 @@ import {
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useAuth } from "@/context/AuthContext";
 import { useWallet } from "@/context/WalletContext";
 import { useColors } from "@/hooks/useColors";
-import type { VaultDocument } from "@/types";
+import type { VaultDocument, DocumentType } from "@/types";
 import BiometricPrompt from "@/app/biometric-prompt";
-
-const DOC_INFO: Record<VaultDocument["type"], { label: string; icon: keyof typeof Feather.glyphMap; color: string; gradient: [string, string] }> = {
-  aadhaar: { label: "Aadhaar Card", icon: "user", color: "#D06224", gradient: ["#3A1A10", "#1A1510"] },
-  pan: { label: "PAN Card", icon: "credit-card", color: "#EAC891", gradient: ["#3A2A10", "#1A1510"] },
-  driving_license: { label: "Driving License", icon: "navigation", color: "#2E7D32", gradient: ["#1A2A10", "#0F1A08"] },
-  passport: { label: "Passport", icon: "bookmark", color: "#AE431E", gradient: ["#2A1510", "#1A0F08"] },
-  vehicle_rc: { label: "Vehicle RC", icon: "truck", color: "#D06224", gradient: ["#3A1A10", "#1A1510"] },
-};
-
-const AVAILABLE_TYPES: VaultDocument["type"][] = [
-  "aadhaar",
-  "pan",
-  "driving_license",
-  "passport",
-  "vehicle_rc",
-];
+import DocumentCard from "@/components/DocumentCard";
+import AddDocumentSheet from "@/components/AddDocumentSheet";
+import spacing from "@/constants/spacing";
+import radius from "@/constants/radius";
 
 export default function DocumentsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { documents, addDocument, removeDocument } = useWallet();
-  const { verifyBiometric } = useAuth();
-  const [showAdd, setShowAdd] = useState(false);
+  const [showAddSheet, setShowAddSheet] = useState(false);
   const [biometricPending, setBiometricPending] = useState(false);
+  const [pendingDocId, setPendingDocId] = useState<string | null>(null);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
-  const handleAdd = (type: VaultDocument["type"]) => {
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const info = DOC_INFO[type];
-    const alreadyHas = documents.some((d) => d.type === type);
-    if (alreadyHas) {
-      Alert.alert("Document exists", `${info.label} is already added.`);
-      return;
-    }
-    const doc: VaultDocument = {
-      id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
-      type,
-      name: info.label,
-      number: "XXXX-XXXX-XXXX",
-    };
+  const existingTypes = documents.map((d) => d.type);
+
+  const handleAddDocument = useCallback((doc: VaultDocument) => {
     addDocument(doc);
-    setShowAdd(false);
-  };
+  }, [addDocument]);
 
-  const handleDelete = (id: string, name: string) => {
-    if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    Alert.alert("Remove Document", `Remove ${name}?`, [
-      { text: "Cancel", style: "cancel" },
-      { text: "Remove", style: "destructive", onPress: () => removeDocument(id) },
-    ]);
-  };
-
-  const handleViewDocument = () => {
+  const handleCardPress = useCallback((doc: VaultDocument) => {
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setPendingDocId(doc.id);
     setBiometricPending(true);
-  };
+  }, []);
+
+  const handleBiometricSuccess = useCallback(() => {
+    setBiometricPending(false);
+    if (pendingDocId) {
+      router.push(`/document-detail?id=${pendingDocId}` as never);
+      setPendingDocId(null);
+    }
+  }, [pendingDocId]);
+
+  const handleBiometricCancel = useCallback(() => {
+    setBiometricPending(false);
+    setPendingDocId(null);
+  }, []);
+
+  const handleDeleteDocument = useCallback((doc: VaultDocument) => {
+    if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    Alert.alert(
+      "Remove Document",
+      `Remove ${doc.name}${doc.holderName ? ` (${doc.holderName})` : ""}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: () => removeDocument(doc.id),
+        },
+      ]
+    );
+  }, [removeDocument]);
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={[styles.content, { paddingTop: topPad + 16, paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 40 }]}
-      showsVerticalScrollIndicator={false}
-    >
-      <Animated.View entering={FadeInDown.duration(500).delay(0)} style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Feather name="arrow-left" size={22} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>Documents</Text>
-        <TouchableOpacity
-          style={[styles.addBtn, { backgroundColor: colors.primary }]}
-          onPress={() => {
-            if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            setShowAdd(!showAdd);
-          }}
-        >
-          <Feather name={showAdd ? "x" : "plus"} size={18} color={colors.primaryForeground} />
-        </TouchableOpacity>
-      </Animated.View>
-
-      <Animated.View entering={FadeInDown.duration(500).delay(100)} style={[styles.securityNote, { backgroundColor: colors.successLight }]}>
-        <Feather name="shield" size={16} color={colors.success} />
-        <Text style={[styles.securityText, { color: colors.success }]}>
-          Documents are encrypted and stored securely on your device
-        </Text>
-      </Animated.View>
-
-      {showAdd && (
-        <Animated.View entering={FadeInDown.duration(500).delay(200)} style={styles.addSection}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Add Document</Text>
-          <View style={styles.typeGrid}>
-            {AVAILABLE_TYPES.map((type) => {
-              const info = DOC_INFO[type];
-              const exists = documents.some((d) => d.type === type);
-              return (
-                <TouchableOpacity
-                  key={type}
-                  style={[
-                    styles.typeCard,
-                    { backgroundColor: colors.surface, borderColor: exists ? colors.success : colors.border },
-                  ]}
-                  onPress={() => handleAdd(type)}
-                  activeOpacity={0.7}
-                  disabled={exists}
-                >
-                  <View style={[styles.typeIcon, { backgroundColor: info.color + "20" }]}>
-                    <Feather name={info.icon} size={20} color={info.color} />
-                  </View>
-                  <Text style={[styles.typeLabel, { color: exists ? colors.success : colors.text }]}>
-                    {info.label}
-                  </Text>
-                  {exists && <Feather name="check-circle" size={14} color={colors.success} />}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: topPad + spacing.base, paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + spacing["2xl"] },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <Animated.View entering={FadeInDown.duration(400).delay(0)} style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Feather name="arrow-left" size={22} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.title, { color: colors.text }]}>Documents</Text>
+          <TouchableOpacity
+            style={[styles.addBtn, { backgroundColor: colors.primary }]}
+            onPress={() => {
+              if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setShowAddSheet(true);
+            }}
+          >
+            <Feather name="plus" size={18} color={colors.primaryForeground} />
+          </TouchableOpacity>
         </Animated.View>
-      )}
 
-      {documents.length === 0 ? (
-        <Animated.View entering={FadeInDown.duration(500).delay(300)} style={[styles.empty, { backgroundColor: colors.surface }]}>
-          <Feather name="file-text" size={40} color={colors.mutedForeground} />
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>No documents yet</Text>
-          <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
-            Add your important documents for quick access
+        <Animated.View
+          entering={FadeInDown.duration(400).delay(80)}
+          style={[styles.securityBanner, { backgroundColor: colors.success + "12" }]}
+        >
+          <Feather name="shield" size={16} color={colors.success} />
+          <Text style={[styles.securityText, { color: colors.success }]}>
+            Your documents are encrypted and stored securely on-device
           </Text>
         </Animated.View>
-      ) : (
-        <View style={styles.docGrid}>
-          {documents.map((doc, index) => {
-            const info = DOC_INFO[doc.type];
-            return (
-              <Animated.View key={doc.id} entering={FadeInDown.duration(500).delay(300 + index * 100)}>
-                <TouchableOpacity style={styles.docCardWrap} onPress={handleViewDocument} activeOpacity={0.9}>
-                  <LinearGradient
-                    colors={info.gradient}
-                    style={styles.docCard}
-                  >
-                    <View style={styles.docTop}>
-                      <View style={[styles.docIcon, { backgroundColor: info.color + "30" }]}>
-                        <Feather name={info.icon} size={20} color={info.color} />
-                      </View>
-                      <TouchableOpacity onPress={() => handleDelete(doc.id, doc.name)}>
-                        <Feather name="trash-2" size={16} color="rgba(255,255,255,0.4)" />
-                      </TouchableOpacity>
-                    </View>
-                    <Text style={[styles.docName, { color: colors.primaryForeground }]}>{doc.name}</Text>
-                    <Text style={styles.docNumber}>{doc.number}</Text>
-                    {doc.expiry && (
-                      <Text style={styles.docExpiry}>Expires: {doc.expiry}</Text>
-                    )}
-                    <View style={styles.verifiedBadge}>
-                      <Feather name="check-circle" size={12} color={colors.success} />
-                      <Text style={[styles.verifiedText, { color: colors.success }]}>Verified</Text>
-                    </View>
-                  </LinearGradient>
+
+        {documents.length === 0 ? (
+          <Animated.View entering={FadeInDown.duration(500).delay(200)} style={styles.emptyState}>
+            <View style={[styles.emptyIcon, { backgroundColor: colors.surfaceElevated }]}>
+              <Feather name="file-plus" size={48} color={colors.textTertiary} />
+            </View>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No Documents Yet</Text>
+            <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+              Securely store your IDs, licenses, certificates and important documents.
+            </Text>
+            <TouchableOpacity
+              style={[styles.emptyCta, { backgroundColor: colors.primary }]}
+              onPress={() => {
+                if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShowAddSheet(true);
+              }}
+              activeOpacity={0.8}
+            >
+              <Feather name="plus" size={18} color={colors.primaryForeground} />
+              <Text style={[styles.emptyCtaText, { color: colors.primaryForeground }]}>Add Document</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        ) : (
+          <View style={styles.docList}>
+            {documents.map((doc, index) => (
+              <Animated.View key={doc.id} entering={FadeInDown.duration(400).delay(150 + index * 60)}>
+                <TouchableOpacity
+                  onLongPress={() => handleDeleteDocument(doc)}
+                  activeOpacity={1}
+                >
+                  <DocumentCard document={doc} onPress={handleCardPress} />
                 </TouchableOpacity>
               </Animated.View>
-            );
-          })}
-        </View>
-      )}
+            ))}
+          </View>
+        )}
+      </ScrollView>
+
+      <AddDocumentSheet
+        visible={showAddSheet}
+        onClose={() => setShowAddSheet(false)}
+        onAdd={handleAddDocument}
+        existingTypes={existingTypes}
+      />
+
       <BiometricPrompt
         visible={biometricPending}
-        title="View Document"
-        subtitle="Authorize with biometrics to access your document"
-        onSuccess={() => setBiometricPending(false)}
-        onCancel={() => setBiometricPending(false)}
+        title="Authenticate"
+        subtitle="Use Face ID / Fingerprint to securely view this document"
+        onSuccess={handleBiometricSuccess}
+        onCancel={handleBiometricCancel}
       />
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { paddingHorizontal: 20, gap: 0 },
+  content: { paddingHorizontal: spacing.base, gap: 0 },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 20,
+    marginBottom: spacing.base,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    justifyContent: "center",
+    alignItems: "center",
   },
   title: { fontSize: 20, fontWeight: "800" },
   addBtn: {
     width: 36,
     height: 36,
-    borderRadius: 10,
+    borderRadius: radius.sm,
     justifyContent: "center",
     alignItems: "center",
   },
-  securityNote: {
+  securityBanner: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: spacing.sm,
     padding: 12,
-    borderRadius: 12,
-    marginBottom: 20,
+    borderRadius: radius.md,
+    marginBottom: spacing.lg,
   },
-  securityText: { fontSize: 12, flex: 1 },
-  addSection: { marginBottom: 24 },
-  sectionTitle: { fontSize: 16, fontWeight: "700", marginBottom: 12 },
-  typeGrid: { gap: 8 },
-  typeCard: {
+  securityText: { fontSize: 12, flex: 1, lineHeight: 16 },
+  docList: { gap: spacing.md },
+  emptyState: {
+    alignItems: "center",
+    paddingTop: spacing["3xl"],
+    paddingHorizontal: spacing.lg,
+  },
+  emptyIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: spacing.lg,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: spacing.sm,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.lg,
+  },
+  emptyCta: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 14,
+    borderRadius: radius.lg,
   },
-  typeIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
+  emptyCtaText: {
+    fontSize: 15,
+    fontWeight: "700",
   },
-  typeLabel: { flex: 1, fontSize: 15, fontWeight: "600" },
-  docGrid: { gap: 12 },
-  docCardWrap: { borderRadius: 20, overflow: "hidden" },
-  docCard: { padding: 20, gap: 8 },
-  docTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  docIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  docName: { fontSize: 16, fontWeight: "700", marginTop: 8 },
-  docNumber: { color: "rgba(255,255,255,0.7)", fontSize: 14, letterSpacing: 1 },
-  docExpiry: { color: "rgba(255,255,255,0.5)", fontSize: 12 },
-  verifiedBadge: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 },
-  verifiedText: { fontSize: 12, fontWeight: "600" },
-  empty: { alignItems: "center", padding: 40, borderRadius: 20, gap: 12 },
-  emptyTitle: { fontSize: 18, fontWeight: "700" },
-  emptySub: { fontSize: 14, textAlign: "center" },
 });

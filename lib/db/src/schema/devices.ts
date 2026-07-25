@@ -1,13 +1,19 @@
-import { pgTable, uuid, varchar, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
 import { users } from "./users";
 
-export const devices = pgTable("registered_devices", {
+export const devices = pgTable("devices", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => users.id),
-  deviceName: varchar("device_name", { length: 255 }),
-  deviceIdentifier: varchar("device_identifier", { length: 255 }).notNull(),
+  deviceFingerprint: varchar("device_fingerprint", { length: 255 }).notNull(),
   pushToken: text("push_token"),
-  lastUsedAt: timestamp("last_used_at", { withTimezone: true }).notNull().defaultNow(),
-  enrolledAt: timestamp("enrolled_at", { withTimezone: true }).notNull().defaultNow(),
-  revokedAt: timestamp("revoked_at", { withTimezone: true }),
-});
+  isTrusted: boolean("is_trusted").notNull().default(false),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+}, (table) => ({
+  userIdIdx: index("devices_user_id_idx").on(table.userId),
+}));
+
+export type Device = typeof devices.$inferSelect;
+export type NewDevice = typeof devices.$inferInsert;

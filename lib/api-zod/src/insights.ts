@@ -37,4 +37,15 @@ export const insightsRequestSchema = z.object({
   year: z.number().int().optional(),
 });
 
+export const forecastQuerySchema = z.object({
+  days: z.coerce.number().refine((n) => [7, 30, 60].includes(n), {
+    message: "days must be 7, 30, or 60",
+  }).default(30),
+});
+
+export const merchantParamSchema = z.object({
+  merchantName: z.string().min(1).max(100),
+});
+
 export type InsightsRequestInput = z.infer<typeof insightsRequestSchema>;
+export type ForecastQueryInput = z.infer<typeof forecastQuerySchema>;

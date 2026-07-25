@@ -7,12 +7,20 @@ export const sendOtpSchema = z.object({
 export const verifyOtpSchema = z.object({
   phone: z.string().min(1, "Phone is required"),
   otp: z.string().min(1, "OTP is required"),
-  deviceName: z.string().optional(),
-  deviceIdentifier: z.string().optional(),
+  device_fingerprint: z.string().min(1, "device_fingerprint is required"),
+  push_token: z.string().optional(),
+});
+
+export const registerSchema = z.object({
+  phone: z.string().min(1, "Phone is required"),
+  otp: z.string().min(1, "OTP is required"),
+  name: z.string().min(1, "Name is required"),
+  device_fingerprint: z.string().min(1, "device_fingerprint is required"),
+  push_token: z.string().optional(),
 });
 
 export const refreshSchema = z.object({
-  refreshToken: z.string().min(1, "Refresh token is required"),
+  refresh_token: z.string().min(1, "Refresh token is required"),
 });
 
 export const updateProfileSchema = z.object({
@@ -21,13 +29,13 @@ export const updateProfileSchema = z.object({
 });
 
 export const registerDeviceSchema = z.object({
-  deviceName: z.string().optional(),
-  deviceIdentifier: z.string().min(1, "deviceIdentifier is required"),
-  pushToken: z.string().optional(),
+  device_name: z.string().optional(),
+  device_fingerprint: z.string().min(1, "device_fingerprint is required"),
+  push_token: z.string().optional(),
 });
 
 export const revokeSessionSchema = z.object({
-  sessionId: z.string().uuid("Invalid session ID").min(1, "sessionId is required"),
+  session_id: z.string().uuid("Invalid session ID").min(1, "session_id is required"),
 });
 
 export const deviceIdParamSchema = z.object({
@@ -36,6 +44,7 @@ export const deviceIdParamSchema = z.object({
 
 export type SendOtpInput = z.infer<typeof sendOtpSchema>;
 export type VerifyOtpInput = z.infer<typeof verifyOtpSchema>;
+export type RegisterInput = z.infer<typeof registerSchema>;
 export type RefreshInput = z.infer<typeof refreshSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type RegisterDeviceInput = z.infer<typeof registerDeviceSchema>;

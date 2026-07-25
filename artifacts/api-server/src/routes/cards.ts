@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { getDb, schema } from "@workspace/db";
 import { requireAuth } from "../middleware/auth";
 import { logger } from "../lib/logger";
@@ -14,29 +14,35 @@ const router: IRouter = Router();
 
 router.use(requireAuth);
 
-function paramId(req: Request): string {
-  const id = paramId(req);
-  return Array.isArray(id) ? id[0] : id;
-}
-
 function toCardJson(card: typeof schema.cards.$inferSelect) {
   return {
-    ...card,
-    frozen: Boolean(card.frozen),
-    theme: (() => {
-      try {
-        return JSON.parse(card.theme);
-      } catch {
-        return { gradientColors: ["#2a2a2a", "#222222"] };
-      }
-    })(),
+    id: card.id,
+    user_id: card.userId,
+    last4: card.last4,
+    holder_name: card.holderName,
+    expiry_month: card.expiryMonth,
+    expiry_year: card.expiryYear,
+    network: card.network,
+    bank_name: card.bankName,
+    gradient_colors: card.gradientColors,
+    is_frozen: card.isFrozen,
+    created_at: card.createdAt instanceof Date ? card.createdAt.toISOString() : card.createdAt,
+    updated_at: card.updatedAt instanceof Date ? card.updatedAt.toISOString() : card.updatedAt,
   };
 }
 
-router.get("/cards", async (_req: Request, res: Response) => {
+router.get("/cards", async (req: Request, res: Response) => {
   try {
     const db = getDb();
-    const allCards = await db.query.cards.findMany();
+    const userId = req.user!.userId;
+
+    const allCards = await db.query.cards.findMany({
+      where: and(
+        eq(schema.cards.userId, userId),
+        isNull(schema.cards.deletedAt),
+      ),
+    });
+
     res.json({ cards: allCards.map(toCardJson) });
   } catch (error) {
     logger.error({ err: error }, "Failed to list cards");
@@ -50,13 +56,22 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const db = getDb();
+      const userId = req.user!.userId;
+      const cardId = req.params.id as string;
+
       const card = await db.query.cards.findFirst({
-        where: eq(schema.cards.id, paramId(req)),
+        where: and(
+          eq(schema.cards.id, cardId),
+          eq(schema.cards.userId, userId),
+          isNull(schema.cards.deletedAt),
+        ),
       });
+
       if (!card) {
         res.status(404).json({ error: "Card not found" });
         return;
       }
+
       res.json({ card: toCardJson(card) });
     } catch (error) {
       logger.error({ err: error }, "Failed to get card");
@@ -71,29 +86,24 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       const db = getDb();
+      const userId = req.user!.userId;
       const body = req.body;
 
       const now = new Date();
-      const themeStr = body.theme
-        ? JSON.stringify(body.theme)
-        : '{"gradientColors":["#2a2a2a","#222222"]}';
 
       const [newCard] = await db
         .insert(schema.cards)
         .values({
-          id: body.id ?? `card_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-          userId: body.userId ?? "api",
-          cardNetwork: body.cardNetwork,
-          issuer: body.issuer ?? null,
-          lastFour: body.lastFour,
-          expiryMonth: body.expiryMonth,
-          expiryYear: body.expiryYear,
-          nickname:
-            body.nickname ??
-            `${body.cardNetwork.charAt(0).toUpperCase() + body.cardNetwork.slice(1)} •••• ${body.lastFour}`,
-          theme: themeStr,
-          frozen: body.frozen ? 1 : 0,
-          balance: body.balance ?? 0,
+          userId,
+          encryptedNumber: body.encrypted_number,
+          last4: body.last4,
+          holderName: body.holder_name,
+          expiryMonth: body.expiry_month,
+          expiryYear: body.expiry_year,
+          network: body.network,
+          bankName: body.bank_name ?? null,
+          gradientColors: body.gradient_colors ?? null,
+          isFrozen: body.is_frozen ?? false,
           createdAt: now,
           updatedAt: now,
         })
@@ -113,27 +123,30 @@ router.patch(
   async (req: Request, res: Response) => {
     try {
       const db = getDb();
-      const cardId = paramId(req);
+      const userId = req.user!.userId;
+      const cardId = req.params.id as string;
       const updates = req.body;
 
       const existing = await db.query.cards.findFirst({
-        where: eq(schema.cards.id, cardId),
+        where: and(
+          eq(schema.cards.id, cardId),
+          eq(schema.cards.userId, userId),
+          isNull(schema.cards.deletedAt),
+        ),
       });
+
       if (!existing) {
         res.status(404).json({ error: "Card not found" });
         return;
       }
 
       const setPayload: Record<string, unknown> = { updatedAt: new Date() };
-      if (updates.cardNetwork !== undefined) setPayload.cardNetwork = updates.cardNetwork;
-      if (updates.issuer !== undefined) setPayload.issuer = updates.issuer;
-      if (updates.lastFour !== undefined) setPayload.lastFour = updates.lastFour;
-      if (updates.expiryMonth !== undefined) setPayload.expiryMonth = updates.expiryMonth;
-      if (updates.expiryYear !== undefined) setPayload.expiryYear = updates.expiryYear;
-      if (updates.nickname !== undefined) setPayload.nickname = updates.nickname;
-      if (updates.theme !== undefined) setPayload.theme = JSON.stringify(updates.theme);
-      if (updates.frozen !== undefined) setPayload.frozen = updates.frozen ? 1 : 0;
-      if (updates.balance !== undefined) setPayload.balance = updates.balance;
+      if (updates.holder_name !== undefined) setPayload.holderName = updates.holder_name;
+      if (updates.expiry_month !== undefined) setPayload.expiryMonth = updates.expiry_month;
+      if (updates.expiry_year !== undefined) setPayload.expiryYear = updates.expiry_year;
+      if (updates.bank_name !== undefined) setPayload.bankName = updates.bank_name;
+      if (updates.gradient_colors !== undefined) setPayload.gradientColors = updates.gradient_colors;
+      if (updates.is_frozen !== undefined) setPayload.isFrozen = updates.is_frozen;
 
       const [updated] = await db
         .update(schema.cards)
@@ -155,18 +168,41 @@ router.delete(
   async (req: Request, res: Response) => {
     try {
       const db = getDb();
-      const cardId = paramId(req);
+      const userId = req.user!.userId;
+      const deviceId = req.user!.deviceId;
+      const cardId = req.params.id as string;
 
-      const [removed] = await db
-        .delete(schema.cards)
-        .where(eq(schema.cards.id, cardId))
-        .returning();
+      const existing = await db.query.cards.findFirst({
+        where: and(
+          eq(schema.cards.id, cardId),
+          eq(schema.cards.userId, userId),
+          isNull(schema.cards.deletedAt),
+        ),
+      });
 
-      if (!removed) {
+      if (!existing) {
         res.status(404).json({ error: "Card not found" });
         return;
       }
-      res.json({ card: toCardJson(removed) });
+
+      const now = new Date();
+
+      await db
+        .update(schema.cards)
+        .set({ deletedAt: now })
+        .where(eq(schema.cards.id, cardId));
+
+      // Audit log
+      await db.insert(schema.auditLogs).values({
+        userId,
+        deviceId,
+        action: "card.deleted",
+        ipAddress: req.ip ?? null,
+        metadata: { card_id: cardId, last4: existing.last4 },
+        createdAt: now,
+      });
+
+      res.json({ success: true });
     } catch (error) {
       logger.error({ err: error }, "Failed to delete card");
       res.status(500).json({ error: "Internal server error" });
@@ -180,18 +216,41 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       const db = getDb();
-      const cardId = paramId(req);
+      const userId = req.user!.userId;
+      const deviceId = req.user!.deviceId;
+      const cardId = req.params.id as string;
 
-      const [updated] = await db
-        .update(schema.cards)
-        .set({ frozen: 1, updatedAt: new Date() })
-        .where(eq(schema.cards.id, cardId))
-        .returning();
+      const existing = await db.query.cards.findFirst({
+        where: and(
+          eq(schema.cards.id, cardId),
+          eq(schema.cards.userId, userId),
+          isNull(schema.cards.deletedAt),
+        ),
+      });
 
-      if (!updated) {
+      if (!existing) {
         res.status(404).json({ error: "Card not found" });
         return;
       }
+
+      const now = new Date();
+
+      const [updated] = await db
+        .update(schema.cards)
+        .set({ isFrozen: true, updatedAt: now })
+        .where(eq(schema.cards.id, cardId))
+        .returning();
+
+      // Audit log
+      await db.insert(schema.auditLogs).values({
+        userId,
+        deviceId,
+        action: "card.frozen",
+        ipAddress: req.ip ?? null,
+        metadata: { card_id: cardId, last4: existing.last4 },
+        createdAt: now,
+      });
+
       res.json({ card: toCardJson(updated) });
     } catch (error) {
       logger.error({ err: error }, "Failed to freeze card");
@@ -206,18 +265,41 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       const db = getDb();
-      const cardId = paramId(req);
+      const userId = req.user!.userId;
+      const deviceId = req.user!.deviceId;
+      const cardId = req.params.id as string;
 
-      const [updated] = await db
-        .update(schema.cards)
-        .set({ frozen: 0, updatedAt: new Date() })
-        .where(eq(schema.cards.id, cardId))
-        .returning();
+      const existing = await db.query.cards.findFirst({
+        where: and(
+          eq(schema.cards.id, cardId),
+          eq(schema.cards.userId, userId),
+          isNull(schema.cards.deletedAt),
+        ),
+      });
 
-      if (!updated) {
+      if (!existing) {
         res.status(404).json({ error: "Card not found" });
         return;
       }
+
+      const now = new Date();
+
+      const [updated] = await db
+        .update(schema.cards)
+        .set({ isFrozen: false, updatedAt: now })
+        .where(eq(schema.cards.id, cardId))
+        .returning();
+
+      // Audit log
+      await db.insert(schema.auditLogs).values({
+        userId,
+        deviceId,
+        action: "card.unfrozen",
+        ipAddress: req.ip ?? null,
+        metadata: { card_id: cardId, last4: existing.last4 },
+        createdAt: now,
+      });
+
       res.json({ card: toCardJson(updated) });
     } catch (error) {
       logger.error({ err: error }, "Failed to unfreeze card");

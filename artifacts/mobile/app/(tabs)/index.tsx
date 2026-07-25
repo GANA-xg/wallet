@@ -14,27 +14,14 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 
-import { Skeleton, SkeletonBalance, SkeletonTransaction } from "@/components/Skeleton";
-import { TransactionItem } from "@/components/TransactionItem";
+import { Skeleton, SkeletonBalance } from "@/components/Skeleton";
 import { useAuth } from "@/context/AuthContext";
 import { useWallet } from "@/context/WalletContext";
 import { useColors } from "@/hooks/useColors";
 import spacing from "@/constants/spacing";
 import radius from "@/constants/radius";
 import iconSizes from "@/constants/icons";
-
-/**
- * VAULT HOME SCREEN — Font Comparison Build
- *
- * Answers exactly 4 questions:
- * 1. How much money do I have?    → Balance
- * 2. What can I do right now?     → Quick Actions
- * 3. What happened recently?      → Recent Transactions
- * 4. What needs my attention?     → (notifications badge only)
- *
- * Uses both Geist and Inter for side-by-side comparison.
- * Set FONT_MODE to 'geist' or 'inter' to compare.
- */
+import * as api from "@/services/api";
 
 // Toggle this to compare fonts
 const FONT_MODE = "geist" as "geist" | "inter";
@@ -89,16 +76,29 @@ export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { balance, cards, upiLite, transactions, unreadCount } = useWallet();
+  const { balance, cards, upiLite, unreadCount } = useWallet();
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [balanceHidden, setBalanceHidden] = useState(false);
+  const [subscriptions, setSubscriptions] = useState<any[]>([]);
+  const [subsLoading, setSubsLoading] = useState(true);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 800);
     return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.getSubscriptions({ status: "active" });
+        setSubscriptions(res.subscriptions ?? []);
+      } catch {} finally {
+        setSubsLoading(false);
+      }
+    })();
   }, []);
 
   const handleRefresh = () => {
@@ -111,7 +111,13 @@ export default function HomeScreen() {
     }, 1200);
   };
 
-  const recentTx = transactions.slice(0, 5);
+  const monthlyTotal = (subscriptions ?? [])
+    .filter((s: any) => s.cadence === "monthly")
+    .reduce((sum: number, s: any) => sum + (s.amount_paise ?? 0), 0);
+  const top3 = (subscriptions ?? [])
+    .filter((s: any) => s.status === "active")
+    .sort((a: any, b: any) => (b.amount_paise ?? 0) - (a.amount_paise ?? 0))
+    .slice(0, 3);
 
   return (
     <ScrollView
@@ -301,49 +307,62 @@ export default function HomeScreen() {
         </View>
       </Animated.View>
 
-      {/* ── RECENT TRANSACTIONS ──
-       * No container card. Just typography + dividers on background.
-       * "Can this become typography instead?" — yes, it can.
-       */}
+      {/* ── SUBSCRIPTIONS SUMMARY ── */}
       <Animated.View entering={FadeInDown.duration(320).delay(300)}>
         <View style={styles.txSection}>
           <View style={styles.txHeader}>
-            <Text
-              style={[
-                styles.txTitle,
-                { color: colors.text, fontFamily: f.semibold },
-              ]}
-            >
-              Recent
+            <Text style={[styles.txTitle, { color: colors.text, fontFamily: f.semibold }]}>
+              Subscriptions
             </Text>
             <Pressable
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push("/(tabs)/transactions");
+                router.push("/subscriptions");
               }}
               hitSlop={8}
             >
-              <Text
-                style={[
-                  styles.txAction,
-                  { color: colors.primary, fontFamily: f.semibold },
-                ]}
-              >
-                See All
+              <Text style={[styles.txAction, { color: colors.primary, fontFamily: f.semibold }]}>
+                View All
               </Text>
             </Pressable>
           </View>
 
-          {loading ? (
+          {subsLoading ? (
             <View>
-              <SkeletonTransaction />
-              <SkeletonTransaction />
-              <SkeletonTransaction />
+              <Skeleton width="100%" height={80} borderRadius={radius.md} />
+            </View>
+          ) : subscriptions.length === 0 ? (
+            <View style={[styles.subEmpty, { borderColor: colors.border }]}>
+              <Feather name="repeat" size={32} color={colors.mutedForeground} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.subEmptyTitle, { color: colors.text }]}>
+                  No subscriptions yet
+                </Text>
+                <Text style={[styles.subEmptySub, { color: colors.mutedForeground }]}>
+                  Recurring payments will appear here
+                </Text>
+              </View>
             </View>
           ) : (
             <View>
-              {recentTx.map((tx) => (
-                <TransactionItem key={tx.id} transaction={tx} />
+              <View style={[styles.subTotalRow, { backgroundColor: colors.surfaceElevated }]}>
+                <Text style={[styles.subTotalLabel, { color: colors.mutedForeground }]}>
+                  Monthly total
+                </Text>
+                <Text style={[styles.subTotalAmount, { color: colors.text }]}>
+                  ₹{(monthlyTotal / 100).toLocaleString("en-IN")}
+                </Text>
+              </View>
+              {top3.map((sub: any) => (
+                <View key={sub.id} style={styles.subRow}>
+                  <View style={[styles.subDot, { backgroundColor: sub.status === "active" ? "#10B981" : "#6B7280" }]} />
+                  <Text style={[styles.subName, { color: colors.text }]} numberOfLines={1}>
+                    {sub.merchant}
+                  </Text>
+                  <Text style={[styles.subAmount, { color: colors.textSecondary }]}>
+                    ₹{(sub.amount_paise / 100).toLocaleString("en-IN")}/mo
+                  </Text>
+                </View>
               ))}
             </View>
           )}
@@ -537,6 +556,33 @@ const styles = StyleSheet.create({
   },
   txTitle: { fontSize: 18 },
   txAction: { fontSize: 13 },
+
+  // ── Subscriptions ──
+  subEmpty: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    padding: spacing.base,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderStyle: "dashed",
+  },
+  subEmptyTitle: { fontSize: 14, fontWeight: "700" },
+  subEmptySub: { fontSize: 12, fontWeight: "500", marginTop: 2 },
+  subTotalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: spacing.md,
+    borderRadius: radius.sm,
+    marginBottom: spacing.sm,
+  },
+  subTotalLabel: { fontSize: 12, fontWeight: "600" },
+  subTotalAmount: { fontSize: 18, fontWeight: "800" },
+  subRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: spacing.sm },
+  subDot: { width: 8, height: 8, borderRadius: 4 },
+  subName: { flex: 1, fontSize: 14, fontWeight: "600" },
+  subAmount: { fontSize: 13, fontWeight: "700" },
 
   // ── Cards ──
   cardsSection: {

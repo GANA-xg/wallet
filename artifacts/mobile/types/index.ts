@@ -64,12 +64,53 @@ export interface ScheduledPayment {
   status: "scheduled" | "cancelled" | "completed";
 }
 
+export type DocumentType =
+  | "aadhaar"
+  | "pan"
+  | "driving_license"
+  | "passport"
+  | "vehicle_rc"
+  | "membership"
+  | "college_id"
+  | "custom";
+
+export type VerificationStatus = "verified" | "pending" | "failed" | "unverified";
+
+export interface DocumentMetadata {
+  holderName?: string;
+  fatherName?: string;
+  gender?: string;
+  dateOfBirth?: string;
+  address?: string;
+  issueDate?: string;
+  expiryDate?: string;
+  vehicleClass?: string;
+  vehicleModel?: string;
+  fuelType?: string;
+  chassisNumber?: string;
+  engineNumber?: string;
+  registrationNumber?: string;
+  nationality?: string;
+  passportNumber?: string;
+  licenceNumber?: string;
+  organization?: string;
+  customFields?: Record<string, string>;
+}
+
 export interface VaultDocument {
   id: string;
-  type: "aadhaar" | "pan" | "driving_license" | "passport" | "vehicle_rc";
+  userId: string;
+  type: DocumentType;
   name: string;
-  number: string;
-  expiry?: string;
+  holderName: string;
+  documentNumber: string;
+  maskedNumber: string;
+  verificationStatus: VerificationStatus;
+  metadata: DocumentMetadata;
+  encryptedFileUri?: string;
+  thumbnail?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Ticket {

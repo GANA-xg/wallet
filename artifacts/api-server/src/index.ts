@@ -1,7 +1,12 @@
 import "dotenv/config";
+import { createServer } from "http";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { getPool } from "@workspace/db";
+import { initSocketServer, getIO } from "./lib/socketServer";
+import { connectRedis } from "./lib/redis";
+
+const httpServer = createServer(app);
 
 const port = (() => {
   const raw = process.env.PORT;
@@ -113,11 +118,17 @@ async function runMigrations() {
 async function start() {
   await runMigrations();
 
-  app.listen(port, (err) => {
-    if (err) {
-      logger.error({ err }, "Error listening on port");
-      process.exit(1);
-    }
+  // Initialize Redis (best-effort)
+  try {
+    await connectRedis();
+  } catch (err) {
+    logger.warn({ err }, "Redis connection failed — OTP will use in-memory fallback");
+  }
+
+  // Initialize Socket.IO
+  initSocketServer(httpServer);
+
+  httpServer.listen(port, () => {
     logger.info({ port }, "Server listening");
   });
 }

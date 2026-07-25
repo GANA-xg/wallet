@@ -127,6 +127,7 @@ function RootLayoutNav() {
       <Stack.Screen name="profile" />
       <Stack.Screen name="security" />
       <Stack.Screen name="documents" />
+      <Stack.Screen name="document-detail" />
       <Stack.Screen name="tickets" />
       <Stack.Screen name="add-ticket" />
       <Stack.Screen name="ticket-detail" />
