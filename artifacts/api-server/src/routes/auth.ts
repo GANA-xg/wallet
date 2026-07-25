@@ -76,8 +76,11 @@ const otpRateLimiter = rateLimit({
   },
 });
 
-function validateE164(phone: string): boolean {
-  return /^\+[1-9]\d{7,14}$/.test(phone);
+function validateE164(phone: string): { valid: boolean; normalized: string } {
+  // Auto-prepend +91 (India) if just digits without prefix
+  const normalized = phone.startsWith("+") ? phone : `+91${phone}`;
+  const valid = /^\+[1-9]\d{7,14}$/.test(normalized);
+  return { valid, normalized };
 }
 
 function generateOtp(): string {
@@ -185,13 +188,14 @@ router.post(
   async (req: Request, res: Response) => {
     const { phone } = req.body;
 
-    if (!validateE164(phone)) {
+    const { valid, normalized } = validateE164(phone);
+    if (!valid) {
       res.status(400).json({ error: "Invalid phone format. Use E.164 format (+XXXXXXXXXXX)" });
       return;
     }
 
     const otp = generateOtp();
-    await setOtp(phone, otp, 300);
+    await setOtp(normalized, otp, 300);
 
     // TODO: integrate SMS provider (Twilio, MSG91, etc.)
     // For dev only, log the OTP
@@ -207,8 +211,13 @@ router.post(
 router.post("/auth/verify-otp", validate({ schema: verifyOtpSchema, source: "body" }), async (req: Request, res: Response) => {
   try {
     const { phone, otp, device_fingerprint, push_token } = req.body;
+    const { valid, normalized } = validateE164(phone);
+    if (!valid) {
+      res.status(400).json({ error: "Invalid phone format" });
+      return;
+    }
 
-    const stored = await getOtp(phone);
+    const stored = await getOtp(normalized);
     if (!stored || stored.otp !== otp) {
       if (stored) {
         const attempts = await incrementOtpAttempts(phone);
@@ -225,11 +234,11 @@ router.post("/auth/verify-otp", validate({ schema: verifyOtpSchema, source: "bod
       return;
     }
 
-    await deleteOtp(phone);
+    await deleteOtp(normalized);
 
     const db = getDb();
     const user = await db.query.users.findFirst({
-      where: eq(schema.users.phone, phone),
+      where: eq(schema.users.phone, normalized),
     });
 
     if (!user) {
@@ -273,12 +282,7 @@ router.post("/auth/register", validate({ schema: registerSchema, source: "body" 
       return;
     }
 
-    await deleteOtp(phone);
-
-    if (!validateE164(phone)) {
-      res.status(400).json({ error: "Invalid phone format" });
-      return;
-    }
+    await deleteOtp(normalized);
 
     if (!name || name.trim().length === 0) {
       res.status(400).json({ error: "Name is required" });
@@ -288,7 +292,7 @@ router.post("/auth/register", validate({ schema: registerSchema, source: "body" 
     const db = getDb();
 
     const existing = await db.query.users.findFirst({
-      where: eq(schema.users.phone, phone),
+      where: eq(schema.users.phone, normalized),
     });
 
     if (existing) {
@@ -302,7 +306,7 @@ router.post("/auth/register", validate({ schema: registerSchema, source: "body" 
       const [newUser] = await tx
         .insert(schema.users)
         .values({
-          phone,
+          phone: normalized,
           name: name.trim(),
           pinHash: "",
           kycStatus: "pending",
