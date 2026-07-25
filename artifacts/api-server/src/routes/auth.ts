@@ -216,9 +216,9 @@ router.post("/auth/verify-otp", validate({ schema: verifyOtpSchema, source: "bod
     const stored = await getOtp(normalized);
     if (!stored || stored.otp !== otp) {
       if (stored) {
-        const attempts = await incrementOtpAttempts(phone);
+        const attempts = await incrementOtpAttempts(normalized);
         if (attempts >= 3) {
-          await deleteOtp(phone);
+          await deleteOtp(normalized);
           res.status(429).json({
             error: "too_many_attempts",
             message: "OTP invalidated after 3 failed attempts",
@@ -238,7 +238,7 @@ router.post("/auth/verify-otp", validate({ schema: verifyOtpSchema, source: "bod
     });
 
     if (!user) {
-      res.json({ requires_registration: true, phone });
+      res.json({ requires_registration: true, phone: normalized });
       return;
     }
 
@@ -261,12 +261,23 @@ router.post("/auth/register", validate({ schema: registerSchema, source: "body" 
   try {
     const { phone, otp, name, device_fingerprint, push_token } = req.body;
 
-    const stored = await getOtp(phone);
+    if (!name || name.trim().length === 0) {
+      res.status(400).json({ error: "Name is required" });
+      return;
+    }
+
+    const { valid, normalized } = validateE164(phone);
+    if (!valid) {
+      res.status(400).json({ error: "Invalid phone format" });
+      return;
+    }
+
+    const stored = await getOtp(normalized);
     if (!stored || stored.otp !== otp) {
       if (stored) {
-        const attempts = await incrementOtpAttempts(phone);
+        const attempts = await incrementOtpAttempts(normalized);
         if (attempts >= 3) {
-          await deleteOtp(phone);
+          await deleteOtp(normalized);
           res.status(429).json({
             error: "too_many_attempts",
             message: "OTP invalidated after 3 failed attempts",
@@ -279,11 +290,6 @@ router.post("/auth/register", validate({ schema: registerSchema, source: "body" 
     }
 
     await deleteOtp(normalized);
-
-    if (!name || name.trim().length === 0) {
-      res.status(400).json({ error: "Name is required" });
-      return;
-    }
 
     const db = getDb();
 
