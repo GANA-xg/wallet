@@ -47,6 +47,9 @@ app.use(
   }),
 );
 
+// Trust proxy — required for accurate rate limiting behind Render/AWS/nginx
+app.set("trust proxy", true);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
