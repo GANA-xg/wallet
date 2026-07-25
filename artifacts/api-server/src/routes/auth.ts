@@ -194,14 +194,12 @@ router.post(
       return;
     }
 
-    const otp = generateOtp();
+    const otp = process.env.DEV_OTP || generateOtp();
     await setOtp(normalized, otp, 300);
 
     // TODO: integrate SMS provider (Twilio, MSG91, etc.)
     // For dev only, log the OTP
-    if (process.env.NODE_ENV !== "production") {
-      logger.info({ phone, otp }, "[DEV ONLY] OTP generated");
-    }
+    logger.info({ phone, otp }, "[DEV ONLY] OTP generated — remove DEV_OTP env var in production");
 
     res.json({ message: "OTP sent" });
   },
