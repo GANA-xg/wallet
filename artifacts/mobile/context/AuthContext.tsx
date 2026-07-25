@@ -97,6 +97,7 @@ interface AuthContextType {
   validateSession: () => Promise<boolean>;
   refreshAuth: () => Promise<boolean>;
   updateUser: (updates: { name?: string; email?: string }) => Promise<void>;
+  currentOtp: string;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -123,6 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [biometricVerified, setBiometricVerified] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [pendingPhone, setPendingPhone] = useState("");
+  const [currentOtp, setCurrentOtp] = useState("");
   const refreshPromise = useRef<Promise<boolean> | null>(null);
 
   useEffect(() => {
@@ -219,10 +221,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const sendOtp = useCallback(async (phone: string) => {
-    await apiFetch<{ message: string; expiresIn: number }>("/auth/send-otp", {
+    const data = await apiFetch<{ message: string; otp?: string }>("/auth/send-otp", {
       method: "POST",
       body: JSON.stringify({ phone }),
     });
+    if (data.otp) setCurrentOtp(data.otp);
   }, []);
 
   const verifyOtp = useCallback(async (phone: string, otp: string) => {
@@ -248,6 +251,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     ]);
 
     setAuthUser(data.user!);
+    setCurrentOtp("");
   }, []);
 
   const logout = useCallback(async () => {
@@ -339,6 +343,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         validateSession,
         refreshAuth,
         updateUser,
+        currentOtp,
       }}
     >
       {children}

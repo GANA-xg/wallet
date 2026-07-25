@@ -69,7 +69,7 @@ function OtpBox({ char, isActive, isFilled, index, colors }: { char: string; isA
 export default function OTP() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { pendingPhone, verifyOtp, sendOtp } = useAuth();
+  const { pendingPhone, verifyOtp, sendOtp, currentOtp } = useAuth();
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [resendTimer, setResendTimer] = useState(30);
@@ -218,6 +218,13 @@ export default function OTP() {
                       autoFocus
                       caretHidden
                     />
+
+                    {currentOtp ? (
+                      <View style={[styles.otpDevBadge, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                        <Text style={[styles.otpDevLabel, { color: colors.mutedForeground }]}>DEV OTP</Text>
+                        <Text style={[styles.otpDevValue, { color: colors.primary }]}>{currentOtp}</Text>
+                      </View>
+                    ) : null}
 
                     {!!error && (
                       <Animated.View entering={FadeIn.duration(200)}>
@@ -382,5 +389,26 @@ const styles = StyleSheet.create({
   btnText: {
     fontSize: 17,
     fontWeight: "700",
+  },
+  otpDevBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  otpDevLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+  otpDevValue: {
+    fontSize: 20,
+    fontWeight: "800",
+    letterSpacing: 3,
   },
 });

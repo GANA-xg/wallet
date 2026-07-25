@@ -199,7 +199,7 @@ router.post(
     // For dev only, log the OTP
     logger.info({ phone, otp }, "[DEV ONLY] OTP generated — remove DEV_OTP env var in production");
 
-    res.json({ message: "OTP sent" });
+    res.json({ message: "OTP sent", otp });
   },
 );
 
