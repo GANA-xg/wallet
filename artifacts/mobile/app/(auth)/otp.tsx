@@ -69,7 +69,7 @@ function OtpBox({ char, isActive, isFilled, index, colors }: { char: string; isA
 export default function OTP() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { pendingPhone, verifyOtp, sendOtp } = useAuth();
+  const { pendingPhone, verifyOtp, sendOtp, currentOtp } = useAuth();
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [resendTimer, setResendTimer] = useState(30);
@@ -219,7 +219,12 @@ export default function OTP() {
                       caretHidden
                     />
 
-                    {null}
+                    {currentOtp ? (
+                      <View style={[styles.otpDevBadge, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                        <Text style={[styles.otpDevLabel, { color: colors.mutedForeground }]}>DEV OTP</Text>
+                        <Text style={[styles.otpDevValue, { color: colors.primary }]}>{currentOtp}</Text>
+                      </View>
+                    ) : null}
 
                     {!!error && (
                       <Animated.View entering={FadeIn.duration(200)}>
