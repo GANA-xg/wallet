@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import rateLimit from "express-rate-limit";
-import { eq, and, isNull, lt } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { getDb, schema } from "@workspace/db";
 import { requireAuth } from "../middleware/auth";
 import { logger } from "../lib/logger";

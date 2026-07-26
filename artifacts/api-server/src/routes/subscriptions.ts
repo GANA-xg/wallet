@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { eq, and, isNull, ilike, sql } from "drizzle-orm";
+import { eq, and, isNull, sql, desc } from "drizzle-orm";
 import { getDb, schema } from "@workspace/db";
 import { requireAuth } from "../middleware/auth";
 import { logger } from "../lib/logger";
@@ -41,36 +41,54 @@ router.get(
         .from(schema.subscriptions)
         .where(and(...conditions));
 
-      // Compute next_charge_date for each subscription
-      const subscriptionsWithDates = await Promise.all(
-        subscriptions.map(async (sub) => {
-          // Find most recent transaction with matching merchant
-          const recentTxn = await db.query.transactions.findFirst({
-            where: and(
+      // Batch compute next_charge_date — single DB query instead of N
+      let recentTxns: (typeof schema.transactions.$inferSelect)[] = [];
+      if (subscriptions.length > 0) {
+        // Build parameterized ILIKE conditions
+        const ilikeConditions = subscriptions.map(
+          (_, i) => sql`${schema.transactions.merchant} ILIKE ${`%${subscriptions[i].merchant}%`}`
+        );
+        recentTxns = await db
+          .select()
+          .from(schema.transactions)
+          .where(
+            and(
               eq(schema.transactions.userId, userId),
-              ilike(schema.transactions.merchant, `%${sub.merchant}%`),
-              isNull(schema.transactions.deletedAt)
-            ),
-            orderBy: (t, { desc }) => [desc(t.occurredAt)],
-          });
+              isNull(schema.transactions.deletedAt),
+              sql`(${ilikeConditions.reduce((a, c) => sql`${a} OR ${c}`)})`
+            )
+          )
+          .orderBy(desc(schema.transactions.occurredAt));
+      }
 
-          const baseDate = recentTxn
-            ? new Date(recentTxn.occurredAt)
-            : new Date(sub.createdAt);
+      // Index by merchant match (first/latest match wins)
+      const txnByMerchant = new Map<string, typeof schema.transactions.$inferSelect>();
+      for (const txn of recentTxns) {
+        if (!txnByMerchant.has(txn.merchant ?? "")) {
+          txnByMerchant.set(txn.merchant ?? "", txn);
+        }
+      }
 
-          const nextChargeDate = new Date(baseDate);
-          if (sub.cadence === "monthly") {
-            nextChargeDate.setMonth(nextChargeDate.getMonth() + 1);
-          } else {
-            nextChargeDate.setFullYear(nextChargeDate.getFullYear() + 1);
-          }
+      const subscriptionsWithDates = subscriptions.map((sub) => {
+        const matchedTxn = recentTxns.find(
+          (t) => t.merchant?.toLowerCase().includes(sub.merchant)
+        );
+        const baseDate = matchedTxn
+          ? new Date(matchedTxn.occurredAt)
+          : new Date(sub.createdAt);
 
-          return {
-            ...sub,
-            next_charge_date: nextChargeDate.toISOString(),
-          };
-        })
-      );
+        const nextChargeDate = new Date(baseDate);
+        if (sub.cadence === "monthly") {
+          nextChargeDate.setMonth(nextChargeDate.getMonth() + 1);
+        } else {
+          nextChargeDate.setFullYear(nextChargeDate.getFullYear() + 1);
+        }
+
+        return {
+          ...sub,
+          next_charge_date: nextChargeDate.toISOString(),
+        };
+      });
 
       // Compute totals
       const activeMonthly = subscriptions.filter(
