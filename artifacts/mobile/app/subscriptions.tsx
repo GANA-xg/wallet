@@ -17,6 +17,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 
 import SubscriptionDetailSheet from "@/components/SubscriptionDetailSheet";
 import { Skeleton } from "@/components/Skeleton";
+import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 import spacing from "@/constants/spacing";
 import radius from "@/constants/radius";
@@ -55,6 +56,7 @@ function formatNextCharge(dateStr?: string | null): string {
 export default function SubscriptionsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { user, authUser } = useAuth();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const [subscriptions, setSubscriptions] = useState<SubItem[]>([]);
@@ -146,6 +148,13 @@ export default function SubscriptionsScreen() {
     .filter((s) => s.cadence === "yearly")
     .reduce((sum, s) => sum + s.amount_paise, 0);
 
+  // Days remaining helper
+  function daysUntil(dateStr?: string | null): number | null {
+    if (!dateStr) return null;
+    const diff = new Date(dateStr).getTime() - Date.now();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  }
+
   // Filter list
   const filteredList =
     activeFilter === "all"
@@ -190,6 +199,12 @@ export default function SubscriptionsScreen() {
                 <Text style={[styles.nextDate, { color: colors.mutedForeground }]}>
                   Next: {formatNextCharge(item.next_charge_date)}
                 </Text>
+                {(() => {
+                  const d = daysUntil(item.next_charge_date);
+                  if (d === null) return null;
+                  const color = d <= 3 ? "#EF4444" : d <= 7 ? "#F59E0B" : colors.mutedForeground;
+                  return <Text style={[styles.daysLeft, { color }]}>{d}d left</Text>;
+                })()}
               </View>
             </View>
           </View>
@@ -258,6 +273,22 @@ export default function SubscriptionsScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* User info banner */}
+        {user || authUser ? (
+          <View style={[styles.userBanner, { backgroundColor: colors.surfaceElevated }]}>
+            {user?.phone && <Text style={[styles.userInfo, { color: colors.mutedForeground }]}>📱 {user.phone}</Text>}
+            {authUser?.email && <Text style={[styles.userInfo, { color: colors.mutedForeground }]}>✉️ {authUser.email}</Text>}
+            <View style={[styles.upcomingBadge, { backgroundColor: colors.primary + "20" }]}>
+              <Text style={[styles.upcomingText, { color: colors.primary }]}>
+                {subscriptions.filter(s => {
+                  const d = daysUntil(s.next_charge_date);
+                  return d !== null && d <= 7;
+                }).length} due this week
+              </Text>
+            </View>
+          </View>
+        ) : null}
 
         {/* Summary cards */}
         <View style={styles.summaryRow}>
@@ -471,6 +502,19 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     textAlign: "center",
   },
+  userBanner: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    marginBottom: spacing.md,
+  },
+  userInfo: { fontSize: 12, fontWeight: "500" },
+  upcomingBadge: { paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: radius.sm },
+  upcomingText: { fontSize: 11, fontWeight: "700" },
+  daysLeft: { fontSize: 10, fontWeight: "700" },
   skeletonCard: {
     flexDirection: "row",
     alignItems: "center",
