@@ -20,10 +20,10 @@ import { useColors } from "@/hooks/useColors";
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, updateUser } = useAuth();
+  const { user, authUser, updateUser } = useAuth();
   const [editing, setEditing] = useState(false);
-  const [name, setName] = useState(user?.name ?? "Aryan Sharma");
-  const [email, setEmail] = useState("aryan.sharma@gmail.com");
+  const [name, setName] = useState(user?.name ?? "");
+  const [email, setEmail] = useState(authUser?.email ?? "");
   const [saving, setSaving] = useState(false);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -84,18 +84,16 @@ export default function ProfileScreen() {
       <Animated.View entering={FadeInDown.duration(500).delay(150)}>
         <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
           {[
-            { label: "Full Name", value: name, key: "name" },
-            { label: "Phone", value: `+91 ${user?.phone ?? "98765 43210"}`, key: "phone" },
-            { label: "Email", value: email, key: "email" },
-            { label: "Date of Birth", value: "15 Aug 1998", key: "dob" },
-            { label: "PAN", value: "ABCDE1234F", key: "pan" },
+            { label: "Full Name", value: name, key: "name", editable: true },
+            { label: "Phone", value: user?.phone ?? "", key: "phone", editable: false },
+            { label: "Email", value: email, key: "email", editable: true },
           ].map((item, i) => (
             <View
               key={item.key}
-              style={[styles.infoRow, { borderBottomColor: colors.border }, i === 4 && { borderBottomWidth: 0 }]}
+              style={[styles.infoRow, { borderBottomColor: colors.border }, i === 2 && { borderBottomWidth: 0 }]}
             >
               <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>{item.label}</Text>
-              {editing && (item.key === "name" || item.key === "email") ? (
+              {editing && item.editable ? (
                 <TextInput
                   style={[styles.infoInput, { color: colors.text, borderColor: colors.border }]}
                   value={item.key === "name" ? name : email}

@@ -4,22 +4,12 @@ import * as Haptics from "expo-haptics";
 import * as Linking from "expo-linking";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
-import {
-  AppState,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Alert, Platform, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
-import * as api from "@/services/api";
 
 const STORAGE_PREFIX = "@vault_settings_";
 
@@ -50,10 +40,8 @@ export default function SettingsScreen() {
     (async () => {
       try {
         const raw = await AsyncStorage.getItem(`${STORAGE_PREFIX}all`);
-        if (raw) {
-          setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(raw) });
-        }
-      } catch {} finally {
+        if (raw) setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(raw) });
+      } finally {
         setLoaded(true);
       }
     })();
@@ -69,14 +57,6 @@ export default function SettingsScreen() {
       const next = { ...settings, [key]: !settings[key] };
       setSettings(next);
       await persist(next);
-
-      // Apply theme switch immediately
-      if (key === "darkMode") {
-        // The theme hook reads from system Appearance, which we can't override
-        // from here without an Appearance API polyfill. The toggle persists
-        // and the app reads it on mount. For a full live switch, wire a
-        // ThemeContext provider.
-      }
     },
     [settings, persist],
   );
@@ -129,58 +109,52 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView
-      style={styles.container}
-      contentContainerStyle={[styles.content, { paddingTop: topPad + 12, paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 40 }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
+      contentContainerStyle={{ paddingTop: topPad + 12, paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 40 }}
       showsVerticalScrollIndicator={false}
     >
       <Animated.View entering={FadeInDown.duration(400).delay(50)}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()}>
-            <Feather name="arrow-left" size={22} color="#222" />
+            <Feather name="arrow-left" size={22} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.title}>Settings</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
           <View style={{ width: 22 }} />
         </View>
       </Animated.View>
 
       {SECTIONS.map((section, sIdx) => (
-        <Animated.View
-          key={section.title}
-          entering={FadeInDown.duration(400).delay(100 + sIdx * 50)}
-          style={styles.section}
-        >
-          <Text style={styles.sectionTitle}>{section.title.toUpperCase()}</Text>
-          <View style={styles.sectionCard}>
+        <Animated.View key={section.title} entering={FadeInDown.duration(400).delay(100 + sIdx * 50)} style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>
+            {section.title.toUpperCase()}
+          </Text>
+          <View style={[styles.sectionCard, { backgroundColor: colors.surface }]}>
             {section.items.map((item, i) => (
               <TouchableOpacity
                 key={item.key}
-                style={[
-                  styles.row,
-                  { borderBottomColor: "#ebebeb" },
-                  i === section.items.length - 1 && { borderBottomWidth: 0 },
-                ]}
+                style={[styles.row, { borderBottomColor: colors.border }, i === section.items.length - 1 && { borderBottomWidth: 0 }]}
                 activeOpacity={item.type === "toggle" ? 1 : 0.7}
                 onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   if (item.type === "nav") router.push(item.route);
-                  if (item.type === "link" && item.url) Linking.openURL(item.url);
-                  if (item.type === "value") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  if (item.type === "link" && "url" in item && item.url) Linking.openURL(item.url);
                 }}
               >
-                <View style={styles.rowIcon}>
-                  <Feather name={item.icon} size={15} color="#6a6a6a" />
+                <View style={[styles.rowIcon, { backgroundColor: colors.surfaceElevated }]}>
+                  <Feather name={item.icon} size={15} color={colors.textSecondary} />
                 </View>
-                <Text style={styles.rowLabel}>{item.label}</Text>
+                <Text style={[styles.rowLabel, { color: colors.text }]}>{item.label}</Text>
                 {item.type === "toggle" ? (
                   <Switch
                     value={settings[item.key as keyof SettingsState] ?? false}
                     onValueChange={() => toggle(item.key as keyof SettingsState)}
-                    trackColor={{ false: "#ddd", true: "#ff385c" }}
+                    trackColor={{ false: colors.border, true: colors.primary }}
                     thumbColor="#fff"
                   />
                 ) : item.type === "value" ? (
-                  <Text style={styles.rowValue}>{item.value}</Text>
+                  <Text style={[styles.rowValue, { color: colors.mutedForeground }]}>{item.value}</Text>
                 ) : (
-                  <Feather name="chevron-right" size={14} color="#929292" />
+                  <Feather name="chevron-right" size={14} color={colors.mutedForeground} />
                 )}
               </TouchableOpacity>
             ))}
@@ -188,12 +162,12 @@ export default function SettingsScreen() {
         </Animated.View>
       ))}
 
-      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+      <TouchableOpacity style={[styles.logoutBtn, { borderColor: colors.border }]} onPress={handleLogout}>
         <Feather name="log-out" size={16} color="#EF4444" />
         <Text style={styles.logoutText}>Log Out</Text>
       </TouchableOpacity>
 
-      <Text style={styles.footer}>
+      <Text style={[styles.footer, { color: colors.textTertiary }]}>
         Vault · Version 1.0.0{"\n"}Made with ❤️ in India
       </Text>
     </ScrollView>
@@ -201,53 +175,18 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  content: { paddingHorizontal: 20, gap: 0 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 24,
-  },
-  title: { fontSize: 20, fontWeight: "700", color: "#222" },
-  section: { marginBottom: 24 },
-  sectionTitle: {
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1.5,
-    color: "#6a6a6a",
-    marginBottom: 10,
-  },
-  sectionCard: { borderRadius: 14, overflow: "hidden", backgroundColor: "#f7f7f7" },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    padding: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    backgroundColor: "#fff",
-  },
-  rowIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: "#f7f7f7",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  rowLabel: { flex: 1, fontSize: 14, fontWeight: "600", color: "#222" },
-  rowValue: { fontSize: 13, color: "#929292" },
-  logoutBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#ebebeb",
-    marginTop: 8,
-  },
+  container: { flex: 1 },
+  content: { paddingHorizontal: 20 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 24, paddingHorizontal: 20 },
+  title: { fontSize: 20, fontWeight: "700" },
+  section: { marginBottom: 24, paddingHorizontal: 20 },
+  sectionTitle: { fontSize: 11, fontWeight: "700", letterSpacing: 1.5, marginBottom: 10 },
+  sectionCard: { borderRadius: 14, overflow: "hidden" },
+  row: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderBottomWidth: StyleSheet.hairlineWidth },
+  rowIcon: { width: 32, height: 32, borderRadius: 8, justifyContent: "center", alignItems: "center" },
+  rowLabel: { flex: 1, fontSize: 14, fontWeight: "600" },
+  rowValue: { fontSize: 13 },
+  logoutBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14, borderRadius: 12, borderWidth: 1, marginHorizontal: 20, marginTop: 8 },
   logoutText: { color: "#EF4444", fontSize: 15, fontWeight: "600" },
-  footer: { textAlign: "center", fontSize: 12, color: "#929292", lineHeight: 20, marginTop: 24 },
+  footer: { textAlign: "center", fontSize: 12, lineHeight: 20, marginTop: 24, marginBottom: 20 },
 });

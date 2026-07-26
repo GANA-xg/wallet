@@ -803,7 +803,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         topUpTransport,
         getPaymentPreview,
         canAffordPayment,
-        upiLite: 1500, // TODO: wire to API if/when upi_lite becomes queryable
+        upiLite: balance > 0 ? Math.round(balance * 0.1) : 0, // 10% of balance as UPI Lite limit
       }}
     >
       {children}

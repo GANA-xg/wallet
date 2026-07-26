@@ -1,5 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as Linking from "expo-linking";
 import { router } from "expo-router";
 import React from "react";
 import {
@@ -34,7 +35,7 @@ const FEATURES = [
 const SETTINGS_ITEMS = [
   { icon: "user" as const, label: "Profile", route: "/profile" },
   { icon: "settings" as const, label: "Settings", route: "/settings" },
-  { icon: "help-circle" as const, label: "Help & Support", route: "/settings" },
+  { icon: "help-circle" as const, label: "Help & Support", route: "https://support.vault.app" },
 ];
 
 export default function MoreScreen() {
@@ -143,7 +144,11 @@ export default function MoreScreen() {
               ]}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push(item.route as never);
+                if (item.route.startsWith("http")) {
+                  Linking.openURL(item.route);
+                } else {
+                  router.push(item.route as never);
+                }
               }}
               activeOpacity={0.7}
             >
