@@ -10,7 +10,6 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -21,9 +20,6 @@ import { useColors } from "@/hooks/useColors";
 import spacing from "@/constants/spacing";
 import type { Transaction } from "@/types";
 import * as api from "@/services/api";
-
-const RAUSCH = "#ff385c";
-const ACCENT = "#ff385c";
 
 type Filter = "all" | "credit" | "debit" | "pending";
 
@@ -61,6 +57,7 @@ export default function TransactionsScreen() {
   const [bdLoading, setBdLoading] = useState(true);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const accent = colors.primary;
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 600);
@@ -120,29 +117,27 @@ export default function TransactionsScreen() {
 
   const renderHeader = () => (
     <View style={[styles.headerWrap, { paddingTop: topPad + spacing.base }]}>
-      {/* Title row */}
       <View style={styles.titleRow}>
-        <Text style={styles.title}>History</Text>
+        <Text style={[styles.title, { color: colors.text }]}>History</Text>
         <View style={styles.titleActions}>
           <TouchableOpacity
-            style={styles.titleIconBtn}
+            style={[styles.titleIconBtn, { backgroundColor: colors.surfaceElevated }]}
             onPress={() => router.push("/cashflow")}
           >
-            <Feather name="trending-up" size={18} color={ACCENT} />
+            <Feather name="trending-up" size={18} color={accent} />
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.titleIconBtn}
+            style={[styles.titleIconBtn, { backgroundColor: colors.surfaceElevated }]}
             onPress={() => router.push("/analytics")}
           >
-            <Feather name="bar-chart-2" size={18} color="#222" />
+            <Feather name="bar-chart-2" size={18} color={colors.mutedForeground} />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Cash Flow + Analytics buttons — Airbnb-style pill buttons */}
       <View style={styles.insightPills}>
         <TouchableOpacity
-          style={[styles.pillBtn, { backgroundColor: ACCENT }]}
+          style={[styles.pillBtn, { backgroundColor: accent }]}
           onPress={() => router.push("/cashflow")}
           activeOpacity={0.8}
         >
@@ -150,7 +145,7 @@ export default function TransactionsScreen() {
           <Text style={styles.pillBtnText}>Cash Flow</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.pillBtn, { backgroundColor: ACCENT }]}
+          style={[styles.pillBtn, { backgroundColor: accent }]}
           onPress={() => router.push("/analytics")}
           activeOpacity={0.8}
         >
@@ -159,23 +154,22 @@ export default function TransactionsScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Safe to Spend mini card */}
       {s2sLoading ? (
         <Skeleton width="100%" height={60} borderRadius={14} style={{ marginBottom: spacing.sm }} />
       ) : (
         <TouchableOpacity
-          style={[styles.miniCard, { borderColor: warning === "insufficient" ? "#EF4444" : "#ebebeb" }]}
+          style={[styles.miniCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
           onPress={() => router.push("/cashflow")}
           activeOpacity={0.7}
         >
           <View style={styles.miniCardRow}>
             <View>
-              <Text style={styles.miniCardLabel}>Safe to Spend</Text>
-              <Text style={[styles.miniCardAmount, { color: safePaise < 0 ? "#EF4444" : "#222" }]}>
+              <Text style={[styles.miniCardLabel, { color: colors.mutedForeground }]}>Safe to Spend</Text>
+              <Text style={[styles.miniCardAmount, { color: safePaise < 0 ? "#EF4444" : colors.text }]}>
                 {formatRupees(safePaise)}
               </Text>
             </View>
-            <Feather name="chevron-right" size={16} color="#929292" />
+            <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
           </View>
           {warning && (
             <Text style={[styles.miniCardWarn, { color: warning === "insufficient" ? "#EF4444" : "#F59E0B" }]}>
@@ -185,31 +179,30 @@ export default function TransactionsScreen() {
         </TouchableOpacity>
       )}
 
-      {/* Mini category breakdown */}
       {bdLoading ? (
         <Skeleton width="100%" height={70} borderRadius={14} style={{ marginBottom: spacing.sm }} />
       ) : categories.length > 0 ? (
         <TouchableOpacity
-          style={[styles.miniCard, { borderColor: "#ebebeb" }]}
+          style={[styles.miniCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
           onPress={() => router.push("/analytics")}
           activeOpacity={0.7}
         >
           <View style={styles.miniCardRow}>
-            <Text style={styles.miniCardLabel}>
+            <Text style={[styles.miniCardLabel, { color: colors.mutedForeground }]}>
               This Month · {formatRupees(totalPaise)}
             </Text>
-            <Feather name="chevron-right" size={16} color="#929292" />
+            <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
           </View>
           <View style={styles.categoryStrip}>
             {categories.slice(0, 3).map((cat: any) => {
               const pct = totalPaise > 0 ? (cat.total_paise / totalPaise) * 100 : 0;
               return (
                 <View key={cat.category} style={styles.categoryRow}>
-                  <Text style={styles.categoryLabel} numberOfLines={1}>{cat.category}</Text>
-                  <View style={[styles.categoryBar, { backgroundColor: "#f7f7f7" }]}>
-                    <View style={[styles.categoryFill, { width: `${Math.min(pct, 100)}%`, backgroundColor: ACCENT }]} />
+                  <Text style={[styles.categoryLabel, { color: colors.textSecondary }]} numberOfLines={1}>{cat.category}</Text>
+                  <View style={[styles.categoryBar, { backgroundColor: colors.surfaceElevated }]}>
+                    <View style={[styles.categoryFill, { width: `${Math.min(pct, 100)}%`, backgroundColor: accent }]} />
                   </View>
-                  <Text style={styles.categoryPct}>{pct.toFixed(0)}%</Text>
+                  <Text style={[styles.categoryPct, { color: colors.mutedForeground }]}>{pct.toFixed(0)}%</Text>
                 </View>
               );
             })}
@@ -217,21 +210,20 @@ export default function TransactionsScreen() {
         </TouchableOpacity>
       ) : null}
 
-      {/* Credit / Debit summary */}
       <View style={styles.summaryRow}>
-        <View style={styles.summaryCard}>
+        <View style={[styles.summaryCard, { backgroundColor: colors.surfaceElevated }]}>
           <Feather name="arrow-down-left" size={14} color="#10B981" />
           <View>
-            <Text style={styles.summaryLabel}>Credit</Text>
+            <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>Credit</Text>
             <Text style={[styles.summaryAmount, { color: "#10B981" }]}>
               ₹{credit.toLocaleString("en-IN")}
             </Text>
           </View>
         </View>
-        <View style={styles.summaryCard}>
+        <View style={[styles.summaryCard, { backgroundColor: colors.surfaceElevated }]}>
           <Feather name="arrow-up-right" size={14} color="#EF4444" />
           <View>
-            <Text style={styles.summaryLabel}>Debit</Text>
+            <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>Debit</Text>
             <Text style={[styles.summaryAmount, { color: "#EF4444" }]}>
               ₹{debit.toLocaleString("en-IN")}
             </Text>
@@ -239,32 +231,30 @@ export default function TransactionsScreen() {
         </View>
       </View>
 
-      {/* Search */}
-      <View style={[styles.searchWrap, { backgroundColor: "#fff", borderColor: "#ebebeb" }]}>
-        <Feather name="search" size={16} color="#929292" />
+      <View style={[styles.searchWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Feather name="search" size={16} color={colors.mutedForeground} />
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { color: colors.text }]}
           placeholder="Search transactions..."
-          placeholderTextColor="#929292"
+          placeholderTextColor={colors.textTertiary}
           value={query}
           onChangeText={setQuery}
         />
         {!!query && (
           <TouchableOpacity onPress={() => setQuery("")}>
-            <Feather name="x" size={16} color="#929292" />
+            <Feather name="x" size={16} color={colors.mutedForeground} />
           </TouchableOpacity>
         )}
       </View>
 
-      {/* Filters */}
       <View style={styles.filters}>
         {FILTERS.map((f) => (
           <TouchableOpacity
             key={f.key}
-            style={[styles.filterChip, { backgroundColor: filter === f.key ? ACCENT : "#f7f7f7" }]}
+            style={[styles.filterChip, { backgroundColor: filter === f.key ? accent : colors.surfaceElevated }]}
             onPress={() => setFilter(f.key)}
           >
-            <Text style={[styles.filterText, { color: filter === f.key ? "#fff" : "#6a6a6a" }]}>
+            <Text style={[styles.filterText, { color: filter === f.key ? "#fff" : colors.mutedForeground }]}>
               {f.label}
             </Text>
           </TouchableOpacity>
@@ -274,7 +264,7 @@ export default function TransactionsScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {loading ? (
         <View style={styles.listPad}>
           <Skeleton width="100%" height={28} borderRadius={4} style={{ marginVertical: topPad + 20 }} />
@@ -293,14 +283,14 @@ export default function TransactionsScreen() {
           renderItem={({ item }) => <TransactionItem transaction={item} />}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Feather name="inbox" size={40} color="#ddd" />
-              <Text style={styles.emptyText}>No transactions found</Text>
+              <Feather name="inbox" size={40} color={colors.border} />
+              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No transactions found</Text>
             </View>
           }
           contentContainerStyle={[styles.listPad, { paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 100 }]}
           style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={ACCENT} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={accent} />}
         />
       )}
     </View>
@@ -308,24 +298,22 @@ export default function TransactionsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1 },
   headerWrap: { paddingHorizontal: 20, gap: 14, paddingBottom: 8 },
   titleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  title: { fontSize: 28, fontWeight: "700", color: "#222" },
+  title: { fontSize: 28, fontWeight: "700" },
   titleActions: { flexDirection: "row", gap: spacing.sm },
   titleIconBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#f7f7f7",
     justifyContent: "center",
     alignItems: "center",
   },
-  // Airbnb-style pill buttons
   insightPills: {
     flexDirection: "row",
     gap: spacing.sm,
@@ -340,7 +328,6 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
   },
   pillBtnText: { color: "#fff", fontSize: 14, fontWeight: "600" },
-  // Mini insight card
   miniCard: {
     padding: spacing.base,
     borderRadius: 14,
@@ -352,17 +339,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
   },
-  miniCardLabel: { fontSize: 12, fontWeight: "600", color: "#6a6a6a", marginBottom: 2 },
+  miniCardLabel: { fontSize: 12, fontWeight: "600", marginBottom: 2 },
   miniCardAmount: { fontSize: 20, fontWeight: "700" },
   miniCardWarn: { fontSize: 12, fontWeight: "600", marginTop: spacing.xs },
-  // Category strip
   categoryStrip: { gap: spacing.xs, marginTop: spacing.sm },
   categoryRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  categoryLabel: { width: 60, fontSize: 11, fontWeight: "600", color: "#3f3f3f" },
+  categoryLabel: { width: 60, fontSize: 11, fontWeight: "600" },
   categoryBar: { flex: 1, height: 6, borderRadius: 3 },
   categoryFill: { height: 6, borderRadius: 3 },
-  categoryPct: { width: 32, fontSize: 10, fontWeight: "700", color: "#929292", textAlign: "right" },
-  // Summary cards
+  categoryPct: { width: 32, fontSize: 10, fontWeight: "700", textAlign: "right" },
   summaryRow: { flexDirection: "row", gap: 12 },
   summaryCard: {
     flex: 1,
@@ -371,11 +356,9 @@ const styles = StyleSheet.create({
     gap: 8,
     padding: 12,
     borderRadius: 14,
-    backgroundColor: "#f7f7f7",
   },
-  summaryLabel: { fontSize: 11, fontWeight: "600", color: "#6a6a6a" },
+  summaryLabel: { fontSize: 11, fontWeight: "600" },
   summaryAmount: { fontSize: 16, fontWeight: "700", marginTop: 2 },
-  // Search
   searchWrap: {
     flexDirection: "row",
     alignItems: "center",
@@ -385,8 +368,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderWidth: 1,
   },
-  searchInput: { flex: 1, fontSize: 15, color: "#222" },
-  // Filters
+  searchInput: { flex: 1, fontSize: 15 },
   filters: { flexDirection: "row", gap: 8 },
   filterChip: {
     paddingHorizontal: 16,
@@ -394,8 +376,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   filterText: { fontSize: 14, fontWeight: "600" },
-  // List
   listPad: { paddingHorizontal: 20 },
   empty: { alignItems: "center", paddingTop: 60, gap: 12 },
-  emptyText: { fontSize: 16, color: "#6a6a6a" },
+  emptyText: { fontSize: 16 },
 });
