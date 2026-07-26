@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Skeleton, SkeletonBalance } from "@/components/Skeleton";
 import { useAuth } from "@/context/AuthContext";
 import { useWallet } from "@/context/WalletContext";
@@ -87,6 +88,9 @@ export default function HomeScreen() {
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 800);
+    AsyncStorage.getItem("@vault_hide_balance").then((v: string | null) => {
+      if (v === "true") setBalanceHidden(true);
+    }).catch(() => {});
     return () => clearTimeout(timer);
   }, []);
 

@@ -32,7 +32,7 @@ const DEFAULT_SETTINGS: SettingsState = {
 export default function SettingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { logout } = useAuth();
+  const { logout, updateUser } = useAuth();
   const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS);
   const [loaded, setLoaded] = useState(false);
 
@@ -57,6 +57,9 @@ export default function SettingsScreen() {
       const next = { ...settings, [key]: !settings[key] };
       setSettings(next);
       await persist(next);
+
+      // Persist toggles locally — extend to API when settings endpoint exists
+      await AsyncStorage.setItem(`@vault_${key}`, String(next[key as keyof SettingsState]));
     },
     [settings, persist],
   );
