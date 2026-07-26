@@ -96,7 +96,7 @@ interface AuthContextType {
   verifyBiometric: () => Promise<boolean>;
   validateSession: () => Promise<boolean>;
   refreshAuth: () => Promise<boolean>;
-  updateUser: (updates: { name?: string; email?: string }) => Promise<void>;
+  updateUser: (updates: { name?: string; email?: string; theme_pref?: string; notifications_enabled?: boolean }) => Promise<void>;
   currentOtp: string; // TODO: remove before production — dev-only OTP display
 }
 
@@ -315,7 +315,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return validateSessionToken(token);
   }, []);
 
-  const updateUser = useCallback(async (updates: { name?: string; email?: string }) => {
+  const updateUser = useCallback(async (updates: { name?: string; email?: string; theme_pref?: string; notifications_enabled?: boolean }) => {
     const data = await authedFetch<{ user: AuthUser }>("/auth/me", {
       method: "PATCH",
       body: JSON.stringify(updates),

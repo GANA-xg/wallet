@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, timestamp, boolean } from "drizzle-orm/pg-core";
 import { kycStatusEnum, themePrefEnum } from "./enums";
 
 export const users = pgTable("users", {
@@ -10,6 +10,7 @@ export const users = pgTable("users", {
   kycStatus: kycStatusEnum("kyc_status").notNull().default("pending"),
   themePref: themePrefEnum("theme_pref").notNull().default("dark"),
   language: varchar("language", { length: 10 }).notNull().default("en-IN"),
+  notificationsEnabled: boolean("notifications_enabled").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),

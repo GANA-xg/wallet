@@ -26,6 +26,8 @@ export const refreshSchema = z.object({
 export const updateProfileSchema = z.object({
   name: z.string().optional(),
   email: z.string().email("Invalid email address").optional(),
+  theme_pref: z.enum(["dark", "light", "system"]).optional(),
+  notifications_enabled: z.boolean().optional(),
 });
 
 export const registerDeviceSchema = z.object({

@@ -475,11 +475,13 @@ router.patch(
     try {
       const db = getDb();
       const userId = req.user!.userId;
-      const { name, email } = req.body;
+      const { name, email, theme_pref, notifications_enabled } = req.body;
 
       const updates: Record<string, unknown> = { updatedAt: new Date() };
       if (name !== undefined) updates.name = name;
       if (email !== undefined) updates.email = email;
+      if (theme_pref !== undefined) updates.themePref = theme_pref;
+      if (notifications_enabled !== undefined) updates.notificationsEnabled = notifications_enabled;
 
       const [updated] = await db
         .update(schema.users)
