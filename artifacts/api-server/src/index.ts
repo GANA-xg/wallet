@@ -38,7 +38,7 @@ async function runMigrations() {
     const pool = getPool();
     const { drizzle } = await import("drizzle-orm/node-postgres");
     const db = drizzle(pool);
-    const migrationsFolder = path.join(__dirname, "..", "..", "lib", "db", "migrations");
+    const migrationsFolder = path.join(__dirname, "..", "..", "..", "lib", "db", "migrations");
     await migrate(db, { migrationsFolder });
     logger.info("Database migrations completed");
   } catch (error) {
