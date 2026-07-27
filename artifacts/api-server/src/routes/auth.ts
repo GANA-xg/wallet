@@ -230,20 +230,23 @@ router.post("/auth/verify-otp", validate({ schema: verifyOtpSchema, source: "bod
       return;
     }
 
-    await deleteOtp(normalized);
-
     const db = getDb();
     const user = await db.query.users.findFirst({
       where: eq(schema.users.phone, normalized),
     });
 
     if (!user) {
+      // Delete OTP only after successful verification for new users
+      await deleteOtp(normalized);
       res.json({ requires_registration: true, phone: normalized });
       return;
     }
 
     const deviceId = await findOrCreateDevice(user.id, device_fingerprint, push_token);
     const tokens = await createSession(user.id, deviceId);
+
+    // Delete OTP only after all database operations succeed
+    await deleteOtp(normalized);
 
     res.json({
       access_token: tokens.accessToken,

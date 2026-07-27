@@ -113,8 +113,13 @@ export default function OTP() {
     setError("");
 
     try {
-      await verifyOtp(pendingPhone, otp);
-      router.replace("/(auth)/register");
+      const isExistingUser = await verifyOtp(pendingPhone, otp);
+      // Navigate based on whether the user was already registered
+      if (isExistingUser) {
+        router.replace("/(tabs)/dashboard");
+      } else {
+        router.replace("/(auth)/register");
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Verification failed");
     } finally {

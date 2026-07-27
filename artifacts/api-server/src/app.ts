@@ -48,7 +48,8 @@ app.use(
 );
 
 // Trust proxy — required for accurate rate limiting behind Render/AWS/nginx
-app.set("trust proxy", true);
+// Use number (proxy hop count) instead of boolean to satisfy express-rate-limit v8
+app.set("trust proxy", process.env.NODE_ENV === "production" ? 1 : 0);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

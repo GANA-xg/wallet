@@ -91,7 +91,7 @@ interface AuthContextType {
   pendingPhone: string;
   setPendingPhone: (phone: string) => void;
   sendOtp: (phone: string) => Promise<void>;
-  verifyOtp: (phone: string, otp: string) => Promise<void>;
+  verifyOtp: (phone: string, otp: string) => Promise<boolean>;
   logout: () => Promise<void>;
   verifyBiometric: () => Promise<boolean>;
   validateSession: () => Promise<boolean>;
@@ -110,7 +110,7 @@ const AuthContext = createContext<AuthContextType>({
   pendingPhone: "",
   setPendingPhone: () => {},
   sendOtp: async () => {},
-  verifyOtp: async () => {},
+  verifyOtp: async () => false,
   logout: async () => {},
   verifyBiometric: async () => false,
   validateSession: async () => false,
@@ -229,7 +229,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (data.otp) setCurrentOtp(data.otp); // TODO: remove before production
   }, []);
 
-  const verifyOtp = useCallback(async (phone: string, otp: string) => {
+  const verifyOtp = useCallback(async (phone: string, otp: string): Promise<boolean> => {
     const data = await apiFetch<{
       user?: AuthUser;
       access_token?: string;
@@ -242,7 +242,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (data.requires_registration) {
       setPendingPhone(phone);
-      return;
+      return false; // Not authenticated, needs registration
     }
 
     await Promise.all([
@@ -252,6 +252,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     ]);
 
     setAuthUser(data.user!);
+    return true; // Authenticated successfully
   }, []);
 
   const logout = useCallback(async () => {
