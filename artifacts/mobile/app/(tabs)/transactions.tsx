@@ -119,39 +119,6 @@ export default function TransactionsScreen() {
     <View style={[styles.headerWrap, { paddingTop: topPad + spacing.base }]}>
       <View style={styles.titleRow}>
         <Text style={[styles.title, { color: colors.text }]}>History</Text>
-        <View style={styles.titleActions}>
-          <TouchableOpacity
-            style={[styles.titleIconBtn, { backgroundColor: colors.surfaceElevated }]}
-            onPress={() => router.push("/cashflow")}
-          >
-            <Feather name="trending-up" size={18} color={accent} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.titleIconBtn, { backgroundColor: colors.surfaceElevated }]}
-            onPress={() => router.push("/analytics")}
-          >
-            <Feather name="bar-chart-2" size={18} color={colors.mutedForeground} />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={styles.insightPills}>
-        <TouchableOpacity
-          style={[styles.pillBtn, { backgroundColor: accent }]}
-          onPress={() => router.push("/cashflow")}
-          activeOpacity={0.8}
-        >
-          <Feather name="trending-up" size={15} color="#fff" />
-          <Text style={styles.pillBtnText}>Cash Flow</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.pillBtn, { backgroundColor: accent }]}
-          onPress={() => router.push("/analytics")}
-          activeOpacity={0.8}
-        >
-          <Feather name="bar-chart-2" size={15} color="#fff" />
-          <Text style={styles.pillBtnText}>Analytics</Text>
-        </TouchableOpacity>
       </View>
 
       {s2sLoading ? (
@@ -306,28 +273,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   title: { fontSize: 28, fontWeight: "700" },
-  titleActions: { flexDirection: "row", gap: spacing.sm },
-  titleIconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  insightPills: {
-    flexDirection: "row",
-    gap: spacing.sm,
-  },
-  pillBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.xs,
-    paddingVertical: 12,
-    borderRadius: 9999,
-  },
-  pillBtnText: { color: "#fff", fontSize: 14, fontWeight: "600" },
   miniCard: {
     padding: spacing.base,
     borderRadius: 14,
