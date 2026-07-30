@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { router } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
 
 import SubscriptionDetailSheet from "@/components/SubscriptionDetailSheet";
@@ -23,8 +24,6 @@ import { useColors } from "@/hooks/useColors";
 import spacing from "@/constants/spacing";
 import radius from "@/constants/radius";
 import * as api from "@/services/api";
-
-// ─── Types ────────────────────────────────────────────
 
 type SubItem = {
   id: string;
@@ -39,9 +38,6 @@ type SubItem = {
 
 type FilterTab = "all" | "active" | "cancelled_by_user" | "ignored";
 type Category = "all" | "apps" | "media" | "tools" | "bills" | "other";
-
-// ─── Category Heuristic — client-side keyword matching ──
-// Shared with components/SubscriptionDetailSheet.tsx
 
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
   apps: ["apple", "google", "microsoft", "adobe", "notion", "figma", "slack", "zoom", "dropbox", "github", "vercel", "netlify", "1password", "bitwarden", "clickup", "miro", "atlassian", "jira"],
@@ -60,8 +56,6 @@ function classifyMerchant(merchantName: string): Exclude<Category, "all"> {
   return "other";
 }
 
-// ─── Filter configs ───────────────────────────────────
-
 const FILTERS: { key: FilterTab; label: string }[] = [
   { key: "all", label: "All" },
   { key: "active", label: "Active" },
@@ -77,8 +71,6 @@ const CATEGORIES: { key: Category; label: string; icon: keyof typeof Feather.gly
   { key: "bills", label: "Bills", icon: "file-text" },
   { key: "other", label: "Other", icon: "more-horizontal" },
 ];
-
-// ─── Helpers ──────────────────────────────────────────
 
 function formatAmount(paise: number): string {
   return `₹${(paise / 100).toLocaleString("en-IN")}`;
@@ -130,14 +122,11 @@ function categoryColor(cat: string): string {
   }
 }
 
-// ─── Screen ───────────────────────────────────────────
-
 export default function SubscriptionsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
-  // State
   const [subscriptions, setSubscriptions] = useState<SubItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -148,15 +137,16 @@ export default function SubscriptionsScreen() {
   const [searchVisible, setSearchVisible] = useState(false);
   const [activeCategory, setActiveCategory] = useState<Category>("all");
   const [activeStatusFilter, setActiveStatusFilter] = useState<FilterTab>("all");
+  const [isEmailConnected, setIsEmailConnected] = useState(false);
 
-  // Fetch
   const fetchSubs = useCallback(async () => {
     try {
       const res = await api.getSubscriptions({ status: "all" });
       setSubscriptions(res.subscriptions || []);
-    } catch {
-      // silent
-    }
+      if (res.subscriptions && res.subscriptions.length > 0) {
+        setIsEmailConnected(true);
+      }
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -173,19 +163,21 @@ export default function SubscriptionsScreen() {
     setRefreshing(false);
   };
 
-  const handleDetect = async () => {
+  const handleConnectEmail = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setDetecting(true);
     try {
+      // Mock / trigger subscription scanning
       const res = await api.detectSubscriptions();
       await fetchSubs();
+      setIsEmailConnected(true);
       if (res.detected > 0) {
-        Alert.alert("Subscriptions Found", `${res.detected} new subscription${res.detected > 1 ? "s" : ""} detected.`);
+        Alert.alert("Email Connected", `${res.detected} subscriptions detected successfully!`);
       } else {
-        Alert.alert("No Subscriptions Found", "No new recurring payments detected.");
+        Alert.alert("Connected", "Connected to email. No subscriptions found yet.");
       }
     } catch {
-      Alert.alert("Detection Failed", "Could not scan for subscriptions. Please try again.");
+      Alert.alert("Connection Failed", "Could not connect. Please try again.");
     } finally {
       setDetecting(false);
     }
@@ -207,7 +199,7 @@ export default function SubscriptionsScreen() {
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
-      Alert.alert("Error", "Failed to update subscription status.");
+      Alert.alert("Error", "Failed to update status.");
     }
   };
 
@@ -222,8 +214,6 @@ export default function SubscriptionsScreen() {
     }
   };
 
-  // ─── Derived / computed values ──────────────────────
-
   const enrichedSubs = useMemo(() => {
     return subscriptions.map((s) => ({
       ...s,
@@ -231,15 +221,14 @@ export default function SubscriptionsScreen() {
     }));
   }, [subscriptions]);
 
-  const monthlyTotal = enrichedSubs
-    .filter((s) => s.status === "active" && s.cadence === "monthly")
-    .reduce((sum, s) => sum + s.amount_paise, 0);
+  const activeSubs = useMemo(() => enrichedSubs.filter((s) => s.status === "active"), [enrichedSubs]);
 
-  const yearlyTotal = enrichedSubs
-    .filter((s) => s.status === "active" && s.cadence === "yearly")
-    .reduce((sum, s) => sum + s.amount_paise, 0);
-
-  const effectiveMonthly = monthlyTotal + Math.round(yearlyTotal / 12);
+  const effectiveMonthly = useMemo(() => {
+    return activeSubs.reduce((sum, s) => {
+      const val = s.amount_paise || 0;
+      return sum + (s.cadence === "yearly" ? Math.round(val / 12) : val);
+    }, 0);
+  }, [activeSubs]);
 
   const dueThisWeekCount = useMemo(() => {
     return enrichedSubs.filter((s) => {
@@ -286,11 +275,8 @@ export default function SubscriptionsScreen() {
     return list;
   }, [enrichedSubs, activeStatusFilter, activeCategory, searchQuery]);
 
-  // ─── Render helpers ─────────────────────────────────
-
   const renderHeader = () => (
     <View style={{ marginBottom: spacing.md }}>
-      {/* Search bar */}
       {searchVisible && (
         <Animated.View entering={FadeInDown.duration(200)}>
           <View style={[styles.searchContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
@@ -328,7 +314,6 @@ export default function SubscriptionsScreen() {
           )}
         </View>
 
-        {/* Category breakdown bars */}
         <View style={styles.categoryBreakdown}>
           {(["apps", "media", "tools", "bills", "other"] as const).map((cat) => {
             const amount = categoryBreakdown[cat] || 0;
@@ -347,7 +332,6 @@ export default function SubscriptionsScreen() {
         </View>
       </View>
 
-      {/* Upcoming timeline */}
       {upcomingItems.length > 0 && (
         <>
           <SectionHeader title="Upcoming" actionLabel="See all" onAction={() => setActiveStatusFilter("active")} />
@@ -383,7 +367,6 @@ export default function SubscriptionsScreen() {
         </>
       )}
 
-      {/* Category tabs */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryBar}>
         {CATEGORIES.map((cat) => (
           <TouchableOpacity
@@ -406,7 +389,6 @@ export default function SubscriptionsScreen() {
         ))}
       </ScrollView>
 
-      {/* Status filter chips */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterBar}>
         {FILTERS.map((f) => (
           <TouchableOpacity
@@ -429,7 +411,6 @@ export default function SubscriptionsScreen() {
         ))}
       </ScrollView>
 
-      {/* Section label */}
       <SectionHeader
         title={`${activeCategory === "all" ? "All" : activeCategory} subscriptions`}
         actionLabel={filteredList.length > 0 ? `${filteredList.length}` : undefined}
@@ -473,7 +454,6 @@ export default function SubscriptionsScreen() {
               <Text style={[styles.amount, { color: colors.text }]}>{formatAmount(item.amount_paise)}</Text>
             </View>
           </View>
-          {/* Bottom row: next charge + days remaining */}
           {item.status === "active" && days !== null && (
             <View style={[styles.cardFooter, { borderTopColor: colors.border }]}>
               <View style={styles.cardFooterLeft}>
@@ -493,6 +473,79 @@ export default function SubscriptionsScreen() {
       </Animated.View>
     );
   };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background, paddingTop: topPad + spacing.lg }]}>
+        <View style={styles.headerSection}>
+          <Skeleton width={200} height={28} borderRadius={4} />
+        </View>
+      </View>
+    );
+  }
+
+  // ─── Render Marketing Screen (Mockup) ───
+  if (!isEmailConnected) {
+    return (
+      <View style={[styles.mContainer, { backgroundColor: colors.background }]}>
+        {/* Header */}
+        <View style={[styles.mHeader, { paddingTop: topPad + spacing.lg }]}>
+          <Text style={[styles.mTitle, { color: colors.text }]}>Bills & Subscriptions</Text>
+          <View style={styles.mHeaderRight}>
+            <TouchableOpacity style={styles.mIconBtn}>
+              <Feather name="zap" size={16} color={colors.text} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.mIconBtn} onPress={() => router.push("/settings")}>
+              <Feather name="settings" size={16} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Brand icons horizontal list */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.logoScroll} contentContainerStyle={styles.logoScrollContent}>
+          {[
+            { icon: "slack", color: "#4A154B" },
+            { icon: "cpu", color: "#10a37f" }, // ChatGPT style green
+            { icon: "plus", color: "#FF385C" },
+            { icon: "youtube", color: "#FF0000" },
+            { icon: "phone", color: "#3B82F6" },
+            { icon: "video", color: "#00A8E1" }, // Prime style blue
+            { icon: "book", color: "#000000" },
+          ].map((item, idx) => (
+            <View key={idx} style={[styles.logoBubble, { backgroundColor: colors.surfaceElevated }]}>
+              <Feather name={item.icon as any} size={28} color={item.color} />
+            </View>
+          ))}
+        </ScrollView>
+
+        {/* Marketing summary */}
+        <View style={styles.mBody}>
+          <Text style={[styles.mSubTitle, { color: colors.text }]}>
+            Never get surprised by a recurring charge again.
+          </Text>
+          <Text style={[styles.mText, { color: colors.textSecondary }]}>
+            Connect your email and we line up every bill and subscription from{" "}
+            <Text style={{ fontWeight: "700" }}>Play Store</Text> or{" "}
+            <Text style={{ fontWeight: "700" }}>App Store</Text>, with reminders before they renew. No spreadsheets, no manual tracking.
+          </Text>
+
+          {/* Action button */}
+          <TouchableOpacity
+            style={[styles.mButton, { backgroundColor: colors.primary }]}
+            onPress={handleConnectEmail}
+            disabled={detecting}
+          >
+            <Text style={styles.mButtonText}>
+              {detecting ? "Connecting..." : "Connect email"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Footer spacing for tabs */}
+        <View style={{ height: 100 }} />
+      </View>
+    );
+  }
 
   const renderEmpty = () => (
     <View style={styles.emptyState}>
@@ -514,57 +567,19 @@ export default function SubscriptionsScreen() {
       {!searchQuery && activeStatusFilter === "all" && activeCategory === "all" && (
         <TouchableOpacity
           style={[styles.emptyCta, { backgroundColor: colors.primary }]}
-          onPress={handleDetect}
+          onPress={handleConnectEmail}
           disabled={detecting}
         >
-          <Feather name="scan" size={16} color="#FFFFFF" />
+          <Feather name="maximize" size={16} color="#FFFFFF" />
           <Text style={styles.emptyCtaText}>{detecting ? "Scanning..." : "Detect Subscriptions"}</Text>
         </TouchableOpacity>
       )}
     </View>
   );
 
-  // ─── Loading state ──────────────────────────────────
-
-  if (loading) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background, paddingTop: topPad + spacing.lg }]}>
-        <View style={styles.headerSection}>
-          <Skeleton width={200} height={28} borderRadius={4} />
-        </View>
-        <View style={[styles.heroCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Skeleton width={120} height={14} borderRadius={4} />
-          <Skeleton width={160} height={32} borderRadius={4} style={{ marginTop: spacing.sm }} />
-          <View style={{ marginTop: spacing.md }}>
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} width="100%" height={8} borderRadius={4} style={{ marginBottom: spacing.sm }} />
-            ))}
-          </View>
-        </View>
-        <View style={{ flexDirection: "row", gap: spacing.md, marginBottom: spacing.lg, paddingHorizontal: spacing.base }}>
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} width={140} height={100} borderRadius={radius.md} />
-          ))}
-        </View>
-        {[1, 2, 3, 4].map((i) => (
-          <View key={i} style={[styles.skeletonCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Skeleton width={36} height={36} borderRadius={18} />
-            <View style={{ flex: 1 }}>
-              <Skeleton width="60%" height={14} borderRadius={4} />
-              <Skeleton width="40%" height={12} borderRadius={4} style={{ marginTop: 6 }} />
-            </View>
-            <Skeleton width={80} height={20} borderRadius={4} />
-          </View>
-        ))}
-      </View>
-    );
-  }
-
-  // ─── Main render ────────────────────────────────────
-
+  // ─── Main list render ──────────────────────────────────
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
       <View style={[styles.headerSection, { paddingTop: topPad + spacing.lg }]}>
         <View style={styles.headerRow}>
           <Text style={[styles.title, { color: colors.text }]}>Subscriptions</Text>
@@ -577,20 +592,19 @@ export default function SubscriptionsScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.headerIconBtn, { backgroundColor: colors.surfaceElevated }]}
-              onPress={handleDetect}
+              onPress={handleConnectEmail}
               disabled={detecting}
             >
-              <Feather name={detecting ? "refresh-cw" : "scan"} size={18} color={colors.primary} />
+              <Feather name={detecting ? "refresh-cw" : "maximize"} size={18} color={colors.primary} />
             </TouchableOpacity>
           </View>
         </View>
       </View>
 
-      {/* List */}
       <FlatList
         data={filteredList}
         keyExtractor={(item) => item.id}
-        renderItem={renderItem}
+        renderItem={renderItem as any}
         ListEmptyComponent={renderEmpty}
         ListHeaderComponent={renderHeader}
         contentContainerStyle={[
@@ -603,7 +617,6 @@ export default function SubscriptionsScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      {/* Detail sheet */}
       <SubscriptionDetailSheet
         visible={sheetVisible}
         subscription={selectedSub}
@@ -615,343 +628,79 @@ export default function SubscriptionsScreen() {
   );
 }
 
-// ─── Styles ────────────────────────────────────────────
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  headerSection: {
-    paddingHorizontal: spacing.base,
-    paddingBottom: spacing.md,
-  },
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.base,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "800",
-  },
-  headerActions: {
-    flexDirection: "row",
-    gap: spacing.sm,
-  },
-  headerIconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  container: { flex: 1 },
+  headerSection: { paddingHorizontal: spacing.base, paddingBottom: spacing.md },
+  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.base },
+  title: { fontSize: 24, fontWeight: "800" },
+  headerActions: { flexDirection: "row", gap: spacing.sm },
+  headerIconBtn: { width: 40, height: 40, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
+  searchContainer: { flexDirection: "row", alignItems: "center", gap: spacing.sm, borderWidth: 1, borderRadius: radius.md, paddingHorizontal: spacing.base, height: 44, marginBottom: spacing.base },
+  searchInput: { flex: 1, fontSize: 15, paddingVertical: 8 },
+  heroCard: { padding: spacing.base, borderRadius: radius.lg, borderWidth: 1, marginBottom: spacing.base },
+  heroTop: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: spacing.base },
+  heroLabel: { fontSize: 12, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: spacing.xs },
+  heroAmount: { fontSize: 28, fontWeight: "800" },
+  dueBadge: { flexDirection: "row", alignItems: "center", gap: spacing.xs, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs + 2, borderRadius: radius.sm },
+  dueBadgeText: { fontSize: 11, fontWeight: "700" },
+  categoryBreakdown: { gap: spacing.sm },
+  breakdownRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  breakdownLabel: { fontSize: 11, fontWeight: "600", width: 48, textTransform: "capitalize" },
+  breakdownBarBg: { flex: 1, height: 6, borderRadius: 3 },
+  breakdownBarFill: { height: 6, borderRadius: 3 },
+  breakdownAmount: { fontSize: 12, fontWeight: "700", width: 64, textAlign: "right" },
+  timelineScroll: { flexGrow: 0, marginBottom: spacing.base },
+  timelineCard: { width: 140, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, marginRight: spacing.sm },
+  timelineDot: { width: 8, height: 8, borderRadius: 4, marginBottom: spacing.sm },
+  timelineMerchant: { fontSize: 13, fontWeight: "700", marginBottom: spacing.xs },
+  timelineAmount: { fontSize: 15, fontWeight: "800", marginBottom: spacing.sm },
+  timelineFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  categoryBar: { flexGrow: 0, marginBottom: spacing.sm, paddingHorizontal: spacing.base },
+  categoryChip: { flexDirection: "row", alignItems: "center", gap: spacing.xs, paddingHorizontal: spacing.base, paddingVertical: spacing.sm, borderRadius: radius.full, borderWidth: 1, marginRight: spacing.sm },
+  categoryChipText: { fontSize: 13, fontWeight: "700" },
+  filterBar: { flexGrow: 0, marginBottom: spacing.base, paddingHorizontal: spacing.base },
+  filterChip: { flexDirection: "row", alignItems: "center", gap: spacing.xs, paddingHorizontal: spacing.base, paddingVertical: spacing.sm, borderRadius: radius.full, borderWidth: 1, marginRight: spacing.sm },
+  filterDot: { width: 6, height: 6, borderRadius: 3 },
+  filterChipText: { fontSize: 13, fontWeight: "700" },
+  listContent: { paddingHorizontal: spacing.base, paddingTop: spacing.sm },
+  card: { padding: spacing.base, borderRadius: radius.md, borderWidth: 1, marginBottom: spacing.sm },
+  cardHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  cardLeft: { flexDirection: "row", alignItems: "center", flex: 1, gap: spacing.md },
+  statusDot: { width: 10, height: 10, borderRadius: 5 },
+  cardInfo: { flex: 1 },
+  merchant: { fontSize: 15, fontWeight: "700", textTransform: "capitalize", marginBottom: 4 },
+  cardMeta: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  cadencePill: { paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: radius.sm },
+  cadencePillText: { fontSize: 10, fontWeight: "700" },
+  categoryTag: { paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: radius.sm },
+  categoryTagText: { fontSize: 10, fontWeight: "700", textTransform: "capitalize" },
+  cardRight: { alignItems: "flex-end" },
+  amount: { fontSize: 17, fontWeight: "800" },
+  cardFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: spacing.md, paddingTop: spacing.sm, borderWidth: 0, borderTopWidth: StyleSheet.hairlineWidth },
+  cardFooterLeft: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  nextDateText: { fontSize: 12, fontWeight: "500" },
+  daysLeftBadge: { paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: radius.sm },
+  daysLeftText: { fontSize: 10, fontWeight: "700" },
+  emptyState: { alignItems: "center", paddingTop: 60 },
+  emptyIconCircle: { width: 72, height: 72, borderRadius: 36, alignItems: "center", justifyContent: "center", marginBottom: spacing.base },
+  emptyTitle: { fontSize: 16, fontWeight: "700", marginBottom: spacing.sm },
+  emptySubtext: { fontSize: 13, fontWeight: "500", textAlign: "center", paddingHorizontal: spacing.xl, marginBottom: spacing.lg },
+  emptyCta: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.base, paddingVertical: spacing.sm + 2, borderRadius: radius.md },
+  emptyCtaText: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
+  skeletonCard: { flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.base, borderRadius: radius.md, borderWidth: 1, marginBottom: spacing.sm, marginHorizontal: spacing.base },
 
-  // Hero card
-  heroCard: {
-    padding: spacing.base,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    marginBottom: spacing.base,
-  },
-  heroTop: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    marginBottom: spacing.base,
-  },
-  heroLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: spacing.xs,
-  },
-  heroAmount: {
-    fontSize: 28,
-    fontWeight: "800",
-  },
-  dueBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs + 2,
-    borderRadius: radius.sm,
-  },
-  dueBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  categoryBreakdown: {
-    gap: spacing.sm,
-  },
-  breakdownRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  breakdownLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-    width: 48,
-    textTransform: "capitalize",
-  },
-  breakdownBarBg: {
-    flex: 1,
-    height: 6,
-    borderRadius: 3,
-  },
-  breakdownBarFill: {
-    height: 6,
-    borderRadius: 3,
-  },
-  breakdownAmount: {
-    fontSize: 12,
-    fontWeight: "700",
-    width: 64,
-    textAlign: "right",
-  },
-
-  // Timeline
-  timelineScroll: {
-    flexGrow: 0,
-    marginBottom: spacing.base,
-  },
-  timelineCard: {
-    width: 140,
-    padding: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    marginRight: spacing.sm,
-  },
-  timelineDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginBottom: spacing.sm,
-  },
-  timelineMerchant: {
-    fontSize: 13,
-    fontWeight: "700",
-    marginBottom: spacing.xs,
-  },
-  timelineAmount: {
-    fontSize: 15,
-    fontWeight: "800",
-    marginBottom: spacing.sm,
-  },
-  timelineFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  // Search
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    marginBottom: spacing.base,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: "500",
-    padding: 0,
-  },
-
-  // Category tabs
-  categoryBar: {
-    flexGrow: 0,
-    marginBottom: spacing.sm,
-  },
-  categoryChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    marginRight: spacing.sm,
-  },
-  categoryChipText: {
-    fontSize: 13,
-    fontWeight: "700",
-  },
-
-  // Status filter chips
-  filterBar: {
-    flexGrow: 0,
-    marginBottom: spacing.base,
-  },
-  filterChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    marginRight: spacing.sm,
-    borderWidth: 1,
-  },
-  filterDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  filterChipText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-
-  // List / cards
-  listContent: {
-    paddingHorizontal: spacing.base,
-  },
-  card: {
-    padding: spacing.base,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    marginBottom: spacing.sm,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  cardLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    gap: spacing.md,
-  },
-  statusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  cardInfo: {
-    flex: 1,
-  },
-  merchant: {
-    fontSize: 15,
-    fontWeight: "700",
-    textTransform: "capitalize",
-    marginBottom: 4,
-  },
-  cardMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  cadencePill: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: radius.sm,
-  },
-  cadencePillText: {
-    fontSize: 10,
-    fontWeight: "700",
-  },
-  categoryTag: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: radius.sm,
-  },
-  categoryTagText: {
-    fontSize: 10,
-    fontWeight: "700",
-    textTransform: "capitalize",
-  },
-  cardRight: {
-    alignItems: "flex-end",
-  },
-  amount: {
-    fontSize: 17,
-    fontWeight: "800",
-  },
-  cardFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: spacing.sm,
-    paddingTop: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  cardFooterLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-  },
-  nextDateText: {
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  daysLeftBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: radius.sm,
-  },
-  daysLeftText: {
-    fontSize: 11,
-    fontWeight: "700",
-  },
-
-  // Empty state
-  emptyState: {
-    alignItems: "center",
-    paddingTop: 60,
-    paddingHorizontal: spacing.xl,
-  },
-  emptyIconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.base,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    textAlign: "center",
-    marginBottom: spacing.sm,
-  },
-  emptySubtext: {
-    fontSize: 13,
-    fontWeight: "500",
-    textAlign: "center",
-    marginBottom: spacing.base,
-  },
-  emptyCta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.sm + 2,
-    borderRadius: radius.md,
-  },
-  emptyCtaText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-
-  // Skeleton
-  skeletonCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    padding: spacing.base,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    marginBottom: spacing.sm,
-    marginHorizontal: spacing.base,
-  },
+  // Marketing Layout (Mockup)
+  mContainer: { flex: 1, paddingHorizontal: spacing.base },
+  mHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.xl + 20 },
+  mTitle: { fontSize: 26, fontWeight: "800" },
+  mHeaderRight: { flexDirection: "row", gap: spacing.sm },
+  mIconBtn: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+  logoScroll: { flexGrow: 0, marginBottom: spacing.xl + 20 },
+  logoScrollContent: { gap: spacing.md, paddingHorizontal: spacing.sm },
+  logoBubble: { width: 72, height: 72, borderRadius: 24, alignItems: "center", justifyContent: "center" },
+  mBody: { paddingHorizontal: spacing.base, gap: spacing.base },
+  mSubTitle: { fontSize: 24, fontWeight: "800", lineHeight: 32 },
+  mText: { fontSize: 14, lineHeight: 22, fontWeight: "500" },
+  mButton: { height: 48, borderRadius: 12, alignItems: "center", justifyContent: "center", marginTop: spacing.base },
+  mButtonText: { color: "#FFFFFF", fontSize: 15, fontWeight: "700" },
 });

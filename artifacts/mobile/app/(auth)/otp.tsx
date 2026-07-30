@@ -116,7 +116,7 @@ export default function OTP() {
       const isExistingUser = await verifyOtp(pendingPhone, otp);
       // Navigate based on whether the user was already registered
       if (isExistingUser) {
-        router.replace("/(tabs)/dashboard");
+        router.replace("/(tabs)");
       } else {
         router.replace("/(auth)/register");
       }
