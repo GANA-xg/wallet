@@ -22,7 +22,12 @@ if (!DATABASE_URL) {
 const migrationsFolder = path.join(__dirname, "..", "migrations");
 
 async function runMigrations() {
-  const pool = new pg.Pool({ connectionString: DATABASE_URL });
+  const pool = new pg.Pool({
+    connectionString: DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: false,
+    },
+  });
   const db = drizzle(pool, { schema });
 
   console.log(`Running migrations from ${migrationsFolder}`);

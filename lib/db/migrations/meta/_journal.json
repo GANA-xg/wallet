@@ -15,6 +15,13 @@
       "when": 1785041376268,
       "tag": "0001_overrated_zodiak",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785312000000,
+      "tag": "0002_add_avatar_url",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,1 @@
+{"idx": 2, "sql": "ALTER TABLE \"users\" ADD COLUMN \"avatar_url\" varchar(512);", "params": {}, "revision": "a1b2c3d4-e5f6-7890-abcd-ef1234567890", "foldJs": false, "lintSql": "error"}
